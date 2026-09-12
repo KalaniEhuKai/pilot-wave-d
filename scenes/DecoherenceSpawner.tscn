@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://f5g8h2j4k6l7"]
+
+[ext_resource type="Script" path="res://scripts/DecoherenceSpawner.gd" id="1_spawner"]
+
+[node name="DecoherenceSpawner" type="Node2D"]
+script = ExtResource("1_spawner")

@@ -1,0 +1,261 @@
+[gd_scene load_steps=5 format=3 uid="uid://u1v2w3x4y5z6"]
+
+[ext_resource type="Script" path="res://scripts/HUD.gd" id="1_hud"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_shield_bg"]
+bg_color = Color(0.08, 0.12, 0.18, 0.8)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_shield_fill"]
+bg_color = Color(0.15, 0.85, 1.0, 1.0)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn"]
+bg_color = Color(0.1, 0.18, 0.28, 0.7)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.2, 0.7, 0.9, 0.8)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="TopLeft" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 20.0
+offset_top = 18.0
+offset_right = 260.0
+offset_bottom = 130.0
+
+[node name="VBox" type="VBoxContainer" parent="TopLeft"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 6
+
+[node name="ShieldLabel" type="Label" parent="TopLeft/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "SHIELDS"
+
+[node name="ShieldBar" type="ProgressBar" parent="TopLeft/VBox"]
+custom_minimum_size = Vector2(160, 10)
+layout_mode = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_shield_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_shield_fill")
+max_value = 2.0
+step = 1.0
+value = 2.0
+show_percentage = false
+
+[node name="HullLabel" type="Label" parent="TopLeft/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 1, 0.6, 1)
+theme_override_font_sizes/font_size = 12
+text = "HULL INTEGRITY"
+
+[node name="HullContainer" type="HBoxContainer" parent="TopLeft/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Pip1" type="ColorRect" parent="TopLeft/VBox/HullContainer"]
+custom_minimum_size = Vector2(26, 10)
+layout_mode = 2
+color = Color(0.1, 1, 0.6, 1)
+
+[node name="Pip2" type="ColorRect" parent="TopLeft/VBox/HullContainer"]
+custom_minimum_size = Vector2(26, 10)
+layout_mode = 2
+color = Color(0.1, 1, 0.6, 1)
+
+[node name="Pip3" type="ColorRect" parent="TopLeft/VBox/HullContainer"]
+custom_minimum_size = Vector2(26, 10)
+layout_mode = 2
+color = Color(0.1, 1, 0.6, 1)
+
+[node name="Pip4" type="ColorRect" parent="TopLeft/VBox/HullContainer"]
+custom_minimum_size = Vector2(26, 10)
+layout_mode = 2
+color = Color(0.1, 1, 0.6, 1)
+
+[node name="RollLabel" type="Label" parent="TopLeft/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.8, 1, 1)
+theme_override_font_sizes/font_size = 11
+text = "1942 BARREL ROLL"
+
+[node name="RollContainer" type="HBoxContainer" parent="TopLeft/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Pip1" type="ColorRect" parent="TopLeft/VBox/RollContainer"]
+custom_minimum_size = Vector2(18, 12)
+layout_mode = 2
+color = Color(0.2, 0.9, 1, 1)
+
+[node name="Pip2" type="ColorRect" parent="TopLeft/VBox/RollContainer"]
+custom_minimum_size = Vector2(18, 12)
+layout_mode = 2
+color = Color(0.2, 0.9, 1, 1)
+
+[node name="Pip3" type="ColorRect" parent="TopLeft/VBox/RollContainer"]
+custom_minimum_size = Vector2(18, 12)
+layout_mode = 2
+color = Color(0.2, 0.9, 1, 1)
+
+[node name="TopRight" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -240.0
+offset_top = 18.0
+offset_right = -20.0
+offset_bottom = 120.0
+grow_horizontal = 0
+
+[node name="VBox" type="VBoxContainer" parent="TopRight"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 2
+
+[node name="ScoreLabel" type="Label" parent="TopRight/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "SCORE: 000000"
+horizontal_alignment = 2
+
+[node name="WaveLabel" type="Label" parent="TopRight/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.85, 0.9, 1)
+theme_override_font_sizes/font_size = 14
+text = "WAVE: 1"
+horizontal_alignment = 2
+
+[node name="WipesLabel" type="Label" parent="TopRight/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 14
+text = "WIPES: 0"
+horizontal_alignment = 2
+
+[node name="TopCenter" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -110.0
+offset_top = 16.0
+offset_right = 110.0
+offset_bottom = 52.0
+grow_horizontal = 2
+
+[node name="AxisButton" type="Button" parent="TopCenter"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+text = "MODE: HORIZONTAL (16:9)"
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -140.0
+offset_right = 300.0
+offset_bottom = -60.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(300, 40)
+
+[node name="WipeBanner" type="Label" parent="CenterContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.8)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 24
+text = "100% FORMATION WIPE! +1,000 PTS"
+horizontal_alignment = 1
+
+[node name="MobileControls" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -220.0
+offset_top = -140.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 0
+grow_vertical = 0
+
+[node name="FireButton" type="Button" parent="MobileControls"]
+custom_minimum_size = Vector2(90, 90)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -90.0
+offset_top = -90.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.2, 1, 1, 1)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+text = "FIRE"
+
+[node name="RollButton" type="Button" parent="MobileControls"]
+custom_minimum_size = Vector2(70, 70)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -180.0
+offset_top = -75.0
+offset_right = -110.0
+offset_bottom = -5.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+text = "ROLL"
+
+[connection signal="button_down" from="MobileControls/FireButton" to="." method="_on_fire_button_down"]
+[connection signal="button_up" from="MobileControls/FireButton" to="." method="_on_fire_button_up"]
+[connection signal="pressed" from="MobileControls/RollButton" to="." method="_on_roll_button_pressed"]

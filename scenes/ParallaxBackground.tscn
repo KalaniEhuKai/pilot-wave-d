@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://p2k3l4m5n6o7"]
+
+[ext_resource type="Script" path="res://scripts/ParallaxBackground.gd" id="1_bg"]
+
+[node name="ParallaxBackground" type="Node2D"]
+z_index = -10
+script = ExtResource("1_bg")
