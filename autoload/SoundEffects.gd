@@ -22,6 +22,7 @@ func _ready() -> void:
 	_streams["roll"] = _generate_roll()
 	_streams["bonus"] = _generate_bonus()
 	_streams["hurt"] = _generate_hurt()
+	_streams["quantum_collapse"] = _generate_quantum_collapse()
 
 func play_sfx(name: String, pitch_range: float = 0.08, volume_db: float = 0.0) -> void:
 	if not _streams.has(name):
@@ -163,5 +164,26 @@ func _generate_hurt() -> AudioStreamWAV:
 		var env = 1.0 - (t / duration)
 		var s = (sin(phase) * 0.8 + (randf() * 2.0 - 1.0) * 0.3) * env
 		data[i] = clampi(int((s * 0.8 + 1.0) * 127.5), 0, 255)
+	
+	return _create_stream_from_samples(data, sample_rate)
+
+func _generate_quantum_collapse() -> AudioStreamWAV:
+	var sample_rate = 22050
+	var duration = 0.18
+	var num_samples = int(sample_rate * duration)
+	var data = PackedByteArray()
+	data.resize(num_samples)
+	
+	var phase = 0.0
+	for i in range(num_samples):
+		var t = float(i) / sample_rate
+		var p = t / duration
+		var base_freq = lerpf(840.0, 90.0, pow(p, 0.7))
+		var mod = sin(t * TAU * 52.0) * (180.0 * (1.0 - p))
+		phase += (base_freq + mod) * (TAU / sample_rate)
+		var env = pow(1.0 - p, 0.85)
+		var pop = sin(t * TAU * 65.0) * exp(-p * 4.0) * 0.4
+		var s = (sin(phase) * 0.65 + pop) * env
+		data[i] = clampi(int((s * 0.85 + 1.0) * 127.5), 0, 255)
 	
 	return _create_stream_from_samples(data, sample_rate)

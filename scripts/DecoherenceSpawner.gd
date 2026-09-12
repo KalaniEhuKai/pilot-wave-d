@@ -65,7 +65,10 @@ func _execute_encounter_template(template: Dictionary, squad_id: int) -> void:
 	if hud and hud.has_method("_show_banner"):
 		hud._show_banner("[ WAVE: " + template_name + " ]", Color(0.3, 0.9, 1.0, 1.0))
 	
-	# 1. Spawn Environmental Hazards
+	# 0. Clean up any stale hazards from previous waves to prevent clutter
+	_cleanup_stale_hazards()
+	
+	# 1. Spawn Environmental Hazards along the forward horizon
 	var hazards = template.get("hazards", [])
 	for h_data in hazards:
 		var h_type = h_data.get("type", 0)
@@ -73,11 +76,13 @@ func _execute_encounter_template(template: Dictionary, squad_id: int) -> void:
 		for i in range(count):
 			var hz = hazard_scene.instantiate()
 			get_parent().add_child(hz)
-			var vp = get_viewport_rect().size
-			var pos = Vector2(randf_range(80, vp.x - 80), randf_range(60, vp.y * 0.45))
+			var lat_step = randf_range(0.15, 0.85)
+			# Spawn off-screen along forward horizon, drifting naturally downfield
+			var deep_offset = -GameAxis.scroll_dir * (i * 45.0 + randf_range(15.0, 40.0))
+			var pos = GameAxis.get_spawn_line(lat_step) + deep_offset
 			hz.setup(h_type, pos)
 	
-	# 2. Spawn Enemies
+	# 2. Spawn Enemies from collapsing wave functions along the forward horizon
 	var spawns = template.get("spawns", [])
 	var total_enemy_count = 0
 	for batch in spawns:
@@ -93,58 +98,70 @@ func _execute_encounter_template(template: Dictionary, squad_id: int) -> void:
 		var affix = batch.get("affix", 0)
 		_spawn_pattern_batch(e_type, count, pattern, delay, squad_id, affix)
 
+func _cleanup_stale_hazards() -> void:
+	for h in get_tree().get_nodes_in_group("hazard"):
+		if is_instance_valid(h):
+			if h.has_method("fade_and_despawn"):
+				h.fade_and_despawn()
+			else:
+				h.queue_free()
+
 func _spawn_pattern_batch(e_type: int, count: int, pattern: String, base_delay: float, squad_id: int, affix: int) -> void:
-	var vp = get_viewport_rect().size
-	var fwd = GameAxis.forward
-	var lat = GameAxis.lateral
+	var scroll = GameAxis.scroll_dir
 	
 	match pattern:
-		"RING":
-			var center = Vector2(vp.x * 0.5, vp.y * 0.35)
+		"ROW", "HORIZON_SPREAD":
 			for i in range(count):
-				var a = (float(i) / count) * TAU
-				var r = randf_range(140.0, 220.0)
-				var pos = center + Vector2(cos(a) * r, sin(a) * r)
-				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.04, affix)
-				
-		"ROW":
-			for i in range(count):
-				var lateral_step = 0.2 + (float(i) / maxi(1, count - 1)) * 0.6
+				var lateral_step = 0.18 + (float(i) / maxi(1, count - 1)) * 0.64
 				var pos = GameAxis.get_spawn_line(lateral_step)
 				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.1, affix)
 				
-		"FLANK_LEFT":
+		"SWEEP_ROW", "ECHELON":
 			for i in range(count):
-				var pos = Vector2(-40, 80 + i * 65)
-				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.12, affix)
-				
-		"FLANK_RIGHT":
-			for i in range(count):
-				var pos = Vector2(vp.x + 40, 80 + i * 65)
-				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.12, affix)
-				
-		"FLANK_SPLIT":
-			for i in range(count):
-				var is_left = (i % 2 == 0)
-				var pos = Vector2(-40 if is_left else vp.x + 40, 80 + (i / 2) * 80)
-				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.1, affix)
-				
-		"CENTER":
-			for i in range(count):
-				var pos = GameAxis.get_spawn_line(0.5) + (fwd * i * 45.0)
-				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.2, affix)
+				var lateral_step = 0.15 + (float(i) / maxi(1, count - 1)) * 0.7
+				var deep_offset = -scroll * (i * 26.0)
+				var pos = GameAxis.get_spawn_line(lateral_step) + deep_offset
+				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.16, affix)
 				
 		"V_SHAPE":
 			var mid = int(count * 0.5)
 			for i in range(count):
 				var lateral_step = (float(i) - mid) / float(maxi(1, mid)) * 0.35 + 0.5
-				var pos = GameAxis.get_spawn_line(lateral_step) + fwd * (absf(float(i - mid)) * 36.0)
-				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + absf(float(i - mid)) * 0.1, affix)
+				var deep_offset = -scroll * (absf(float(i - mid)) * 34.0)
+				var pos = GameAxis.get_spawn_line(lateral_step) + deep_offset
+				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + absf(float(i - mid)) * 0.12, affix)
 				
-		_: # RANDOM_TOP
+		"CENTER", "CENTER_STREAM":
+			for i in range(count):
+				var deep_offset = -scroll * (i * 45.0)
+				var pos = GameAxis.get_spawn_line(0.5) + deep_offset
+				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.18, affix)
+				
+		"FLANK_LEFT":
+			for i in range(count):
+				var deep_offset = -scroll * (i * 32.0)
+				var pos = GameAxis.get_spawn_line(0.18) + deep_offset
+				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.14, affix)
+				
+		"FLANK_RIGHT":
+			for i in range(count):
+				var deep_offset = -scroll * (i * 32.0)
+				var pos = GameAxis.get_spawn_line(0.82) + deep_offset
+				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.14, affix)
+				
+		"FLANK_SPLIT", "PINCER_FLANK":
+			for i in range(count):
+				var is_left = (i % 2 == 0)
+				var lateral_step = 0.18 if is_left else 0.82
+				var deep_offset = -scroll * ((i / 2) * 32.0)
+				var pos = GameAxis.get_spawn_line(lateral_step) + deep_offset
+				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.12, affix)
+				
+		_: # RANDOM_HORIZON / Fallback
 			for i in range(count):
 				var lat_step = randf_range(0.15, 0.85)
-				var pos = GameAxis.get_spawn_line(lat_step) + fwd * randf_range(0, 50.0)
+				var deep_offset = -scroll * randf_range(0.0, 40.0)
+				var pos = GameAxis.get_spawn_line(lat_step) + deep_offset
 				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.12, affix)
 
 func _register_squad(squad_id: int, total_count: int) -> void:
@@ -164,7 +181,8 @@ func _queue_quantum_bubble(type: int, pos: Vector2, squad_id: int, delay: float 
 				"squad_id": squad_id,
 				"affix": affix,
 				"elapsed": 0.0,
-				"duration": 0.42
+				"duration": 0.72,
+				"sfx_played": false
 			})
 	)
 
@@ -199,14 +217,40 @@ func _draw() -> void:
 	for b in active_bubbles:
 		var progress = b.elapsed / b.duration
 		var bubble_pos = to_local(b.pos)
-		var base_radius = 28.0 * sin(progress * PI)
 		
-		var fringe_color = Color(0.2, 0.9, 1.0, (1.0 - progress) * 0.8)
-		if b.get("affix", 0) != 0:
-			fringe_color = Color(1.0, 0.8, 0.2, (1.0 - progress) * 0.9)
-			base_radius *= 1.3
+		# Audio cue right as wave function collapses into eigenstate
+		if progress >= 0.85 and not b.get("sfx_played", false):
+			b["sfx_played"] = true
+			SoundEffects.play_sfx("quantum_collapse", 0.08, -3.0)
 		
-		var inner_color = Color(0.8, 0.2, 1.0, (1.0 - progress) * 0.6)
-		draw_arc(bubble_pos, base_radius, 0, TAU, 32, fringe_color, 2.5, true)
-		draw_arc(bubble_pos, base_radius * 0.65, 0, TAU, 24, inner_color, 1.8, true)
-		draw_circle(bubble_pos, 4.0 * (1.0 - progress), Color.WHITE)
+		# Quantum collapsing wave dynamics: wide probability ripples rapidly contract inward
+		var outer_radius = lerpf(52.0, 3.0, pow(progress, 2.2))
+		var inner_radius = outer_radius * 0.6
+		
+		var is_elite = b.get("affix", 0) != 0
+		var primary_col = Color(1.0, 0.8, 0.2) if is_elite else Color(0.2, 0.9, 1.0)
+		var secondary_col = Color(1.0, 0.35, 0.1) if is_elite else Color(0.85, 0.2, 1.0)
+		
+		# 1. Concentric de Broglie phase rings
+		var alpha = (1.0 - progress * 0.4)
+		draw_arc(bubble_pos, outer_radius, 0, TAU, 32, Color(primary_col.r, primary_col.g, primary_col.b, alpha * 0.8), 2.2, true)
+		draw_arc(bubble_pos, inner_radius, 0, TAU, 24, Color(secondary_col.r, secondary_col.g, secondary_col.b, alpha * 0.9), 1.8, true)
+		
+		# 2. Quantum probability brackets / crosshairs contracting toward eigenstate
+		var bracket_dist = outer_radius + 4.0
+		var bracket_len = 7.0 * (1.0 - progress)
+		for dir in [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]:
+			var p_start = bubble_pos + dir * bracket_dist
+			var p_end = bubble_pos + dir * (bracket_dist - bracket_len)
+			draw_line(p_start, p_end, Color(primary_col.r, primary_col.g, primary_col.b, alpha), 1.5)
+		
+		# 3. High-energy eigenstate collapse spark
+		if progress > 0.65:
+			var spark_t = (progress - 0.65) / 0.35
+			var spark_radius = lerpf(2.0, 7.5, spark_t)
+			draw_circle(bubble_pos, spark_radius, Color(1.0, 1.0, 1.0, spark_t))
+			# Crosshair flash
+			var flash_len = spark_radius * 1.6
+			draw_line(bubble_pos - Vector2(flash_len, 0), bubble_pos + Vector2(flash_len, 0), Color.WHITE, 1.5)
+			draw_line(bubble_pos - Vector2(0, flash_len), bubble_pos + Vector2(0, flash_len), Color.WHITE, 1.5)
+

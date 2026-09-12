@@ -342,6 +342,28 @@ func _ready() -> void:
 	assert(mutated_t.has("spawns") and mutated_t["spawns"].size() > 0, "Mutated template invalid!")
 	print(" - 12H: Procedural behavioral mutations and template wildcard system verified.")
 	
+	# 12I. Verify Quantum Collapsing Wave Function Spawning & Downfield Shmup Motion
+	var test_enemy = enemy_scene.instantiate()
+	main_inst.add_child(test_enemy)
+	var spawn_pt = GameAxis.get_spawn_line(0.5)
+	test_enemy.setup(0, spawn_pt, -1, null, 0)
+	var initial_pos = test_enemy.global_position
+	test_enemy._physics_process(0.1)
+	var motion_vector = test_enemy.global_position - initial_pos
+	assert(motion_vector.dot(-GameAxis.forward) > 0.0, "Enemy must advance downfield toward player along -GameAxis.forward!")
+	test_enemy.queue_free()
+
+	# Verify hazard movement along cosmic stream
+	var test_hazard = hazard_scene.instantiate()
+	main_inst.add_child(test_hazard)
+	test_hazard.setup(0, spawn_pt)
+	assert(test_hazard.velocity.dot(GameAxis.scroll_dir) > 0.0, "Hazard must drift along GameAxis.scroll_dir!")
+	test_hazard.queue_free()
+
+	# Verify procedural quantum collapse sound registered
+	assert(SoundEffects._streams.has("quantum_collapse"), "quantum_collapse procedural sound missing!")
+	print(" - 12I: Horizon wave function spawning, cosmic hazard drift, and downfield shmup flight verified.")
+	
 	print("\n====================================================")
 	print("--- ALL VERIFICATION TESTS PASSED 100% CLEANLY ---")
 	print("====================================================")

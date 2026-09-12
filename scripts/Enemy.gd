@@ -258,16 +258,12 @@ func _setup_stats() -> void:
 	# Procedural Behavioral Mutation Traits
 	lateral_frequency = randf_range(1.8, 3.6)
 	lateral_amplitude = randf_range(50.0, 110.0)
-	orbital_direction = 1.0 if randf() > 0.5 else -1.0
-	orbital_radius = randf_range(200.0, 320.0)
+	has_evasive_juke = false
+	has_orbital_flight = false
 	
 	var trait_chance = 0.25 + (sec - 1) * 0.15
-	if randf() < trait_chance and enemy_type in [EnemyType.SCOUT, EnemyType.INTERCEPTOR, EnemyType.KNIGHT_VANGUARD]:
-		has_evasive_juke = true
-	if randf() < trait_chance and enemy_type in [EnemyType.SCOUT, EnemyType.BOMBER]:
+	if randf() < trait_chance and enemy_type in [EnemyType.SCOUT, EnemyType.INTERCEPTOR]:
 		has_desperation_charge = true
-	if randf() < (trait_chance * 0.7) and enemy_type in [EnemyType.SCOUT, EnemyType.SNIPER, EnemyType.DRAINER_LEECH]:
-		has_orbital_flight = true
 	if randf() < trait_chance:
 		has_aimed_lead = true
 	if randf() < (trait_chance * 0.6) and enemy_type in [EnemyType.SCOUT, EnemyType.BOMBER, EnemyType.MISSILE_CORVETTE]:
@@ -315,126 +311,127 @@ func _check_shield_frigate_buffs() -> void:
 				break
 
 func _handle_flight_movement(delta: float) -> void:
-	var fwd = GameAxis.forward
+	var oncoming = -GameAxis.forward
 	var lat = GameAxis.lateral
+	var base_angle = oncoming.angle()
 
-	# 1. Evasive Juking (Dodging close player bullets)
-	if juke_cooldown > 0.0:
-		juke_cooldown -= delta
-	if has_evasive_juke and juke_cooldown <= 0.0:
-		for b in get_tree().get_nodes_in_group("bullet"):
-			if is_instance_valid(b) and not b.get("is_enemy"):
-				if global_position.distance_to(b.global_position) <= 85.0:
-					var dodge_dir = lat * (1.0 if randf() > 0.5 else -1.0)
-					global_position += dodge_dir * 55.0
-					juke_cooldown = 1.4
-					SoundEffects.play_sfx("roll", 0.06, 5.0)
-					break
-
-	# 2. Desperation Kamikaze Charge on Low Health
+	# 1. Desperation Kamikaze Charge on Low Health
+	# Commits to a single focused high-speed charge downfield through player position, then exits screen
 	if has_desperation_charge and health <= max_health * 0.35:
-		var target = _get_closest_player()
-		if target != null:
-			var ram_dir = (target.global_position - global_position).normalized()
-			global_position += ram_dir * speed * 1.8 * delta
-			rotation = ram_dir.angle()
+		if not is_desperation_ramming:
+			var target = _get_closest_player()
+			if target != null:
+				var to_player = (target.global_position - global_position).normalized()
+				if to_player.dot(oncoming) > 0.05:
+					charge_vector = to_player
+				else:
+					charge_vector = oncoming
+			else:
+				charge_vector = oncoming
 			is_desperation_ramming = true
-			return
+			SoundEffects.play_sfx("laser", 0.15, -2.0)
 
-	# 3. Dynamic Orbital Circling
-	if has_orbital_flight:
-		var target = _get_closest_player()
-		if target != null:
-			var to_player = global_position - target.global_position
-			var angle = to_player.angle() + (orbital_direction * 1.6 * delta)
-			global_position = target.global_position + Vector2(cos(angle), sin(angle)) * orbital_radius
-			rotation = (target.global_position - global_position).angle()
-			return
+		global_position += charge_vector * speed * 1.8 * delta
+		rotation = charge_vector.angle()
+		return
 
 	match enemy_type:
 		EnemyType.SCOUT:
-			# Classic sine weave
-			var forward_motion = fwd * speed * delta
-			var lat_offset = sin(flight_time * lateral_frequency) * lateral_amplitude
-			global_position = spawn_pos + (fwd * speed * flight_time) + (lat * lat_offset)
-			rotation = fwd.angle()
+			# Classic smooth sine weave advancing downfield
+			var forward_step = oncoming * speed * delta
+			var lat_step = lat * cos(flight_time * lateral_frequency) * lateral_amplitude * delta
+			global_position += forward_step + lat_step
+			rotation = base_angle
 
-		EnemyType.BOMBER, EnemyType.HEAVY_CRUISER, EnemyType.DRONE_CARRIER:
-			# Slow forward advance with slight banking
-			global_position += fwd * speed * delta
-			rotation = fwd.angle()
+		EnemyType.BOMBER, EnemyType.HEAVY_CRUISER, EnemyType.DRONE_CARRIER, EnemyType.SHIELD_FRIGATE, EnemyType.DRAINER_LEECH, EnemyType.ORBITAL_REFLECTOR:
+			# Steady forward advance downfield into the combat arena
+			global_position += oncoming * speed * delta
+			rotation = base_angle
 
 		EnemyType.INTERCEPTOR:
-			# Dives toward player position once target is spotted
+			# High-speed strike craft: advances downfield, locks dive vector downfield when player is sighted, streaks through off-screen
 			if not is_charging:
 				var target = _get_closest_player()
 				if target != null:
-					charge_vector = (target.global_position - global_position).normalized()
-					is_charging = true
+					var to_player = (target.global_position - global_position).normalized()
+					if to_player.dot(oncoming) > 0.1:
+						charge_vector = to_player
+						is_charging = true
+					else:
+						charge_vector = oncoming
 				else:
-					charge_vector = fwd
-			global_position += charge_vector * speed * delta
+					charge_vector = oncoming
+			global_position += charge_vector * (speed * 1.4 if is_charging else speed) * delta
 			rotation = charge_vector.angle()
 
 		EnemyType.KNIGHT_VANGUARD:
-			# Slow, relentless forward march with directional shield facing forward
-			global_position += fwd * speed * delta
-			rotation = fwd.angle()
+			# Relentless forward march with forward-facing mirror shield
+			global_position += oncoming * speed * delta
+			rotation = base_angle
 
 		EnemyType.MICRO_DRONE:
-			# Swarms directly toward player
+			# Fast forward swarm: high forward velocity with gentle lateral drift toward player corridor
 			var target = _get_closest_player()
+			var lat_drift = Vector2.ZERO
 			if target != null:
-				var dir = (target.global_position - global_position).normalized()
-				global_position += dir * speed * delta
-				rotation = dir.angle()
-			else:
-				global_position += fwd * speed * delta
+				var lat_diff = (target.global_position - global_position).dot(lat)
+				lat_drift = lat * clampf(lat_diff * 1.4, -speed * 0.35, speed * 0.35)
+			var swarm_vel = oncoming * speed + lat_drift
+			global_position += swarm_vel * delta
+			rotation = swarm_vel.angle()
 
 		EnemyType.SNIPER:
-			# Slow drift, anchors at perimeter
+			# Advances from spawn horizon, then anchors in forward perimeter to snipe
 			var vp = get_viewport_rect().size
-			if global_position.y < vp.y * 0.35:
-				global_position += fwd * speed * delta
-			rotation = fwd.angle()
+			var in_station = false
+			if GameAxis.is_vertical:
+				in_station = (global_position.y >= vp.y * 0.26)
+			else:
+				in_station = (global_position.x <= vp.x * 0.74)
+
+			if not in_station:
+				global_position += oncoming * speed * delta
+			rotation = base_angle
 
 		EnemyType.PHANTOM:
-			# Teleports behind player during cloak
+			# Cloaks and drifts downfield unseen, decloaks in the forward sector ahead of the player
 			phantom_timer -= delta
 			if phantom_timer <= 0.0:
 				phantom_is_cloaked = not phantom_is_cloaked
 				phantom_timer = 2.4 if phantom_is_cloaked else 3.2
-				if phantom_is_cloaked:
+				if not phantom_is_cloaked:
 					var target = _get_closest_player()
 					if target != null:
-						# Teleport behind player
-						global_position = target.global_position - (fwd * 180.0) + (lat * randf_range(-100, 100))
-			if not phantom_is_cloaked:
-				global_position += fwd * speed * delta
-			rotation = fwd.angle()
+						global_position = target.global_position + (oncoming * randf_range(200.0, 320.0)) + (lat * randf_range(-140.0, 140.0))
+			global_position += oncoming * speed * (1.2 if phantom_is_cloaked else 0.8) * delta
+			rotation = base_angle
 
 		EnemyType.WARP_STALKER:
-			# Periodically teleports
+			# Quantum phase-shifter: warps strictly within forward staging sector
 			warp_timer -= delta
 			if warp_timer <= 0.0:
-				warp_timer = 3.0
+				warp_timer = 3.2
 				var vp = get_viewport_rect().size
-				global_position = Vector2(randf_range(80, vp.x - 80), randf_range(60, vp.y * 0.5))
-				_fire_radial_burst(4, 300.0)
-			global_position += fwd * speed * delta * 0.4
-			rotation = fwd.angle()
+				if GameAxis.is_vertical:
+					global_position = Vector2(randf_range(80, vp.x - 80), randf_range(60, vp.y * 0.32))
+				else:
+					global_position = Vector2(randf_range(vp.x * 0.68, vp.x - 60), randf_range(80, vp.y - 80))
+				_fire_radial_burst(4, 280.0)
+			global_position += oncoming * speed * delta * 0.35
+			rotation = base_angle
 
 		EnemyType.TURRET_PLATFORM:
-			# Anchored station; rotates its cannon toward player
+			# Heavy anchored fortress; slowly drifts while its cannon traverses to target player
 			var target = _get_closest_player()
 			if target != null:
 				turret_angle = (target.global_position - global_position).angle()
-			global_position += fwd * speed * delta
+			global_position += oncoming * speed * delta * 0.4
+			rotation = base_angle
 
 		_:
-			# Default forward flight
-			global_position += fwd * speed * delta
-			rotation = fwd.angle()
+			# Default downfield forward flight
+			global_position += oncoming * speed * delta
+			rotation = base_angle
 
 func _handle_combat_abilities(delta: float) -> void:
 	# Carrier drone spawning
@@ -467,7 +464,7 @@ func _execute_attack() -> void:
 	if phantom_is_cloaked or enemy_type == EnemyType.MICRO_DRONE or enemy_type == EnemyType.SNIPER:
 		return
 
-	var fwd = GameAxis.forward
+	var oncoming = -GameAxis.forward
 	var lat = GameAxis.lateral
 
 	# Procedural Attack Trait: Aimed Lead Prediction
@@ -483,35 +480,35 @@ func _execute_attack() -> void:
 	# Procedural Attack Trait: Burst Spread
 	if has_burst_spread and enemy_type in [EnemyType.SCOUT, EnemyType.BOMBER, EnemyType.MISSILE_CORVETTE]:
 		for a in [-16.0, 0.0, 16.0]:
-			var d = fwd.rotated(deg_to_rad(a))
+			var d = oncoming.rotated(deg_to_rad(a))
 			_spawn_enemy_bullet(global_position + d * 18.0, d, 1.0, 400.0)
 		return
 
 	match enemy_type:
 		EnemyType.SCOUT:
-			_spawn_enemy_bullet(global_position + fwd * 14.0, fwd, 1.0, 420.0)
+			_spawn_enemy_bullet(global_position + oncoming * 14.0, oncoming, 1.0, 420.0)
 		EnemyType.BOMBER:
-			_spawn_enemy_bullet(global_position + fwd * 20.0 - lat * 12.0, fwd, 1.5, 340.0)
-			_spawn_enemy_bullet(global_position + fwd * 20.0 + lat * 12.0, fwd, 1.5, 340.0)
+			_spawn_enemy_bullet(global_position + oncoming * 20.0 - lat * 12.0, oncoming, 1.5, 340.0)
+			_spawn_enemy_bullet(global_position + oncoming * 20.0 + lat * 12.0, oncoming, 1.5, 340.0)
 		EnemyType.HEAVY_CRUISER:
 			# 5-way sweeping fan volley
 			for a in [-24.0, -12.0, 0.0, 12.0, 24.0]:
-				var d = fwd.rotated(deg_to_rad(a))
+				var d = oncoming.rotated(deg_to_rad(a))
 				_spawn_enemy_bullet(global_position + d * 22.0, d, 1.2, 380.0)
 		EnemyType.TURRET_PLATFORM:
 			var d = Vector2.RIGHT.rotated(turret_angle)
 			_spawn_enemy_bullet(global_position + d * 18.0, d, 1.0, 450.0)
 		EnemyType.MISSILE_CORVETTE:
-			_spawn_enemy_bullet(global_position - lat * 15.0, fwd.rotated(-0.25), 1.0, 280.0)
-			_spawn_enemy_bullet(global_position + lat * 15.0, fwd.rotated(0.25), 1.0, 280.0)
+			_spawn_enemy_bullet(global_position - lat * 15.0, oncoming.rotated(-0.25), 1.0, 280.0)
+			_spawn_enemy_bullet(global_position + lat * 15.0, oncoming.rotated(0.25), 1.0, 280.0)
 		EnemyType.MINE_TETHER:
 			_fire_radial_burst(6, 260.0)
 		_:
-			_spawn_enemy_bullet(global_position + fwd * 15.0, fwd, 1.0, 400.0)
+			_spawn_enemy_bullet(global_position + oncoming * 15.0, oncoming, 1.0, 400.0)
 
 func _fire_sniper_beam() -> void:
 	var target = _get_closest_player()
-	var dir = (target.global_position - global_position).normalized() if target != null else GameAxis.forward
+	var dir = (target.global_position - global_position).normalized() if target != null else -GameAxis.forward
 	var b = bullet_scene.instantiate()
 	get_parent().add_child(b)
 	b.setup(global_position + dir * 25.0, dir, true, 2.5)
@@ -567,8 +564,8 @@ func take_damage(amount: float) -> void:
 		var players = get_tree().get_nodes_in_group("player")
 		if not players.is_empty() and is_instance_valid(players[0]):
 			var to_player = (players[0].global_position - global_position).normalized()
-			var dot = to_player.dot(GameAxis.forward)
-			# If player is in front (positive dot along flight direction)
+			var dot = to_player.dot(-GameAxis.forward)
+			# If player is in front (positive dot along oncoming direction)
 			if dot > 0.2:
 				SoundEffects.play_sfx("hit", 0.1, 7.0)
 				# Sparks/deflected

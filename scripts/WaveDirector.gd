@@ -68,7 +68,7 @@ static func get_all_templates() -> Array[Dictionary]:
 				{"type": HZ_ASTEROID, "count": 2}
 			],
 			"spawns": [
-				{"type": MICRO_DRONE, "count": 10, "pattern": "RING", "delay": 0.0, "affix": AFFIX_NONE},
+				{"type": MICRO_DRONE, "count": 10, "pattern": "HORIZON_SPREAD", "delay": 0.0, "affix": AFFIX_NONE},
 				{"type": SCOUT, "count": 4, "pattern": "RANDOM_TOP", "delay": 2.0, "affix": AFFIX_NONE}
 			]
 		},
@@ -103,7 +103,7 @@ static func get_all_templates() -> Array[Dictionary]:
 				{"type": HZ_PLASMA_BARREL, "count": 2}
 			],
 			"spawns": [
-				{"type": SCOUT, "count": 12, "pattern": "RING", "delay": 0.0, "affix": AFFIX_NONE}
+				{"type": SCOUT, "count": 12, "pattern": "SWEEP_ROW", "delay": 0.0, "affix": AFFIX_NONE}
 			]
 		},
 		{
@@ -271,7 +271,7 @@ static func get_all_templates() -> Array[Dictionary]:
 				{"type": HZ_STORM_CELL, "count": 2}
 			],
 			"spawns": [
-				{"type": PHANTOM, "count": 6, "pattern": "RING", "delay": 0.0, "affix": AFFIX_SWIFT},
+				{"type": PHANTOM, "count": 6, "pattern": "HORIZON_SPREAD", "delay": 0.0, "affix": AFFIX_SWIFT},
 				{"type": SNIPER, "count": 2, "pattern": "FLANK_SPLIT", "delay": 2.5, "affix": AFFIX_NONE}
 			]
 		},
@@ -296,7 +296,7 @@ static func get_all_templates() -> Array[Dictionary]:
 				{"type": HZ_PLASMA_BARREL, "count": 3}
 			],
 			"spawns": [
-				{"type": WARP_STALKER, "count": 4, "pattern": "RING", "delay": 0.0, "affix": AFFIX_VOLATILE},
+				{"type": WARP_STALKER, "count": 4, "pattern": "SWEEP_ROW", "delay": 0.0, "affix": AFFIX_VOLATILE},
 				{"type": INTERCEPTOR, "count": 6, "pattern": "ROW", "delay": 2.0, "affix": AFFIX_SWIFT}
 			]
 		},
@@ -311,7 +311,7 @@ static func get_all_templates() -> Array[Dictionary]:
 			"spawns": [
 				{"type": HEAVY_CRUISER, "count": 1, "pattern": "CENTER", "delay": 0.0, "affix": AFFIX_ARMORED},
 				{"type": DRONE_CARRIER, "count": 1, "pattern": "FLANK_LEFT", "delay": 1.5, "affix": AFFIX_NONE},
-				{"type": PHANTOM, "count": 4, "pattern": "RING", "delay": 3.0, "affix": AFFIX_NONE},
+				{"type": PHANTOM, "count": 4, "pattern": "HORIZON_SPREAD", "delay": 3.0, "affix": AFFIX_NONE},
 				{"type": SNIPER, "count": 2, "pattern": "FLANK_RIGHT", "delay": 4.5, "affix": AFFIX_VOLATILE}
 			]
 		},
@@ -338,7 +338,7 @@ static func get_all_templates() -> Array[Dictionary]:
 			"spawns": [
 				{"type": HEAVY_CRUISER, "count": 2, "pattern": "FLANK_SPLIT", "delay": 0.0, "affix": AFFIX_VOLATILE},
 				{"type": MISSILE_CORVETTE, "count": 2, "pattern": "ROW", "delay": 2.0, "affix": AFFIX_ARMORED},
-				{"type": WARP_STALKER, "count": 3, "pattern": "RING", "delay": 4.0, "affix": AFFIX_NONE}
+				{"type": WARP_STALKER, "count": 3, "pattern": "SWEEP_ROW", "delay": 4.0, "affix": AFFIX_NONE}
 			]
 		},
 		{
@@ -352,7 +352,7 @@ static func get_all_templates() -> Array[Dictionary]:
 			"spawns": [
 				{"type": DRONE_CARRIER, "count": 2, "pattern": "ROW", "delay": 0.0, "affix": AFFIX_NONE},
 				{"type": DRAINER_LEECH, "count": 2, "pattern": "FLANK_SPLIT", "delay": 2.0, "affix": AFFIX_SWIFT},
-				{"type": PHANTOM, "count": 4, "pattern": "RING", "delay": 3.5, "affix": AFFIX_VOLATILE}
+				{"type": PHANTOM, "count": 4, "pattern": "HORIZON_SPREAD", "delay": 3.5, "affix": AFFIX_VOLATILE}
 			]
 		},
 		{
@@ -366,7 +366,7 @@ static func get_all_templates() -> Array[Dictionary]:
 			"spawns": [
 				{"type": HEAVY_CRUISER, "count": 1, "pattern": "CENTER", "delay": 0.0, "affix": AFFIX_ARMORED},
 				{"type": MINE_TETHER, "count": 3, "pattern": "ROW", "delay": 2.0, "affix": AFFIX_VOLATILE},
-				{"type": WARP_STALKER, "count": 3, "pattern": "RING", "delay": 3.5, "affix": AFFIX_SWIFT}
+				{"type": WARP_STALKER, "count": 3, "pattern": "SWEEP_ROW", "delay": 3.5, "affix": AFFIX_SWIFT}
 			]
 		}
 	]

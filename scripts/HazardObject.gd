@@ -29,26 +29,32 @@ func _ready() -> void:
 	_setup_hazard()
 
 func _setup_hazard() -> void:
+	var scroll = GameAxis.scroll_dir
+	var lat = GameAxis.lateral
 	match hazard_type:
 		HazardType.ASTEROID:
 			max_health = 16.0
 			health = max_health
 			radius = randf_range(20.0, 32.0)
 			rotation_speed = randf_range(-1.2, 1.2)
-			var angle = randf() * TAU
-			velocity = Vector2(cos(angle), sin(angle)) * randf_range(20.0, 60.0)
+			var scroll_speed = randf_range(75.0, 110.0)
+			var lat_drift = randf_range(-20.0, 20.0)
+			velocity = (scroll * scroll_speed) + (lat * lat_drift)
 		HazardType.PLASMA_BARREL:
 			max_health = 2.0
 			health = max_health
 			radius = 16.0
 			rotation_speed = 0.2
-			velocity = Vector2(0, randf_range(15.0, 35.0))
+			var scroll_speed = randf_range(65.0, 95.0)
+			var lat_drift = randf_range(-12.0, 12.0)
+			velocity = (scroll * scroll_speed) + (lat * lat_drift)
 		HazardType.STORM_CELL:
 			max_health = 9999.0
 			health = max_health
 			radius = 65.0
 			rotation_speed = 0.1
-			velocity = Vector2(0, 10.0)
+			var scroll_speed = 45.0
+			velocity = scroll * scroll_speed
 
 func setup(p_type: HazardType, p_pos: Vector2) -> void:
 	hazard_type = p_type
@@ -60,11 +66,18 @@ func _physics_process(delta: float) -> void:
 	global_position += velocity * delta
 	rotation += rotation_speed * delta
 	
-	# Wrap or despawn when far off screen
-	var vp = get_viewport_rect().size
-	if global_position.x < -120 or global_position.x > vp.x + 120 or global_position.y < -120 or global_position.y > vp.y + 120:
+	# Despawn when drifted past the screen along scroll direction
+	if GameAxis.is_out_of_bounds(global_position, 80.0):
 		queue_free()
 		return
+
+func fade_and_despawn() -> void:
+	var tween = create_tween()
+	if tween:
+		tween.tween_property(self, "modulate:a", 0.0, 0.45)
+		tween.tween_callback(queue_free)
+	else:
+		queue_free()
 	
 	if hazard_type == HazardType.STORM_CELL:
 		_apply_storm_slowdown()
