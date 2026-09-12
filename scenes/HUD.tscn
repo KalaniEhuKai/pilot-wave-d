@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://u1v2w3x4y5z6"]
+[gd_scene load_steps=7 format=3 uid="uid://u1v2w3x4y5z6"]
 
 [ext_resource type="Script" path="res://scripts/HUD.gd" id="1_hud"]
 
@@ -10,7 +10,7 @@ corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_shield_fill"]
-bg_color = Color(0.15, 0.85, 1.0, 1.0)
+bg_color = Color(0.15, 0.85, 1, 1)
 corner_radius_top_left = 3
 corner_radius_top_right = 3
 corner_radius_bottom_right = 3
@@ -28,7 +28,31 @@ corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
-[node name="HUD" type="CanvasLayer"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_modal"]
+bg_color = Color(0.05, 0.08, 0.14, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.2, 0.85, 1, 0.9)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
+bg_color = Color(0.08, 0.14, 0.22, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.3, 0.6, 0.8, 0.7)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="HUD" type="CanvasLayer" groups=["hud"]]
 script = ExtResource("1_hud")
 
 [node name="TopLeft" type="Control" parent="."]
@@ -36,8 +60,8 @@ layout_mode = 3
 anchors_preset = 0
 offset_left = 20.0
 offset_top = 18.0
-offset_right = 260.0
-offset_bottom = 130.0
+offset_right = 300.0
+offset_bottom = 180.0
 
 [node name="VBox" type="VBoxContainer" parent="TopLeft"]
 layout_mode = 1
@@ -46,16 +70,16 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 5
 
 [node name="ShieldLabel" type="Label" parent="TopLeft/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.4, 0.9, 1, 1)
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 11
 text = "SHIELDS"
 
 [node name="ShieldBar" type="ProgressBar" parent="TopLeft/VBox"]
-custom_minimum_size = Vector2(160, 10)
+custom_minimum_size = Vector2(160, 8)
 layout_mode = 2
 theme_override_styles/background = SubResource("StyleBoxFlat_shield_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_shield_fill")
@@ -67,30 +91,30 @@ show_percentage = false
 [node name="HullLabel" type="Label" parent="TopLeft/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.2, 1, 0.6, 1)
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 11
 text = "HULL INTEGRITY"
 
 [node name="HullContainer" type="HBoxContainer" parent="TopLeft/VBox"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 5
 
 [node name="Pip1" type="ColorRect" parent="TopLeft/VBox/HullContainer"]
-custom_minimum_size = Vector2(26, 10)
+custom_minimum_size = Vector2(24, 8)
 layout_mode = 2
 color = Color(0.1, 1, 0.6, 1)
 
 [node name="Pip2" type="ColorRect" parent="TopLeft/VBox/HullContainer"]
-custom_minimum_size = Vector2(26, 10)
+custom_minimum_size = Vector2(24, 8)
 layout_mode = 2
 color = Color(0.1, 1, 0.6, 1)
 
 [node name="Pip3" type="ColorRect" parent="TopLeft/VBox/HullContainer"]
-custom_minimum_size = Vector2(26, 10)
+custom_minimum_size = Vector2(24, 8)
 layout_mode = 2
 color = Color(0.1, 1, 0.6, 1)
 
 [node name="Pip4" type="ColorRect" parent="TopLeft/VBox/HullContainer"]
-custom_minimum_size = Vector2(26, 10)
+custom_minimum_size = Vector2(24, 8)
 layout_mode = 2
 color = Color(0.1, 1, 0.6, 1)
 
@@ -98,36 +122,47 @@ color = Color(0.1, 1, 0.6, 1)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.3, 0.8, 1, 1)
 theme_override_font_sizes/font_size = 11
-text = "1942 BARREL ROLL"
+text = "BARREL ROLL CHARGES"
 
 [node name="RollContainer" type="HBoxContainer" parent="TopLeft/VBox"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 5
 
 [node name="Pip1" type="ColorRect" parent="TopLeft/VBox/RollContainer"]
-custom_minimum_size = Vector2(18, 12)
+custom_minimum_size = Vector2(16, 10)
 layout_mode = 2
 color = Color(0.2, 0.9, 1, 1)
 
 [node name="Pip2" type="ColorRect" parent="TopLeft/VBox/RollContainer"]
-custom_minimum_size = Vector2(18, 12)
+custom_minimum_size = Vector2(16, 10)
 layout_mode = 2
 color = Color(0.2, 0.9, 1, 1)
 
 [node name="Pip3" type="ColorRect" parent="TopLeft/VBox/RollContainer"]
-custom_minimum_size = Vector2(18, 12)
+custom_minimum_size = Vector2(16, 10)
 layout_mode = 2
 color = Color(0.2, 0.9, 1, 1)
+
+[node name="SynergyLabel" type="Label" parent="TopLeft/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.8, 0.95, 1)
+theme_override_font_sizes/font_size = 11
+text = "SYNERGY RIBBON"
+
+[node name="SynergyRibbon" type="HBoxContainer" parent="TopLeft/VBox"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+theme_override_constants/separation = 8
 
 [node name="TopRight" type="Control" parent="."]
 layout_mode = 3
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -240.0
+offset_left = -260.0
 offset_top = 18.0
 offset_right = -20.0
-offset_bottom = 120.0
+offset_bottom = 130.0
 grow_horizontal = 0
 
 [node name="VBox" type="VBoxContainer" parent="TopRight"]
@@ -142,21 +177,28 @@ alignment = 2
 [node name="ScoreLabel" type="Label" parent="TopRight/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.2, 0.95, 1, 1)
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 20
 text = "SCORE: 000000"
+horizontal_alignment = 2
+
+[node name="JoulesLabel" type="Label" parent="TopRight/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 14
+text = "JOULES: 0 J"
 horizontal_alignment = 2
 
 [node name="WaveLabel" type="Label" parent="TopRight/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.8, 0.85, 0.9, 1)
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 13
 text = "WAVE: 1"
 horizontal_alignment = 2
 
 [node name="WipesLabel" type="Label" parent="TopRight/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 13
 text = "WIPES: 0"
 horizontal_alignment = 2
 
@@ -168,7 +210,7 @@ anchor_right = 0.5
 offset_left = -110.0
 offset_top = 16.0
 offset_right = 110.0
-offset_bottom = 52.0
+offset_bottom = 48.0
 grow_horizontal = 2
 
 [node name="AxisButton" type="Button" parent="TopCenter"]
@@ -178,7 +220,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 11
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
 text = "MODE: HORIZONTAL (16:9)"
 
@@ -255,6 +297,196 @@ theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
 theme_override_font_sizes/font_size = 14
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
 text = "ROLL"
+
+[node name="ItemChoiceModal" type="Control" parent="."]
+process_mode = 3
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ColorRect" type="ColorRect" parent="ItemChoiceModal"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.04, 0.07, 0.8)
+
+[node name="Panel" type="Panel" parent="ItemChoiceModal"]
+custom_minimum_size = Vector2(620, 360)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -310.0
+offset_top = -180.0
+offset_right = 310.0
+offset_bottom = 180.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_modal")
+
+[node name="VBox" type="VBoxContainer" parent="ItemChoiceModal/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 20.0
+offset_right = -24.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 16
+
+[node name="Header" type="Label" parent="ItemChoiceModal/Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 20
+text = "QUANTUM RELIC DISCOVERED - SELECT SYNERGY"
+horizontal_alignment = 1
+
+[node name="HBox" type="HBoxContainer" parent="ItemChoiceModal/Panel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 20
+
+[node name="CardA" type="Panel" parent="ItemChoiceModal/Panel/VBox/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="TitleA" type="Label" parent="ItemChoiceModal/Panel/VBox/HBox/CardA"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 12.0
+offset_top = 14.0
+offset_right = -12.0
+offset_bottom = 38.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 15
+text = "Relic Alpha"
+horizontal_alignment = 1
+
+[node name="TierA" type="Label" parent="ItemChoiceModal/Panel/VBox/HBox/CardA"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 12.0
+offset_top = 38.0
+offset_right = -12.0
+offset_bottom = 56.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 10
+text = "TIER 1"
+horizontal_alignment = 1
+
+[node name="DescA" type="Label" parent="ItemChoiceModal/Panel/VBox/HBox/CardA"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 66.0
+offset_right = -16.0
+offset_bottom = -58.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.85, 0.9, 0.95, 1)
+theme_override_font_sizes/font_size = 12
+text = "Description here."
+autowrap_mode = 2
+
+[node name="EquipBtnA" type="Button" parent="ItemChoiceModal/Panel/VBox/HBox/CardA"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 18.0
+offset_top = -48.0
+offset_right = -18.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.2, 1, 0.85, 1)
+theme_override_font_sizes/font_size = 13
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+text = "EQUIP RELIC"
+
+[node name="CardB" type="Panel" parent="ItemChoiceModal/Panel/VBox/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="TitleB" type="Label" parent="ItemChoiceModal/Panel/VBox/HBox/CardB"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 12.0
+offset_top = 14.0
+offset_right = -12.0
+offset_bottom = 38.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 15
+text = "Relic Beta"
+horizontal_alignment = 1
+
+[node name="TierB" type="Label" parent="ItemChoiceModal/Panel/VBox/HBox/CardB"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 12.0
+offset_top = 38.0
+offset_right = -12.0
+offset_bottom = 56.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 10
+text = "TIER 2"
+horizontal_alignment = 1
+
+[node name="DescB" type="Label" parent="ItemChoiceModal/Panel/VBox/HBox/CardB"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 66.0
+offset_right = -16.0
+offset_bottom = -58.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.85, 0.9, 0.95, 1)
+theme_override_font_sizes/font_size = 12
+text = "Description here."
+autowrap_mode = 2
+
+[node name="EquipBtnB" type="Button" parent="ItemChoiceModal/Panel/VBox/HBox/CardB"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 18.0
+offset_top = -48.0
+offset_right = -18.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.2, 1, 0.85, 1)
+theme_override_font_sizes/font_size = 13
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+text = "EQUIP RELIC"
 
 [connection signal="button_down" from="MobileControls/FireButton" to="." method="_on_fire_button_down"]
 [connection signal="button_up" from="MobileControls/FireButton" to="." method="_on_fire_button_up"]

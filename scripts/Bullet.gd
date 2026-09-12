@@ -1,6 +1,6 @@
 extends Area2D
 
-## Bullet.gd - High-readability relativistic particle projectile for player and enemy weaponry.
+## Bullet.gd - High-readability projectile with combinatorial synergy hooks (Homing, Splitting, Suspension).
 
 @export var is_enemy: bool = false:
 	set(value):
@@ -17,6 +17,13 @@ var glow_color: Color = Color(0.2, 0.95, 1.0, 1.0)
 var length: float = 16.0
 var radius: float = 4.0
 
+# Synergy variables
+var traveled_distance: float = 0.0
+var has_split: bool = false
+var is_suspended: bool = false
+var suspension_timer: float = 0.0
+var suspension_ship: CharacterBody2D = null
+
 func _ready() -> void:
 	_update_colors()
 	area_entered.connect(_on_area_entered)
@@ -24,23 +31,19 @@ func _ready() -> void:
 
 func _update_colors() -> void:
 	if is_enemy:
-		# High-contrast bright magenta with dark outer rim for enemy bullets
 		core_color = Color(1.0, 0.9, 0.95, 1.0)
 		glow_color = Color(1.0, 0.1, 0.65, 0.9)
 		speed = 420.0
 		length = 10.0
 		radius = 5.0
-		# Set collision layers: Enemy bullet is on layer 4, masks layer 1 (Player)
 		collision_layer = 8
 		collision_mask = 1
 	else:
-		# Bright cyan with hot white core for player bullets
 		core_color = Color(0.85, 1.0, 1.0, 1.0)
 		glow_color = Color(0.1, 0.85, 1.0, 0.9)
 		speed = 950.0
 		length = 18.0
 		radius = 3.5
-		# Set collision layers: Player bullet is on layer 2, masks layer 4 (Enemy)
 		collision_layer = 2
 		collision_mask = 4
 
@@ -54,13 +57,48 @@ func setup(p_pos: Vector2, p_dir: Vector2, p_is_enemy: bool = false, p_dmg: floa
 	queue_redraw()
 
 func _physics_process(delta: float) -> void:
-	global_position += direction * speed * delta
+	if is_suspended:
+		suspension_timer += delta
+		# Slingshot burst on fire release or timeout (2.0s)
+		var should_release = false
+		if is_instance_valid(suspension_ship):
+			if not suspension_ship.is_firing or suspension_timer >= 2.0:
+				should_release = true
+		else:
+			should_release = true
+		
+		if should_release:
+			is_suspended = false
+			speed *= 1.45
+			SoundEffects.play_sfx("laser", 0.15, -2.0)
+		else:
+			queue_redraw()
+			return # Do not move while suspended
+	
+	# Projectile modifier hooks (e.g. Gravitational Lensing, Birefringence Prism)
+	if not is_enemy:
+		var players = get_tree().get_nodes_in_group("player")
+		if not players.is_empty() and is_instance_valid(players[0]):
+			var player = players[0]
+			for mod in player.active_modifiers:
+				mod.on_projectile_tick(self, delta)
+	
+	var step = speed * delta
+	global_position += direction * step
+	traveled_distance += step
 	
 	if GameAxis.is_out_of_bounds(global_position, 60.0):
 		queue_free()
 
 func _draw() -> void:
-	# Draw glowing outer capsule
+	if is_suspended:
+		# Pulsing antimatter suspension plasma orb
+		var pulse = 1.0 + sin(suspension_timer * 18.0) * 0.25
+		draw_circle(Vector2.ZERO, radius * 3.2 * pulse, Color(1.0, 0.2, 0.5, 0.35))
+		draw_circle(Vector2.ZERO, radius * 1.8, Color(1.0, 0.4, 0.7, 0.8))
+		draw_circle(Vector2.ZERO, radius * 0.9, Color.WHITE)
+		return
+	
 	var start_pt = Vector2(-length * 0.5, 0)
 	var end_pt = Vector2(length * 0.5, 0)
 	
