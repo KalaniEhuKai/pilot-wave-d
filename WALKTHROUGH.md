@@ -173,6 +173,98 @@ STEP 5: Testing Sector 1 Boss: Super-Dreadnought Corvus...
 
 ---
 
+## Phase 4 Accomplishments: Threat Director, Deep Item Roster & Boss Asymmetry
+
+### 1. Adaptive Threat Budget Director (`WaveDirector.gd`)
+- **Real-Time Difficulty Scaling**: Evaluates current sector number, wave index, and player active synergy count to calculate a dynamic wave threat point budget.
+- **Formation Library**:
+  - `V_FORMATION`: Heavy fighter spearhead escorted by 4 wingmen diving in unison.
+  - `SINE_DIVE`: Evasive acrobatic scout squadron tracing sinusoidal curves across the screen.
+  - `PINCER_FLANK`: Dual twin squadrons collapsing simultaneously from opposite screen boundaries.
+  - `ESCORT_COLUMN`: Heavily shielded bombers escorted by defensive interceptors.
+  - `ELITE_CHAMPION`: Guaranteed wave 4 miniboss challenge.
+
+### 2. Expanded 20+ Tri-Tier Quantum Synergy Relic Library (`ItemDatabase.gd`)
+1. **Elastic Momentum Transfer** (*Tier 1 Ballistic*): Bullets ricochet off screen boundaries and enemy chassis up to 2 times, gaining +25% kinetic damage on bounce.
+2. **Feynman Propagator** (*Tier 1 Ballistic*): Bullets leave glowing vacuum ionization trails that burn passing hostiles.
+3. **Zeeman Splitting** (*Tier 1 Ballistic*): Magnetic field divergence emits twin rear-firing counter-projectiles whenever primary cannon fires.
+4. **Cherenkov Radiator** (*Tier 1 Ballistic*): Fatal projectile hits detonate enemies into a luminous blue radiation shockwave damaging all nearby targets.
+5. **Heisenberg Uncertainty Lens** (*Tier 1 Ballistic*): Shots undergo quantum erratic jitter with a 25% chance of rolling a +150% critical damage spike.
+6. **Tachyon Capacitor** (*Tier 2 Paradigm Mutator*): Holding primary fire charges a high-density relativistic beam; releasing unleashes a hyper-lance that pierces all targets in its line of fire.
+7. **Carnot Heat Sink** (*Tier 2 Paradigm Mutator*): Emergency thermal overclocking: whenever shields are fully depleted, primary fire rate is doubled!
+8. **Quantum Tunneling Wavepacket** (*Tier 2 Paradigm Mutator*): Bullets phase directly through enemy shielding and heavy armor plates with zero damage attenuation (up to 3 pierces).
+9. **Lagrange Satellites** (*Tier 3 Exotic Relic*): Spawns 2 quantum orbital drones revolving around your ship, vaporizing incoming enemy bullets and firing support micro-lasers.
+10. **Carnot Efficiency** (*Tier 3 Exotic Relic*): Thermal superconductivity grants a permanent 50% discount on all Sky Merchant wares and reroll fees.
+11. **Dirac Inversion Field** (*Tier 3 Exotic Relic*): The Inverted Time Anchor. Absorbs fatal hull damage once per run, rewinding time, clearing all hostile bullets via EMP, and restoring 1 shield pip.
+12. **Bell State Entanglement** (*Tier 3 Exotic Relic*): Collecting scrap or firing resonates between ships/orbitals, granting +30% shared damage and doubling magnet radius.
+
+### 3. Sector Threat Dossier UI (`ThreatDossier.gd`)
+- Holographic tactical briefing card displayed upon sector launch.
+- Reports Sector Codename, Designated Flagship Target, Threat Class, Environmental Hazards, and Tactical Directive.
+- Dismissable via `[ENGAGE COMBAT PATROL]` button or `[Enter]`.
+
+### 4. Asymmetric Sector 1 Boss: Armored Behemoth Goliath (`BossGoliath.gd`)
+- Asymmetric fortress carrier counter to *Corvus*:
+  - **Heavy Bow Armor Plating (40 HP)**: Frontal armor shield protecting internal subsystems.
+  - **Twin Railgun Batteries (50 HP each)**: Charges sweeping red/orange targeting laser lines before discharging high-velocity plasma blasts.
+  - **Internal Fighter Hangars**: Deploys interceptor escort drones to harass the player.
+  - **Goliath Fusion Reactor Core (100 HP)**: High-heat reactor exposed once bow armor is ruptured.
+  - **Victory Bounty**: +15,000 pts, 10 scrap pellets, an Item Choice Crate, and Sector Cleared banner.
+
+---
+
+## Phase 4 Verification Results
+
+All automated tests passed 100% cleanly in headless Godot 4.7.2 (`TestRunner.tscn`):
+
+```text
+====================================================
+--- STARTING PHASE 4 AUTOMATED TEST SUITE ---
+====================================================
+STEP 1: Main.tscn instantiated with Threat Dossier, Wave Director & Bosses.
+
+STEP 2: Testing 2-Player Local Co-Op & Zero-Friction Economy...
+ - P1 (Cyan) found at (256.0, 576.0) | P2 (Amber) found at (256.0, 768.0)
+ - SUCCESS: Zero-friction scrap replication verified! (+10 J P1, +10 J P2)
+
+STEP 3: Testing Sky Merchant Zeppelin & Reroll Terminal...
+ - SUCCESS: Sky Merchant docking, safety purge, and escalating rerolls verified.
+
+STEP 4: Testing Secret Systems (Quantum Anomaly & Dirac Monopole)...
+ - SUCCESS: Quantum Anomaly shattered! Awarded scrap and secret bonus.
+ - SUCCESS: Legendary Dirac Monopole shattered (+10,000 pts & Full Hull Repair).
+
+STEP 5: Testing Sector 1 Boss: Super-Dreadnought Corvus...
+ - SUCCESS: Super-Dreadnought Corvus defeated with subsystem detonations!
+
+STEP 6: Testing Adaptive Wave Director Threat Budget & Formations...
+ - Budget Wave 1: 50.0 | Budget Wave 4: 83.0
+ - SUCCESS: Wave Director budget scaling and formation selection verified.
+
+STEP 7: Testing Expanded 20+ Quantum Synergy Relics...
+ - 7A: Elastic Momentum ricochet and damage scaling verified.
+ - 7B: Tachyon Capacitor charge shot and piercing lance verified.
+ - 7C: Lagrange Satellites orbital defense drones verified.
+ - 7D: Dirac Inversion fatal damage rewind verified.
+ - 7E: Carnot Efficiency 50% shop discount verified.
+
+STEP 8: Testing Sector Threat Dossier Briefing...
+ - SUCCESS: Threat Dossier presentation and engagement verified.
+
+STEP 9: Testing Asymmetric Sector 1 Boss: Armored Behemoth Goliath...
+ - Goliath spawned. Total HP: 240.000000
+ - Goliath Bow Armor shattered!
+ - Goliath Port Railgun Battery offline!
+ - Goliath Starboard Railgun Battery offline!
+ - SUCCESS: Armored Behemoth Goliath obliterated! Defeat signal triggered.
+
+====================================================
+--- ALL PHASE 4 EXPANDED SYNERGY & BOSS TESTS PASSED 100% ---
+====================================================
+```
+
+---
+
 ## How to Play
 
 Launch the game using the Godot 4 console executable:

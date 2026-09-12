@@ -125,4 +125,8 @@ func _handle_hit(target: Node2D) -> void:
 		if target.is_in_group("enemy") and target.has_method("take_damage"):
 			target.take_damage(damage)
 			SoundEffects.play_sfx("hit", 0.15, -4.0)
-			queue_free()
+			var pierce = get_meta("pierce_count", 0)
+			if pierce > 0:
+				set_meta("pierce_count", pierce - 1)
+			else:
+				queue_free()

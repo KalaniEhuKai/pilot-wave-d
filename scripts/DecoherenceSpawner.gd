@@ -40,6 +40,8 @@ func _process(delta: float) -> void:
 	
 	queue_redraw()
 
+var wave_director: WaveDirector = WaveDirector.new()
+
 func _trigger_next_wave() -> void:
 	var squad_id = next_squad_id
 	next_squad_id += 1
@@ -52,17 +54,22 @@ func _trigger_next_wave() -> void:
 	if not players.is_empty() and is_instance_valid(players[0]):
 		players[0].trigger_wave_start_hooks(current_wave_num)
 	
-	var is_elite_wave = (current_wave_num % 4 == 0)
+	var budget = wave_director.calculate_wave_budget(GameManager.current_sector, current_wave_num, players)
+	var formation = wave_director.select_formation_for_wave(current_wave_num, budget)
 	
-	if is_elite_wave:
-		_spawn_elite_champion_wave(squad_id)
-	else:
-		var wave_pattern = (current_wave_num - 1) % 4
-		match wave_pattern:
-			0: _spawn_scout_v_formation(squad_id, 5)
-			1: _spawn_pincer_formation(squad_id, 3)
-			2: _spawn_bomber_echelon(squad_id, 3)
-			3: _spawn_strike_group(squad_id)
+	match formation:
+		WaveDirector.FormationType.ELITE_CHAMPION:
+			_spawn_elite_champion_wave(squad_id)
+		WaveDirector.FormationType.V_FORMATION:
+			_spawn_scout_v_formation(squad_id, 5)
+		WaveDirector.FormationType.SINE_DIVE:
+			_spawn_sine_dive(squad_id, 5)
+		WaveDirector.FormationType.PINCER_FLANK:
+			_spawn_pincer_formation(squad_id, 3)
+		WaveDirector.FormationType.ESCORT_COLUMN:
+			_spawn_bomber_echelon(squad_id, 3)
+		_:
+			_spawn_strike_group(squad_id)
 
 func _register_squad(squad_id: int, total_count: int) -> void:
 	squads[squad_id] = {
@@ -99,6 +106,16 @@ func _spawn_scout_v_formation(squad_id: int, count: int) -> void:
 		var fwd_offset = absf(float(i - mid)) * 36.0
 		pos += GameAxis.forward * fwd_offset
 		_queue_quantum_bubble(0, pos, squad_id, absf(float(i - mid)) * 0.1)
+
+func _spawn_sine_dive(squad_id: int, count: int) -> void:
+	_register_squad(squad_id, count)
+	for i in range(count):
+		var t = float(i) / float(maxi(1, count - 1))
+		var lat_step = 0.2 + t * 0.6
+		var pos = GameAxis.get_spawn_line(lat_step)
+		var sine_fwd = sin(t * PI) * 50.0
+		pos += GameAxis.forward * sine_fwd
+		_queue_quantum_bubble(0, pos, squad_id, i * 0.12)
 
 func _spawn_pincer_formation(squad_id: int, per_side: int) -> void:
 	_register_squad(squad_id, per_side * 2)

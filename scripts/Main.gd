@@ -8,9 +8,11 @@ extends Node2D
 @onready var spawner: Node2D = $DecoherenceSpawner
 @onready var shop: CanvasLayer = $SkyMerchant
 @onready var secrets: Node2D = $SecretDirector
+@onready var dossier: CanvasLayer = $ThreatDossier
 
 var player_scene: PackedScene = preload("res://scenes/Player.tscn")
-var boss_scene: PackedScene = preload("res://scenes/BossCorvus.tscn")
+var boss_corvus_scene: PackedScene = preload("res://scenes/BossCorvus.tscn")
+var boss_goliath_scene: PackedScene = preload("res://scenes/BossGoliath.tscn")
 
 var p1_instance: CharacterBody2D = null
 var p2_instance: CharacterBody2D = null
@@ -22,11 +24,15 @@ var shake_timer: float = 0.0
 
 var shop_visited: bool = false
 var boss_spawned: bool = false
+var chosen_boss_name: String = "Super-Dreadnought Corvus"
 
 func _ready() -> void:
 	GameManager.screen_shake_requested.connect(_on_screen_shake_requested)
 	GameAxis.axis_changed.connect(_on_axis_changed)
 	get_viewport().size_changed.connect(_on_viewport_resized)
+	
+	# Procedural / Seeded asymmetric boss selection for Sector 1
+	chosen_boss_name = "Armored Behemoth Goliath" if (randf() > 0.5) else "Super-Dreadnought Corvus"
 	
 	_center_camera()
 	_spawn_p1()
@@ -38,6 +44,12 @@ func _ready() -> void:
 		shop.undocked.connect(func():
 			if is_instance_valid(spawner):
 				spawner.wave_timer = 2.5
+		)
+	
+	# Display Sector Threat Dossier briefing card at launch
+	if is_instance_valid(dossier):
+		get_tree().create_timer(0.05).timeout.connect(func():
+			dossier.show_dossier(GameManager.current_sector, chosen_boss_name)
 		)
 
 func _center_camera() -> void:
@@ -123,7 +135,8 @@ func _spawn_sector_boss() -> void:
 		if is_instance_valid(b) and b.get("is_enemy"):
 			b.queue_free()
 	
-	var boss = boss_scene.instantiate()
+	var boss_packed = boss_goliath_scene if chosen_boss_name == "Armored Behemoth Goliath" else boss_corvus_scene
+	var boss = boss_packed.instantiate()
 	add_child(boss)
 
 func _on_axis_changed(_is_vertical: bool) -> void:

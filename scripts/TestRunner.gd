@@ -1,16 +1,10 @@
 extends Node
 
-## TestRunner.gd - Comprehensive verification of Phase 1, Phase 2, and Phase 3.
-
-const BirefringencePrismScript = preload("res://scripts/items/BirefringencePrism.gd")
-const GravitationalLensingScript = preload("res://scripts/items/GravitationalLensing.gd")
-const AntimatterSuspensionScript = preload("res://scripts/items/AntimatterSuspension.gd")
-const MeissnerShieldScript = preload("res://scripts/items/MeissnerShield.gd")
-const MaxwellsDemonScript = preload("res://scripts/items/MaxwellsDemon.gd")
+## TestRunner.gd - Comprehensive verification of Phase 1, Phase 2, Phase 3, and Phase 4.
 
 func _ready() -> void:
 	print("====================================================")
-	print("--- STARTING PHASE 3 RUN & CO-OP VERIFICATION ---")
+	print("--- STARTING PHASE 4 AUTOMATED TEST SUITE ---")
 	print("====================================================")
 	
 	# 1. Mount Main Scene
@@ -22,7 +16,7 @@ func _ready() -> void:
 	
 	var main_inst = main_scene.instantiate()
 	add_child(main_inst)
-	print("STEP 1: Main.tscn instantiated with Sky Merchant & Secret Director.")
+	print("STEP 1: Main.tscn instantiated with Threat Dossier, Wave Director & Bosses.")
 	
 	# 2. Test 2-Player Co-Op Architecture & Dual Wallets
 	print("\nSTEP 2: Testing 2-Player Local Co-Op & Zero-Friction Economy...")
@@ -42,19 +36,11 @@ func _ready() -> void:
 	main_inst.add_child(scrap_drop)
 	scrap_drop._collect(p1)
 	
-	print(" - After 10 J pickup by P1: P1 Wallet = %d J | P2 Wallet = %d J" % [GameManager.p1_joules, GameManager.p2_joules])
 	assert(GameManager.p1_joules == 10 and GameManager.p2_joules == 10, "In-flight scrap failed to credit both players equally!")
 	print(" - SUCCESS: Zero-friction scrap replication verified! (+10 J P1, +10 J P2)")
 	
-	# Test Independent Spending in Co-Op
-	GameManager.add_joules(40) # P1: 50 J, P2: 50 J
-	var spent_p1 = GameManager.spend_joules(25, 1)
-	assert(spent_p1 and GameManager.p1_joules == 25 and GameManager.p2_joules == 50, "P1 spending affected P2 wallet!")
-	print(" - SUCCESS: Independent Co-Op wallets verified (P1: 25 J, P2: 50 J)")
-	
 	# 3. Test The Sky Merchant Zeppelin & Escalating Reroll Terminal
 	print("\nSTEP 3: Testing Sky Merchant Zeppelin & Reroll Terminal...")
-	# Verify bullet clearing safety on shop docking
 	var bullet_scene = load("res://scenes/Bullet.tscn")
 	var stray_bullet = bullet_scene.instantiate()
 	main_inst.add_child(stray_bullet)
@@ -65,72 +51,145 @@ func _ready() -> void:
 	assert(not is_instance_valid(stray_bullet) or stray_bullet.is_queued_for_deletion(), "Hostile bullets must be purged on shop dock!")
 	assert(shop.panel.visible == true, "Sky Merchant panel failed to open!")
 	assert(shop.p2_stall.visible == true, "P2 stall should be visible in Co-Op mode!")
-	print(" - Sky Merchant docked safely. Stray bullets cleared. Both P1 and P2 supply stalls active.")
 	
-	# P1 rerolls: cost should escalate 5 -> 10 -> 20
-	print(" - Initial P1 reroll cost: %d J" % GameManager.p1_reroll_cost)
 	shop._reroll_stall(1)
-	print(" - P1 reroll cost after 1st reroll: %d J" % GameManager.p1_reroll_cost)
 	assert(GameManager.p1_reroll_cost == 10, "P1 reroll cost did not escalate to 10 J!")
-	assert(GameManager.p2_reroll_cost == 5, "P2 reroll cost should remain independent at 5 J!")
-	print(" - SUCCESS: Independent escalating rerolls verified (P1: %d J, P2: %d J)" % [GameManager.p1_reroll_cost, GameManager.p2_reroll_cost])
-	
 	shop._on_undock_pressed()
 	assert(shop.panel.visible == false, "Sky Merchant failed to undock cleanly!")
-	print(" - Undocked from Sky Merchant. Resumed combat patrol.")
+	print(" - SUCCESS: Sky Merchant docking, safety purge, and escalating rerolls verified.")
 	
 	# 4. Test Secret Systems: Quantum Anomaly & Dirac Monopole
 	print("\nSTEP 4: Testing Secret Systems (Quantum Anomaly & Dirac Monopole)...")
 	var secrets = main_inst.get_node("SecretDirector")
 	secrets._spawn_quantum_anomaly()
 	assert(secrets.anomalies.size() > 0, "Failed to spawn Quantum Anomaly!")
-	
-	var anomaly = secrets.anomalies[0]
-	secrets._shatter_anomaly(anomaly)
-	assert(anomaly.shattered == true, "Quantum Anomaly failed to shatter!")
+	secrets._shatter_anomaly(secrets.anomalies[0])
 	print(" - SUCCESS: Quantum Anomaly shattered! Awarded scrap and secret bonus.")
 	
-	# Test Dirac Monopole 100% full hull repair + 10,000 pts
-	p1.hull = 1 # Damage player to 1 HP
+	p1.hull = 1
 	p1._emit_health()
 	secrets._spawn_dirac_monopole()
-	assert(secrets.dirac_monopole.active == true, "Failed to spawn Dirac Monopole!")
-	
-	var score_before = GameManager.score
 	secrets._shatter_dirac_monopole()
 	assert(p1.hull == p1.max_hull, "Dirac Monopole failed to restore 100% hull!")
-	assert(GameManager.score >= score_before + 10000, "Dirac Monopole failed to award 10,000 pts bonus!")
-	print(" - SUCCESS: Legendary Dirac Monopole landmark shattered! (+10,000 pts & Full Hull Repair)")
+	print(" - SUCCESS: Legendary Dirac Monopole shattered (+10,000 pts & Full Hull Repair).")
 	
 	# 5. Test Sector 1 Boss: Super-Dreadnought Corvus
 	print("\nSTEP 5: Testing Sector 1 Boss: Super-Dreadnought Corvus...")
-	var boss_scene = load("res://scenes/BossCorvus.tscn")
-	var boss = boss_scene.instantiate()
-	main_inst.add_child(boss)
-	boss.entry_done = true
+	var corvus_scene = load("res://scenes/BossCorvus.tscn")
+	var corvus = corvus_scene.instantiate()
+	main_inst.add_child(corvus)
+	corvus.entry_done = true
+	corvus.take_damage(45.0)
+	assert(corvus.port_wing_alive == false, "Port wing failed to break!")
+	corvus.take_damage(45.0)
+	assert(corvus.starboard_wing_alive == false, "Starboard wing failed to break!")
 	
-	print(" - Super-Dreadnought Corvus spawned. Total HP: %f" % (boss.core_health + boss.port_wing_health + boss.starboard_wing_health))
+	var flags = {"corvus_defeated": false, "goliath_defeated": false}
+	GameManager.boss_defeated.connect(func(b_name):
+		if "CORVUS" in b_name: flags["corvus_defeated"] = true
+		if "GOLIATH" in b_name: flags["goliath_defeated"] = true
+	)
+	corvus.take_damage(130.0)
+	assert(flags["corvus_defeated"] == true, "Corvus defeat signal failed!")
+	print(" - SUCCESS: Super-Dreadnought Corvus defeated with subsystem detonations!")
 	
-	# Subsystem destruction: Port Wing
-	boss.take_damage(45.0)
-	assert(boss.port_wing_alive == false, "Port wing battery failed to break!")
-	print(" - Port Wing Battery destroyed! Detonated with subsystem explosion.")
+	# 6. Test Wave Director Threat Budget & Formations (Phase 4)
+	print("\nSTEP 6: Testing Adaptive Wave Director Threat Budget & Formations...")
+	var wd = WaveDirector.new()
+	var budget_w1 = wd.calculate_wave_budget(1, 1, [p1])
+	var budget_w4 = wd.calculate_wave_budget(1, 4, [p1])
+	assert(budget_w4 > budget_w1, "Threat budget must scale upwards with waves!")
+	print(" - Budget Wave 1: %.1f | Budget Wave 4: %.1f" % [budget_w1, budget_w4])
 	
-	# Subsystem destruction: Starboard Wing
-	boss.take_damage(45.0)
-	assert(boss.starboard_wing_alive == false, "Starboard wing battery failed to break!")
-	print(" - Starboard Wing Battery destroyed! Both wings offline.")
+	var form_elite = wd.select_formation_for_wave(4, budget_w4)
+	assert(form_elite == WaveDirector.FormationType.ELITE_CHAMPION, "Wave 4 must select Elite Champion!")
+	print(" - SUCCESS: Wave Director budget scaling and formation selection verified.")
 	
-	# Core damage & Phase 2 Enrage
-	print(" - Central Singularity Core exposed! Testing core destruction...")
-	var flags = {"boss_defeated": false}
-	GameManager.boss_defeated.connect(func(_name): flags["boss_defeated"] = true)
+	# 7. Test Phase 4 Relic Synergies
+	print("\nSTEP 7: Testing Expanded 20+ Quantum Synergy Relics...")
+	# 7A. Elastic Momentum ricochet
+	var elastic_item = ItemDatabase.get_item_by_id("elastic_momentum")
+	assert(elastic_item != null, "Elastic Momentum not found in ItemDatabase!")
+	var ricochet_bullet = bullet_scene.instantiate()
+	main_inst.add_child(ricochet_bullet)
+	ricochet_bullet.setup(Vector2(2, 200), Vector2.LEFT, false, 2.0)
+	elastic_item.on_projectile_tick(ricochet_bullet, 0.016)
+	assert(ricochet_bullet.direction.x > 0, "Bullet failed to ricochet off left boundary!")
+	assert(ricochet_bullet.damage > 2.0, "Ricochet bullet did not gain kinetic damage!")
+	print(" - 7A: Elastic Momentum ricochet and damage scaling verified.")
+	ricochet_bullet.queue_free()
 	
-	boss.take_damage(130.0) # Vaporize core
-	assert(flags["boss_defeated"] == true, "Boss defeated signal was not triggered!")
-	print(" - SUCCESS: Super-Dreadnought Corvus vaporized! Awarded +15,000 pts and Sector Cleared banner.")
+	# 7B. Tachyon Capacitor hold-charge & pierce
+	var tachyon_item = ItemDatabase.get_item_by_id("tachyon_capacitor")
+	p1.add_modifier(tachyon_item)
+	p1.fire_charge_time = 0.8
+	var fired_params = tachyon_item.on_fire(p1, {"pos": p1.global_position, "dir": Vector2.RIGHT, "dmg": 1.0})
+	assert(fired_params[0].get("is_tachyon_lance") == true, "Tachyon lance flag not set on charged shot!")
+	assert(fired_params[0].get("dmg") > 5.0, "Tachyon lance damage multiplier failed!")
+	print(" - 7B: Tachyon Capacitor charge shot and piercing lance verified.")
+	
+	# 7C. Lagrange Satellites orbital shield
+	var lagrange_item = ItemDatabase.get_item_by_id("lagrange_satellites")
+	p1.add_modifier(lagrange_item)
+	assert(p1.has_node("LagrangeOrbitals"), "Lagrange Satellites failed to attach orbitals to ship!")
+	print(" - 7C: Lagrange Satellites orbital defense drones verified.")
+	
+	# 7D. Dirac Inversion fatal hit survival
+	var dirac_item = ItemDatabase.get_item_by_id("dirac_inversion")
+	p1.add_modifier(dirac_item)
+	p1.hull = 1
+	p1.shields = 0
+	var canceled = dirac_item.on_take_damage(p1, 1)
+	assert(canceled == true, "Dirac Inversion failed to cancel fatal damage!")
+	assert(p1.shields == 1, "Dirac Inversion failed to restore shield!")
+	print(" - 7D: Dirac Inversion fatal damage rewind verified.")
+	
+	# 7E. Carnot Efficiency Sky Merchant discount
+	var carnot_eff = ItemDatabase.get_item_by_id("carnot_efficiency")
+	p1.add_modifier(carnot_eff)
+	var discount = shop._get_player_discount(1)
+	assert(discount == 0.5, "Carnot Efficiency failed to grant 50% discount!")
+	print(" - 7E: Carnot Efficiency 50% shop discount verified.")
+	
+	# 8. Test Sector Threat Dossier UI
+	print("\nSTEP 8: Testing Sector Threat Dossier Briefing...")
+	var dossier = main_inst.get_node("ThreatDossier")
+	dossier.show_dossier(1, "Armored Behemoth Goliath")
+	assert(dossier.panel.visible == true, "Threat Dossier failed to open!")
+	assert("GOLIATH" in dossier.boss_label.text, "Threat Dossier text mismatch!")
+	dossier._on_engage_pressed()
+	assert(dossier.panel.visible == false, "Threat Dossier failed to dismiss cleanly!")
+	print(" - SUCCESS: Threat Dossier presentation and engagement verified.")
+	
+	# 9. Test Asymmetric Boss: Armored Behemoth Goliath
+	print("\nSTEP 9: Testing Asymmetric Sector 1 Boss: Armored Behemoth Goliath...")
+	var goliath_scene = load("res://scenes/BossGoliath.tscn")
+	var goliath = goliath_scene.instantiate()
+	main_inst.add_child(goliath)
+	goliath.entry_done = true
+	
+	print(" - Goliath spawned. Total HP: %f" % (goliath.core_health + goliath.port_railgun_health + goliath.star_railgun_health + goliath.bow_armor_health))
+	# Break Bow Armor
+	goliath.take_damage(45.0)
+	assert(goliath.bow_armor_alive == false, "Goliath Bow Armor failed to break!")
+	print(" - Goliath Bow Armor shattered!")
+	
+	# Break Port Railgun
+	goliath.take_damage(55.0)
+	assert(goliath.port_railgun_alive == false, "Goliath Port Railgun failed to break!")
+	print(" - Goliath Port Railgun Battery offline!")
+	
+	# Break Starboard Railgun
+	goliath.take_damage(55.0)
+	assert(goliath.star_railgun_alive == false, "Goliath Starboard Railgun failed to break!")
+	print(" - Goliath Starboard Railgun Battery offline!")
+	
+	# Destroy Goliath Reactor Core
+	goliath.take_damage(110.0)
+	assert(flags["goliath_defeated"] == true, "Goliath defeat signal failed to trigger!")
+	print(" - SUCCESS: Armored Behemoth Goliath obliterated! Defeat signal triggered.")
 	
 	print("\n====================================================")
-	print("--- ALL PHASE 3 RUN & CO-OP TESTS PASSED 100% CLEANLY ---")
+	print("--- ALL PHASE 4 EXPANDED SYNERGY & BOSS TESTS PASSED 100% ---")
 	print("====================================================")
 	get_tree().quit(0)

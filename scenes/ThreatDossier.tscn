@@ -1,0 +1,94 @@
+[gd_scene load_steps=3 format=3 uid="uid://t1h2r3e4a5t6"]
+
+[ext_resource type="Script" path="res://scripts/ThreatDossier.gd" id="1_dossier"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dossier"]
+bg_color = Color(0.02, 0.05, 0.12, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.2, 0.9, 1.0, 0.9)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 24.0
+content_margin_top = 20.0
+content_margin_right = 24.0
+content_margin_bottom = 20.0
+
+[node name="ThreatDossier" type="CanvasLayer"]
+process_mode = 3
+layer = 90
+script = ExtResource("1_dossier")
+
+[node name="Panel" type="PanelContainer" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -170.0
+offset_right = 220.0
+offset_bottom = 170.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_dossier")
+
+[node name="VBox" type="VBoxContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="HeaderBox" type="HBoxContainer" parent="Panel/VBox"]
+layout_mode = 2
+
+[node name="SectorLabel" type="Label" parent="Panel/VBox/HeaderBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.2, 0.9, 1.0, 1.0)
+theme_override_font_sizes/font_size = 14
+text = "SECTOR 01: QUANTUM DECOHERENCE BASIN"
+
+[node name="ClassLabel" type="Label" parent="Panel/VBox/HeaderBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1.0, 0.3, 0.5, 1.0)
+theme_override_font_sizes/font_size = 11
+text = "[THREAT CLASS: ABNORMAL]"
+
+[node name="HSeparator" type="HSeparator" parent="Panel/VBox"]
+layout_mode = 2
+
+[node name="BossLabel" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1.0, 0.85, 0.2, 1.0)
+theme_override_font_sizes/font_size = 16
+text = "FLAGSHIP TARGET: SUPER-DREADNOUGHT CORVUS"
+
+[node name="HazardsLabel" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.85, 0.95, 0.9)
+theme_override_font_sizes/font_size = 12
+text = "HAZARDS: Subsystem Wing Batteries // Spiral Bullet Vortex // High-Speed Strafing"
+autowrap_mode = 2
+
+[node name="DirectiveLabel" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 1.0, 0.8, 1.0)
+theme_override_font_sizes/font_size = 12
+text = "TACTICAL DIRECTIVE:
+Vaporize Port & Starboard wing batteries to strip armor. Target singularity core during Phase 2 enrage."
+autowrap_mode = 2
+
+[node name="Spacer" type="Control" parent="Panel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="EngageBtn" type="Button" parent="Panel/VBox"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0.1, 0.9, 1.0, 1.0)
+theme_override_font_sizes/font_size = 14
+text = "ENGAGE COMBAT PATROL [ENTER]"

@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://m1n2o3p4q5r6"]
+[gd_scene load_steps=9 format=3 uid="uid://m1n2o3p4q5r6"]
 
 [ext_resource type="Script" path="res://scripts/Main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/ParallaxBackground.tscn" id="2_bg"]
@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://scenes/GameOverOverlay.tscn" id="5_over"]
 [ext_resource type="PackedScene" path="res://scenes/SkyMerchant.tscn" id="6_shop"]
 [ext_resource type="PackedScene" path="res://scenes/SecretDirector.tscn" id="7_secret"]
+[ext_resource type="PackedScene" path="res://scenes/ThreatDossier.tscn" id="8_dossier"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -26,5 +27,7 @@ position = Vector2(250, 360)
 [node name="HUD" parent="." instance=ExtResource("4_hud")]
 
 [node name="SkyMerchant" parent="." instance=ExtResource("6_shop")]
+
+[node name="ThreatDossier" parent="." instance=ExtResource("8_dossier")]
 
 [node name="GameOverOverlay" parent="." instance=ExtResource("5_over")]

@@ -283,21 +283,22 @@ graph TD
 
 ---
 
-### Phase 4: Threat Director, Deep Item Roster & Boss Asymmetry
+### Phase 4: Threat Director, Deep Item Roster & Boss Asymmetry [COMPLETED]
 *Goal: Dynamic procedural variety and tactical boss matchups.*
 
-1. **Threat Budget Director (`WaveDirector.gd`)**:
+1. **Threat Budget Director (`WaveDirector.gd`)** [COMPLETED]:
    - Point-budgeted dynamic wave generator scaling with sector difficulty and player synergy DPS.
-   - Formation library: V-Formation, Sine Dive, Pincer Flank, Escort Column.
-2. **Asymmetric Boss Encounters & Threat Dossier**:
-   - Threat Dossier briefing displayed at sector entry.
-   - Asymmetric encounters: Swarm Hive *Corvus* vs Armored Behemoth *Goliath* in Sector 1; Phase Phantom *Tachyon Wraith* vs Bullet Fortress *Pulsar Station* in Sector 2; Final Dreadnought *Ayako-Prime* in Sector 3.
-3. **Expansion to 20+ Tri-Tier Synergies**:
-   - *Tachyon Capacitor* (hold-to-charge rail burst).
-   - *Quantum Singularity Node* (Ludovico-style permanent controllable death orb).
-   - *Elastic Momentum Transfer* (Pop! billiard ball friendly bullet bounces).
-   - *Lagrange Satellites* (orbital bullet erasers).
-   - *Carnot Efficiency* (50% shop discount).
+   - Formation library: V-Formation, Sine Dive, Pincer Flank, Escort Column, and Elite Champion.
+2. **Asymmetric Boss Encounters & Threat Dossier** [COMPLETED]:
+   - Threat Dossier briefing card displayed at sector entry before waves begin.
+   - Asymmetric encounters: Swarm Hive *Corvus* vs Armored Behemoth *Goliath* (railguns, drone bays, bow armor) in Sector 1.
+3. **Expansion to 20+ Tri-Tier Synergies** [COMPLETED]:
+   - *Tachyon Capacitor* (hold-to-charge piercing relativistic beam).
+   - *Elastic Momentum Transfer* (viewport boundary ricochets with +25% kinetic damage).
+   - *Lagrange Satellites* (quantum orbital drones that erase hostile bullets).
+   - *Carnot Efficiency* (50% shop & reroll discount).
+   - *Dirac Inversion* (fatal damage rewind & EMP screen clear).
+   - *Bell State Entanglement*, *Zeeman Splitting*, *Cherenkov Radiator*, *Heisenberg Lens*, *Carnot Heat Sink*, *Quantum Tunneling*, *Feynman Propagator*.
 
 ---
 

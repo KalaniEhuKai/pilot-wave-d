@@ -76,16 +76,24 @@ func _populate_items_grid(grid: GridContainer, items: Array[ItemModifier], playe
 		desc.custom_minimum_size = Vector2(160, 48)
 		card_vbox.add_child(desc)
 		
+		var discount = _get_player_discount(player_id)
+		var cost = int(25 * discount)
 		var buy_btn = Button.new()
-		buy_btn.text = "BUY - 25 J"
+		buy_btn.text = "BUY - %d J" % cost
 		buy_btn.focus_mode = Control.FOCUS_NONE
-		buy_btn.pressed.connect(func(): _buy_item(it, card, player_id))
+		buy_btn.pressed.connect(func(): _buy_item(it, card, player_id, cost))
 		card_vbox.add_child(buy_btn)
 		
 		grid.add_child(card)
 
-func _buy_item(item: ItemModifier, card_node: Node, player_id: int) -> void:
-	var cost = 25
+func _get_player_discount(player_id: int) -> float:
+	for p in get_tree().get_nodes_in_group("player"):
+		if is_instance_valid(p) and p.player_id == player_id:
+			if p.get("has_carnot_efficiency") == true:
+				return 0.5
+	return 1.0
+
+func _buy_item(item: ItemModifier, card_node: Node, player_id: int, cost: int = 25) -> void:
 	if GameManager.spend_joules(cost, player_id):
 		SoundEffects.play_sfx("bonus", 0.08, 4.0)
 		for p in get_tree().get_nodes_in_group("player"):
@@ -94,7 +102,7 @@ func _buy_item(item: ItemModifier, card_node: Node, player_id: int) -> void:
 		card_node.queue_free()
 
 func _buy_repair(player_id: int) -> void:
-	var cost = 15
+	var cost = int(15 * _get_player_discount(player_id))
 	if GameManager.spend_joules(cost, player_id):
 		SoundEffects.play_sfx("bonus", 0.05, 1.0)
 		for p in get_tree().get_nodes_in_group("player"):
@@ -103,7 +111,8 @@ func _buy_repair(player_id: int) -> void:
 				p._emit_health()
 
 func _reroll_stall(player_id: int) -> void:
-	var cost = GameManager.p1_reroll_cost if player_id == 1 else GameManager.p2_reroll_cost
+	var base_cost = GameManager.p1_reroll_cost if player_id == 1 else GameManager.p2_reroll_cost
+	var cost = int(base_cost * _get_player_discount(player_id))
 	if GameManager.spend_joules(cost, player_id):
 		SoundEffects.play_sfx("roll", 0.08, 2.0)
 		_generate_stall_items(player_id)

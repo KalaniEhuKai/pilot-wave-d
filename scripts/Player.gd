@@ -54,6 +54,12 @@ var thruster_color: Color = Color(0.0, 0.7, 1.0, 0.9)
 var bullet_scene: PackedScene = preload("res://scenes/Bullet.tscn")
 var explosion_scene: PackedScene = preload("res://scenes/Explosion.tscn")
 
+# Synergy state flags
+var fire_charge_time: float = 0.0
+var has_tachyon_capacitor: bool = false
+var has_carnot_heatsink: bool = false
+var has_carnot_efficiency: bool = false
+
 func _ready() -> void:
 	add_to_group("player")
 	_setup_player_identity()
@@ -184,8 +190,17 @@ func _handle_shooting(delta: float) -> void:
 	var fire_action = "p2_fire" if player_id == 2 else "fire"
 	is_firing = Input.is_action_pressed(fire_action) or auto_fire
 	
+	if is_firing:
+		fire_charge_time += delta
+	else:
+		fire_charge_time = 0.0
+	
+	var effective_rate = fire_rate
+	if has_carnot_heatsink and shields <= 0:
+		effective_rate *= 2.0
+	
 	if is_firing and fire_timer <= 0.0 and not is_rolling:
-		fire_timer = 1.0 / fire_rate
+		fire_timer = 1.0 / effective_rate
 		_fire_synchrotron()
 
 func _fire_synchrotron() -> void:
@@ -223,6 +238,17 @@ func _spawn_bullet_from_params(params: Dictionary) -> void:
 	if params.has("is_suspended") and params["is_suspended"]:
 		b.is_suspended = true
 		b.suspension_ship = self
+	
+	if params.has("is_tachyon_lance") and params["is_tachyon_lance"]:
+		b.scale = Vector2(2.5, 1.4)
+		b.glow_color = Color(1.0, 0.2, 0.4, 1.0)
+		b.set_meta("pierce_count", 999)
+	
+	if params.has("pierce_count"):
+		b.set_meta("pierce_count", params["pierce_count"])
+	
+	if params.has("is_spectral") and params["is_spectral"]:
+		b.modulate = Color(0.7, 0.4, 1.0, 0.75)
 
 func _handle_barrel_roll(delta: float) -> void:
 	var roll_action = "p2_barrel_roll" if player_id == 2 else "barrel_roll"
