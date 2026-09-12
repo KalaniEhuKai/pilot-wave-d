@@ -10,8 +10,8 @@ var next_squad_id: int = 1
 var squads: Dictionary = {}
 
 var wave_timer: float = 1.0
-var wave_interval: float = 5.0
-var current_wave_num: int = 1
+var wave_interval: float = 2.5
+var current_wave_num: int = 0
 
 var active_bubbles: Array[Dictionary] = []
 var wave_director: WaveDirector = WaveDirector.new()
@@ -23,12 +23,13 @@ func _process(delta: float) -> void:
 	wave_timer -= delta
 	if wave_timer <= 0.0:
 		var active_enemies = get_tree().get_nodes_in_group("enemy")
-		if not active_enemies.is_empty() or not active_bubbles.is_empty():
-			wave_timer = 1.0
+		var has_active_squad = _has_active_squads()
+		if not active_enemies.is_empty() or not active_bubbles.is_empty() or has_active_squad:
+			wave_timer = 0.8
 		else:
 			_trigger_next_wave()
 			wave_timer = wave_interval
-	
+
 	var remaining_bubbles: Array[Dictionary] = []
 	for b in active_bubbles:
 		b.elapsed += delta
@@ -40,6 +41,13 @@ func _process(delta: float) -> void:
 	active_bubbles = remaining_bubbles
 	
 	queue_redraw()
+
+func _has_active_squads() -> bool:
+	for sid in squads:
+		var sq = squads[sid]
+		if (sq.killed + sq.escaped) < sq.total:
+			return true
+	return false
 
 func _trigger_next_wave() -> void:
 	var squad_id = next_squad_id

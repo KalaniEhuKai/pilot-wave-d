@@ -9,7 +9,7 @@ extends Area2D
 		queue_redraw()
 
 @export var damage: float = 1.0
-@export var speed: float = 800.0
+@export var speed: float = 540.0
 @export var direction: Vector2 = Vector2.RIGHT
 
 var core_color: Color = Color(1.0, 1.0, 1.0, 1.0)
@@ -42,9 +42,9 @@ func _update_colors() -> void:
 	else:
 		core_color = Color(0.85, 1.0, 1.0, 1.0)
 		glow_color = Color(0.1, 0.85, 1.0, 0.9)
-		speed = 950.0
-		length = 18.0
-		radius = 3.5
+		speed = 540.0
+		length = 16.0
+		radius = 4.0
 		collision_layer = 2
 		collision_mask = 4
 

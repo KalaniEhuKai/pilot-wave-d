@@ -5,15 +5,16 @@ extends Area2D
 
 signal subsystem_destroyed(subsystem_name: String)
 
-@export var max_core_health: float = 100.0
-var core_health: float = 100.0
+@export var is_miniboss: bool = false
+@export var max_core_health: float = 350.0
+var core_health: float = 350.0
 
-@export var max_railgun_health: float = 50.0
-var port_railgun_health: float = 50.0
-var star_railgun_health: float = 50.0
+@export var max_railgun_health: float = 150.0
+var port_railgun_health: float = 150.0
+var star_railgun_health: float = 150.0
 
-@export var max_armor_health: float = 40.0
-var bow_armor_health: float = 40.0
+@export var max_armor_health: float = 200.0
+var bow_armor_health: float = 200.0
 
 var port_railgun_alive: bool = true
 var star_railgun_alive: bool = true
@@ -52,6 +53,11 @@ func _ready() -> void:
 	area_entered.connect(_on_area_entered)
 	body_entered.connect(_on_body_entered)
 	
+	if is_miniboss:
+		max_core_health = 110.0
+		max_railgun_health = 45.0
+		max_armor_health = 40.0
+	
 	core_health = max_core_health
 	port_railgun_health = max_railgun_health
 	star_railgun_health = max_railgun_health
@@ -70,7 +76,8 @@ func _ready() -> void:
 func _emit_health() -> void:
 	var total = core_health + port_railgun_health + star_railgun_health + bow_armor_health
 	var max_total = max_core_health + max_railgun_health * 2.0 + max_armor_health
-	GameManager.boss_health_updated.emit(maxf(0.0, total), max_total, "ARMORED BEHEMOTH GOLIATH")
+	var b_name = "MINIBOSS: SIEGE GOLIATH" if is_miniboss else "ARMORED BEHEMOTH GOLIATH"
+	GameManager.boss_health_updated.emit(maxf(0.0, total), max_total, b_name)
 
 func _physics_process(delta: float) -> void:
 	flight_time += delta
@@ -87,9 +94,10 @@ func _physics_process(delta: float) -> void:
 		queue_redraw()
 		return
 	
-	# Slow, imposing juggernaut strafe
-	var strafe_speed = 70.0
-	global_position += GameAxis.lateral * strafe_direction * strafe_speed * delta
+	# Lateral combat patrol
+	var lat = GameAxis.lateral
+	var strafe_speed = 70.0 if bow_armor_alive else 110.0
+	global_position += lat * strafe_direction * strafe_speed * delta
 	
 	var rect = get_viewport_rect()
 	var margin = 120.0
@@ -101,31 +109,30 @@ func _physics_process(delta: float) -> void:
 		elif global_position.y > rect.position.y + rect.size.y - margin: strafe_direction = -1.0
 	
 	rotation = (-GameAxis.forward).angle()
-	
 	_handle_attacks(delta)
 	queue_redraw()
 
 func _handle_attacks(delta: float) -> void:
-	# Railgun charging and firing
-	if is_charging_railgun:
-		charge_elapsed += delta
-		if charge_elapsed >= charge_duration:
-			is_charging_railgun = false
-			_fire_railguns()
-	else:
+	# 1. Fighter Drone Hangar Launch
+	drone_launch_timer -= delta
+	if drone_launch_timer <= 0.0:
+		drone_launch_timer = 5.0 if bow_armor_alive else 3.2
+		_launch_fighters(2)
+	
+	# 2. Railgun Battery Charging & Salvo
+	if not is_charging_railgun:
 		railgun_timer -= delta
 		if railgun_timer <= 0.0:
-			railgun_timer = 2.4 if (port_railgun_alive or star_railgun_alive) else 4.0
 			if port_railgun_alive or star_railgun_alive:
 				is_charging_railgun = true
 				charge_elapsed = 0.0
-				SoundEffects.play_sfx("laser", 0.08, 3.0)
-	
-	# Drone Bay deployments
-	drone_launch_timer -= delta
-	if drone_launch_timer <= 0.0:
-		drone_launch_timer = 5.5
-		_launch_escort_drone()
+				SoundEffects.play_sfx("laser", 0.05, 5.0)
+	else:
+		charge_elapsed += delta
+		if charge_elapsed >= charge_duration:
+			is_charging_railgun = false
+			railgun_timer = 2.4
+			_fire_railguns()
 
 func _fire_railguns() -> void:
 	var fwd = -GameAxis.forward
@@ -148,14 +155,16 @@ func _spawn_heavy_beam(pos: Vector2, dir: Vector2) -> void:
 	SoundEffects.play_sfx("laser", 0.1, -1.0)
 	GameManager.request_screen_shake(8.0, 0.25)
 
-func _launch_escort_drone() -> void:
+func _launch_fighters(count: int = 1) -> void:
 	var parent = get_parent()
 	if not parent:
 		return
 	
-	var drone = drone_scene.instantiate()
-	parent.add_child(drone)
-	drone.setup(0, global_position, 999, null, 0)
+	for i in range(count):
+		var drone = drone_scene.instantiate()
+		parent.add_child(drone)
+		var offset = GameAxis.lateral * ((i - 0.5) * 60.0)
+		drone.setup(0, global_position + offset, 999, null, 0)
 	SoundEffects.play_sfx("roll", 0.05, 2.5)
 
 func take_damage(amount: float) -> void:
@@ -200,7 +209,8 @@ func _explode_subsystem(pos: Vector2, s_name: String) -> void:
 func _die() -> void:
 	GameManager.add_score(15000)
 	GameManager.record_kill()
-	GameManager.boss_defeated.emit("ARMORED BEHEMOTH GOLIATH")
+	var b_name = "MINIBOSS: SIEGE GOLIATH" if is_miniboss else "ARMORED BEHEMOTH GOLIATH"
+	GameManager.boss_defeated.emit(b_name)
 	
 	# Massive chain explosions
 	for i in range(7):

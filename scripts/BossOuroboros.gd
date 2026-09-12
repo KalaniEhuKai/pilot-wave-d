@@ -5,10 +5,10 @@ extends Area2D
 
 signal boss_defeated(boss_name: String)
 
-@export var max_health: float = 240.0
-var health: float = 240.0
+@export var max_health: float = 1200.0
+var health: float = 1200.0
 
-var shield_gate_hp: float = 80.0
+var shield_gate_hp: float = 400.0
 var shield_gate_alive: bool = true
 var shield_angle: float = 0.0
 

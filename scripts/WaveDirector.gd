@@ -52,11 +52,13 @@ static func get_all_templates() -> Array[Dictionary]:
 			"min_sector": 1,
 			"hazards": [
 				{"type": HZ_ASTEROID, "count": 4},
-				{"type": HZ_PLASMA_BARREL, "count": 1}
+				{"type": HZ_PLASMA_BARREL, "count": 2}
 			],
 			"spawns": [
-				{"type": SCOUT, "count": 5, "pattern": "ROW", "delay": 0.0, "affix": AFFIX_NONE},
-				{"type": BOMBER, "count": 2, "pattern": "RANDOM_TOP", "delay": 2.5, "affix": AFFIX_NONE}
+				{"type": SCOUT, "count": 6, "pattern": "ROW", "delay": 0.0, "affix": AFFIX_NONE},
+				{"type": INTERCEPTOR, "count": 4, "pattern": "FLANK_SPLIT", "delay": 3.5, "affix": AFFIX_NONE},
+				{"type": BOMBER, "count": 3, "pattern": "ROW", "delay": 7.5, "affix": AFFIX_NONE},
+				{"type": MICRO_DRONE, "count": 6, "pattern": "HORIZON_SPREAD", "delay": 12.0, "affix": AFFIX_NONE}
 			]
 		},
 		{
@@ -64,23 +66,28 @@ static func get_all_templates() -> Array[Dictionary]:
 			"name": "PLASMA BOMB SURGE",
 			"min_sector": 1,
 			"hazards": [
-				{"type": HZ_PLASMA_BARREL, "count": 3},
+				{"type": HZ_PLASMA_BARREL, "count": 4},
 				{"type": HZ_ASTEROID, "count": 2}
 			],
 			"spawns": [
 				{"type": MICRO_DRONE, "count": 10, "pattern": "HORIZON_SPREAD", "delay": 0.0, "affix": AFFIX_NONE},
-				{"type": SCOUT, "count": 4, "pattern": "RANDOM_TOP", "delay": 2.0, "affix": AFFIX_NONE}
+				{"type": SCOUT, "count": 5, "pattern": "V_SHAPE", "delay": 3.5, "affix": AFFIX_NONE},
+				{"type": BOMBER, "count": 3, "pattern": "ROW", "delay": 7.5, "affix": AFFIX_VOLATILE},
+				{"type": INTERCEPTOR, "count": 4, "pattern": "PINCER_FLANK", "delay": 11.5, "affix": AFFIX_NONE}
 			]
 		},
 		{
 			"id": "WAVE_CAVALRY_CHARGE",
 			"name": "CAVALRY CHARGE",
 			"min_sector": 1,
-			"hazards": [],
+			"hazards": [
+				{"type": HZ_ASTEROID, "count": 2}
+			],
 			"spawns": [
-				{"type": INTERCEPTOR, "count": 4, "pattern": "ROW", "delay": 0.0, "affix": AFFIX_NONE},
-				{"type": INTERCEPTOR, "count": 4, "pattern": "ROW", "delay": 1.5, "affix": AFFIX_NONE},
-				{"type": INTERCEPTOR, "count": 4, "pattern": "ROW", "delay": 3.0, "affix": AFFIX_NONE}
+				{"type": INTERCEPTOR, "count": 5, "pattern": "ROW", "delay": 0.0, "affix": AFFIX_NONE},
+				{"type": INTERCEPTOR, "count": 5, "pattern": "SWEEP_ROW", "delay": 3.5, "affix": AFFIX_SWIFT},
+				{"type": INTERCEPTOR, "count": 5, "pattern": "FLANK_SPLIT", "delay": 7.0, "affix": AFFIX_NONE},
+				{"type": SCOUT, "count": 6, "pattern": "V_SHAPE", "delay": 11.0, "affix": AFFIX_NONE}
 			]
 		},
 		{
@@ -88,11 +95,14 @@ static func get_all_templates() -> Array[Dictionary]:
 			"name": "ORBITAL BASTION",
 			"min_sector": 1,
 			"hazards": [
-				{"type": HZ_ASTEROID, "count": 3}
+				{"type": HZ_ASTEROID, "count": 3},
+				{"type": HZ_PLASMA_BARREL, "count": 1}
 			],
 			"spawns": [
 				{"type": TURRET_PLATFORM, "count": 2, "pattern": "FLANK_SPLIT", "delay": 0.0, "affix": AFFIX_ARMORED},
-				{"type": SCOUT, "count": 6, "pattern": "RANDOM_TOP", "delay": 1.8, "affix": AFFIX_NONE}
+				{"type": SCOUT, "count": 6, "pattern": "ROW", "delay": 3.5, "affix": AFFIX_NONE},
+				{"type": BOMBER, "count": 3, "pattern": "ROW", "delay": 7.5, "affix": AFFIX_NONE},
+				{"type": INTERCEPTOR, "count": 5, "pattern": "HORIZON_SPREAD", "delay": 12.0, "affix": AFFIX_NONE}
 			]
 		},
 		{
@@ -103,18 +113,25 @@ static func get_all_templates() -> Array[Dictionary]:
 				{"type": HZ_PLASMA_BARREL, "count": 2}
 			],
 			"spawns": [
-				{"type": SCOUT, "count": 12, "pattern": "SWEEP_ROW", "delay": 0.0, "affix": AFFIX_NONE}
+				{"type": SCOUT, "count": 10, "pattern": "SWEEP_ROW", "delay": 0.0, "affix": AFFIX_NONE},
+				{"type": MICRO_DRONE, "count": 8, "pattern": "HORIZON_SPREAD", "delay": 4.0, "affix": AFFIX_NONE},
+				{"type": INTERCEPTOR, "count": 5, "pattern": "PINCER_FLANK", "delay": 8.0, "affix": AFFIX_SWIFT},
+				{"type": BOMBER, "count": 3, "pattern": "ROW", "delay": 12.0, "affix": AFFIX_NONE}
 			]
 		},
 		{
 			"id": "WAVE_INTERCEPTOR_FLANK",
 			"name": "PINCER DIVE SQUAD",
 			"min_sector": 1,
-			"hazards": [],
+			"hazards": [
+				{"type": HZ_ASTEROID, "count": 2}
+			],
 			"spawns": [
 				{"type": INTERCEPTOR, "count": 4, "pattern": "FLANK_LEFT", "delay": 0.0, "affix": AFFIX_SWIFT},
 				{"type": INTERCEPTOR, "count": 4, "pattern": "FLANK_RIGHT", "delay": 0.0, "affix": AFFIX_SWIFT},
-				{"type": BOMBER, "count": 2, "pattern": "RANDOM_TOP", "delay": 2.2, "affix": AFFIX_NONE}
+				{"type": SCOUT, "count": 6, "pattern": "V_SHAPE", "delay": 4.0, "affix": AFFIX_NONE},
+				{"type": BOMBER, "count": 3, "pattern": "ROW", "delay": 8.0, "affix": AFFIX_NONE},
+				{"type": INTERCEPTOR, "count": 4, "pattern": "ROW", "delay": 12.5, "affix": AFFIX_ARMORED}
 			]
 		},
 		{
@@ -122,11 +139,13 @@ static func get_all_templates() -> Array[Dictionary]:
 			"name": "STRIKE ECHELON",
 			"min_sector": 1,
 			"hazards": [
-				{"type": HZ_ASTEROID, "count": 2}
+				{"type": HZ_ASTEROID, "count": 3}
 			],
 			"spawns": [
-				{"type": SCOUT, "count": 5, "pattern": "V_SHAPE", "delay": 0.0, "affix": AFFIX_NONE},
-				{"type": BOMBER, "count": 2, "pattern": "RANDOM_TOP", "delay": 2.0, "affix": AFFIX_ARMORED}
+				{"type": SCOUT, "count": 7, "pattern": "V_SHAPE", "delay": 0.0, "affix": AFFIX_NONE},
+				{"type": BOMBER, "count": 3, "pattern": "ROW", "delay": 3.5, "affix": AFFIX_ARMORED},
+				{"type": INTERCEPTOR, "count": 5, "pattern": "SWEEP_ROW", "delay": 7.5, "affix": AFFIX_NONE},
+				{"type": SCOUT, "count": 6, "pattern": "HORIZON_SPREAD", "delay": 11.5, "affix": AFFIX_NONE}
 			]
 		},
 		{
@@ -134,11 +153,14 @@ static func get_all_templates() -> Array[Dictionary]:
 			"name": "HEAVY BOMBER BARRAGE",
 			"min_sector": 1,
 			"hazards": [
-				{"type": HZ_PLASMA_BARREL, "count": 1}
+				{"type": HZ_PLASMA_BARREL, "count": 2},
+				{"type": HZ_ASTEROID, "count": 2}
 			],
 			"spawns": [
 				{"type": BOMBER, "count": 4, "pattern": "ROW", "delay": 0.0, "affix": AFFIX_NONE},
-				{"type": SCOUT, "count": 6, "pattern": "RANDOM_TOP", "delay": 2.0, "affix": AFFIX_NONE}
+				{"type": SCOUT, "count": 6, "pattern": "HORIZON_SPREAD", "delay": 3.5, "affix": AFFIX_NONE},
+				{"type": BOMBER, "count": 4, "pattern": "FLANK_SPLIT", "delay": 7.5, "affix": AFFIX_VOLATILE},
+				{"type": INTERCEPTOR, "count": 5, "pattern": "SWEEP_ROW", "delay": 12.0, "affix": AFFIX_NONE}
 			]
 		},
 
@@ -150,11 +172,14 @@ static func get_all_templates() -> Array[Dictionary]:
 			"name": "AEGIS KNIGHT WALL",
 			"min_sector": 2,
 			"hazards": [
-				{"type": HZ_ASTEROID, "count": 3}
+				{"type": HZ_ASTEROID, "count": 4}
 			],
 			"spawns": [
-				{"type": KNIGHT_VANGUARD, "count": 3, "pattern": "ROW", "delay": 0.0, "affix": AFFIX_NONE},
-				{"type": SCOUT, "count": 5, "pattern": "RANDOM_TOP", "delay": 2.0, "affix": AFFIX_NONE}
+				{"type": KNIGHT_VANGUARD, "count": 3, "pattern": "ROW", "delay": 0.0, "affix": AFFIX_ARMORED},
+				{"type": SCOUT, "count": 6, "pattern": "HORIZON_SPREAD", "delay": 3.8, "affix": AFFIX_NONE},
+				{"type": SNIPER, "count": 3, "pattern": "FLANK_SPLIT", "delay": 7.8, "affix": AFFIX_NONE},
+				{"type": KNIGHT_VANGUARD, "count": 2, "pattern": "CENTER", "delay": 12.0, "affix": AFFIX_NONE},
+				{"type": INTERCEPTOR, "count": 4, "pattern": "ROW", "delay": 12.5, "affix": AFFIX_SWIFT}
 			]
 		},
 		{
@@ -163,11 +188,14 @@ static func get_all_templates() -> Array[Dictionary]:
 			"min_sector": 2,
 			"hazards": [
 				{"type": HZ_ASTEROID, "count": 5},
-				{"type": HZ_STORM_CELL, "count": 1}
+				{"type": HZ_STORM_CELL, "count": 2}
 			],
 			"spawns": [
 				{"type": SNIPER, "count": 3, "pattern": "FLANK_SPLIT", "delay": 0.0, "affix": AFFIX_NONE},
-				{"type": INTERCEPTOR, "count": 4, "pattern": "ROW", "delay": 2.0, "affix": AFFIX_SWIFT}
+				{"type": INTERCEPTOR, "count": 5, "pattern": "SWEEP_ROW", "delay": 3.5, "affix": AFFIX_SWIFT},
+				{"type": SNIPER, "count": 2, "pattern": "CENTER", "delay": 7.5, "affix": AFFIX_ARMORED},
+				{"type": SCOUT, "count": 6, "pattern": "V_SHAPE", "delay": 11.5, "affix": AFFIX_NONE},
+				{"type": BOMBER, "count": 3, "pattern": "ROW", "delay": 12.0, "affix": AFFIX_NONE}
 			]
 		},
 		{
@@ -175,12 +203,15 @@ static func get_all_templates() -> Array[Dictionary]:
 			"name": "SHIELDED CONVOY",
 			"min_sector": 2,
 			"hazards": [
-				{"type": HZ_PLASMA_BARREL, "count": 2}
+				{"type": HZ_PLASMA_BARREL, "count": 3},
+				{"type": HZ_ASTEROID, "count": 2}
 			],
 			"spawns": [
 				{"type": SHIELD_FRIGATE, "count": 2, "pattern": "CENTER", "delay": 0.0, "affix": AFFIX_NONE},
-				{"type": SNIPER, "count": 2, "pattern": "FLANK_SPLIT", "delay": 2.0, "affix": AFFIX_NONE},
-				{"type": INTERCEPTOR, "count": 4, "pattern": "RANDOM_TOP", "delay": 3.5, "affix": AFFIX_NONE}
+				{"type": SNIPER, "count": 3, "pattern": "FLANK_SPLIT", "delay": 3.5, "affix": AFFIX_NONE},
+				{"type": INTERCEPTOR, "count": 6, "pattern": "ROW", "delay": 7.5, "affix": AFFIX_SWIFT},
+				{"type": SHIELD_FRIGATE, "count": 1, "pattern": "CENTER", "delay": 11.5, "affix": AFFIX_ARMORED},
+				{"type": BOMBER, "count": 4, "pattern": "ROW", "delay": 12.0, "affix": AFFIX_NONE}
 			]
 		},
 		{
@@ -188,11 +219,13 @@ static func get_all_templates() -> Array[Dictionary]:
 			"name": "ORDNANCE CORVETTES",
 			"min_sector": 2,
 			"hazards": [
-				{"type": HZ_ASTEROID, "count": 3}
+				{"type": HZ_ASTEROID, "count": 4}
 			],
 			"spawns": [
 				{"type": MISSILE_CORVETTE, "count": 3, "pattern": "ROW", "delay": 0.0, "affix": AFFIX_NONE},
-				{"type": SCOUT, "count": 6, "pattern": "RANDOM_TOP", "delay": 2.2, "affix": AFFIX_NONE}
+				{"type": SCOUT, "count": 6, "pattern": "HORIZON_SPREAD", "delay": 3.8, "affix": AFFIX_NONE},
+				{"type": MISSILE_CORVETTE, "count": 2, "pattern": "FLANK_SPLIT", "delay": 8.0, "affix": AFFIX_ARMORED},
+				{"type": INTERCEPTOR, "count": 6, "pattern": "SWEEP_ROW", "delay": 12.0, "affix": AFFIX_SWIFT}
 			]
 		},
 		{
@@ -200,12 +233,15 @@ static func get_all_templates() -> Array[Dictionary]:
 			"name": "TETHER SIPHON TRAP",
 			"min_sector": 2,
 			"hazards": [
-				{"type": HZ_STORM_CELL, "count": 2}
+				{"type": HZ_STORM_CELL, "count": 2},
+				{"type": HZ_ASTEROID, "count": 3}
 			],
 			"spawns": [
 				{"type": DRAINER_LEECH, "count": 2, "pattern": "FLANK_SPLIT", "delay": 0.0, "affix": AFFIX_SWIFT},
-				{"type": BOMBER, "count": 3, "pattern": "ROW", "delay": 2.0, "affix": AFFIX_NONE},
-				{"type": INTERCEPTOR, "count": 3, "pattern": "RANDOM_TOP", "delay": 3.8, "affix": AFFIX_NONE}
+				{"type": BOMBER, "count": 4, "pattern": "ROW", "delay": 3.5, "affix": AFFIX_NONE},
+				{"type": DRAINER_LEECH, "count": 2, "pattern": "CENTER", "delay": 7.5, "affix": AFFIX_NONE},
+				{"type": INTERCEPTOR, "count": 5, "pattern": "ROW", "delay": 8.0, "affix": AFFIX_NONE},
+				{"type": SNIPER, "count": 3, "pattern": "FLANK_SPLIT", "delay": 12.0, "affix": AFFIX_NONE}
 			]
 		},
 		{
@@ -213,12 +249,14 @@ static func get_all_templates() -> Array[Dictionary]:
 			"name": "PHALANX & RAILGUNS",
 			"min_sector": 2,
 			"hazards": [
-				{"type": HZ_PLASMA_BARREL, "count": 2}
+				{"type": HZ_PLASMA_BARREL, "count": 3}
 			],
 			"spawns": [
 				{"type": KNIGHT_VANGUARD, "count": 2, "pattern": "ROW", "delay": 0.0, "affix": AFFIX_ARMORED},
-				{"type": SNIPER, "count": 2, "pattern": "FLANK_SPLIT", "delay": 1.5, "affix": AFFIX_NONE},
-				{"type": SCOUT, "count": 6, "pattern": "RANDOM_TOP", "delay": 3.0, "affix": AFFIX_NONE}
+				{"type": SNIPER, "count": 3, "pattern": "FLANK_SPLIT", "delay": 3.5, "affix": AFFIX_NONE},
+				{"type": SCOUT, "count": 6, "pattern": "V_SHAPE", "delay": 7.5, "affix": AFFIX_NONE},
+				{"type": KNIGHT_VANGUARD, "count": 2, "pattern": "FLANK_SPLIT", "delay": 11.5, "affix": AFFIX_NONE},
+				{"type": INTERCEPTOR, "count": 4, "pattern": "ROW", "delay": 12.0, "affix": AFFIX_SWIFT}
 			]
 		},
 		{
@@ -226,24 +264,30 @@ static func get_all_templates() -> Array[Dictionary]:
 			"name": "NEBULA FLOTILLA",
 			"min_sector": 2,
 			"hazards": [
-				{"type": HZ_STORM_CELL, "count": 2},
+				{"type": HZ_STORM_CELL, "count": 3},
 				{"type": HZ_ASTEROID, "count": 4}
 			],
 			"spawns": [
 				{"type": MISSILE_CORVETTE, "count": 2, "pattern": "ROW", "delay": 0.0, "affix": AFFIX_ARMORED},
-				{"type": TURRET_PLATFORM, "count": 1, "pattern": "CENTER", "delay": 1.5, "affix": AFFIX_NONE},
-				{"type": INTERCEPTOR, "count": 5, "pattern": "RANDOM_TOP", "delay": 3.0, "affix": AFFIX_SWIFT}
+				{"type": TURRET_PLATFORM, "count": 2, "pattern": "FLANK_SPLIT", "delay": 3.5, "affix": AFFIX_NONE},
+				{"type": INTERCEPTOR, "count": 6, "pattern": "HORIZON_SPREAD", "delay": 7.5, "affix": AFFIX_SWIFT},
+				{"type": MISSILE_CORVETTE, "count": 2, "pattern": "CENTER", "delay": 11.5, "affix": AFFIX_NONE},
+				{"type": BOMBER, "count": 3, "pattern": "ROW", "delay": 12.0, "affix": AFFIX_NONE}
 			]
 		},
 		{
 			"id": "WAVE_SHIELD_DRAINER_MATRIX",
 			"name": "SIPHON SHIELD MATRIX",
 			"min_sector": 2,
-			"hazards": [],
+			"hazards": [
+				{"type": HZ_STORM_CELL, "count": 2},
+				{"type": HZ_PLASMA_BARREL, "count": 2}
+			],
 			"spawns": [
 				{"type": SHIELD_FRIGATE, "count": 2, "pattern": "FLANK_SPLIT", "delay": 0.0, "affix": AFFIX_NONE},
-				{"type": DRAINER_LEECH, "count": 2, "pattern": "CENTER", "delay": 2.0, "affix": AFFIX_NONE},
-				{"type": BOMBER, "count": 3, "pattern": "ROW", "delay": 3.5, "affix": AFFIX_VOLATILE}
+				{"type": DRAINER_LEECH, "count": 2, "pattern": "CENTER", "delay": 3.5, "affix": AFFIX_SWIFT},
+				{"type": BOMBER, "count": 4, "pattern": "ROW", "delay": 7.5, "affix": AFFIX_VOLATILE},
+				{"type": INTERCEPTOR, "count": 6, "pattern": "SWEEP_ROW", "delay": 12.0, "affix": AFFIX_NONE}
 			]
 		},
 
@@ -255,12 +299,15 @@ static func get_all_templates() -> Array[Dictionary]:
 			"name": "HIVE CARRIER SWARM",
 			"min_sector": 3,
 			"hazards": [
-				{"type": HZ_PLASMA_BARREL, "count": 3}
+				{"type": HZ_PLASMA_BARREL, "count": 3},
+				{"type": HZ_STORM_CELL, "count": 2}
 			],
 			"spawns": [
 				{"type": DRONE_CARRIER, "count": 2, "pattern": "FLANK_SPLIT", "delay": 0.0, "affix": AFFIX_ARMORED},
-				{"type": SHIELD_FRIGATE, "count": 1, "pattern": "CENTER", "delay": 1.0, "affix": AFFIX_NONE},
-				{"type": INTERCEPTOR, "count": 4, "pattern": "RANDOM_TOP", "delay": 3.0, "affix": AFFIX_SWIFT}
+				{"type": SHIELD_FRIGATE, "count": 2, "pattern": "CENTER", "delay": 4.0, "affix": AFFIX_NONE},
+				{"type": INTERCEPTOR, "count": 6, "pattern": "HORIZON_SPREAD", "delay": 8.0, "affix": AFFIX_SWIFT},
+				{"type": DRONE_CARRIER, "count": 1, "pattern": "CENTER", "delay": 12.0, "affix": AFFIX_NONE},
+				{"type": PHANTOM, "count": 4, "pattern": "ROW", "delay": 12.5, "affix": AFFIX_NONE}
 			]
 		},
 		{
@@ -268,11 +315,14 @@ static func get_all_templates() -> Array[Dictionary]:
 			"name": "PHANTOM CLOAK AMBUSH",
 			"min_sector": 3,
 			"hazards": [
-				{"type": HZ_STORM_CELL, "count": 2}
+				{"type": HZ_STORM_CELL, "count": 3}
 			],
 			"spawns": [
 				{"type": PHANTOM, "count": 6, "pattern": "HORIZON_SPREAD", "delay": 0.0, "affix": AFFIX_SWIFT},
-				{"type": SNIPER, "count": 2, "pattern": "FLANK_SPLIT", "delay": 2.5, "affix": AFFIX_NONE}
+				{"type": SNIPER, "count": 3, "pattern": "FLANK_SPLIT", "delay": 3.5, "affix": AFFIX_NONE},
+				{"type": PHANTOM, "count": 6, "pattern": "SWEEP_ROW", "delay": 7.5, "affix": AFFIX_NONE},
+				{"type": WARP_STALKER, "count": 3, "pattern": "CENTER", "delay": 11.5, "affix": AFFIX_NONE},
+				{"type": INTERCEPTOR, "count": 5, "pattern": "ROW", "delay": 12.0, "affix": AFFIX_SWIFT}
 			]
 		},
 		{
@@ -280,12 +330,14 @@ static func get_all_templates() -> Array[Dictionary]:
 			"name": "BATTLECRUISER ARMADA",
 			"min_sector": 3,
 			"hazards": [
-				{"type": HZ_ASTEROID, "count": 4}
+				{"type": HZ_ASTEROID, "count": 4},
+				{"type": HZ_PLASMA_BARREL, "count": 2}
 			],
 			"spawns": [
 				{"type": HEAVY_CRUISER, "count": 2, "pattern": "FLANK_SPLIT", "delay": 0.0, "affix": AFFIX_ARMORED},
-				{"type": SHIELD_FRIGATE, "count": 1, "pattern": "CENTER", "delay": 1.5, "affix": AFFIX_NONE},
-				{"type": KNIGHT_VANGUARD, "count": 2, "pattern": "ROW", "delay": 3.0, "affix": AFFIX_NONE}
+				{"type": SHIELD_FRIGATE, "count": 2, "pattern": "CENTER", "delay": 4.0, "affix": AFFIX_NONE},
+				{"type": KNIGHT_VANGUARD, "count": 3, "pattern": "ROW", "delay": 8.0, "affix": AFFIX_NONE},
+				{"type": INTERCEPTOR, "count": 6, "pattern": "SWEEP_ROW", "delay": 12.5, "affix": AFFIX_SWIFT}
 			]
 		},
 		{
@@ -293,11 +345,15 @@ static func get_all_templates() -> Array[Dictionary]:
 			"name": "QUANTUM WARP STORM",
 			"min_sector": 3,
 			"hazards": [
-				{"type": HZ_PLASMA_BARREL, "count": 3}
+				{"type": HZ_PLASMA_BARREL, "count": 4},
+				{"type": HZ_STORM_CELL, "count": 2}
 			],
 			"spawns": [
 				{"type": WARP_STALKER, "count": 4, "pattern": "SWEEP_ROW", "delay": 0.0, "affix": AFFIX_VOLATILE},
-				{"type": INTERCEPTOR, "count": 6, "pattern": "ROW", "delay": 2.0, "affix": AFFIX_SWIFT}
+				{"type": INTERCEPTOR, "count": 6, "pattern": "ROW", "delay": 3.5, "affix": AFFIX_SWIFT},
+				{"type": WARP_STALKER, "count": 4, "pattern": "FLANK_SPLIT", "delay": 7.5, "affix": AFFIX_NONE},
+				{"type": BOMBER, "count": 4, "pattern": "ROW", "delay": 11.5, "affix": AFFIX_NONE},
+				{"type": SNIPER, "count": 2, "pattern": "FLANK_SPLIT", "delay": 12.0, "affix": AFFIX_NONE}
 			]
 		},
 		{
@@ -306,13 +362,14 @@ static func get_all_templates() -> Array[Dictionary]:
 			"min_sector": 3,
 			"hazards": [
 				{"type": HZ_STORM_CELL, "count": 3},
-				{"type": HZ_PLASMA_BARREL, "count": 2}
+				{"type": HZ_PLASMA_BARREL, "count": 3}
 			],
 			"spawns": [
 				{"type": HEAVY_CRUISER, "count": 1, "pattern": "CENTER", "delay": 0.0, "affix": AFFIX_ARMORED},
-				{"type": DRONE_CARRIER, "count": 1, "pattern": "FLANK_LEFT", "delay": 1.5, "affix": AFFIX_NONE},
-				{"type": PHANTOM, "count": 4, "pattern": "HORIZON_SPREAD", "delay": 3.0, "affix": AFFIX_NONE},
-				{"type": SNIPER, "count": 2, "pattern": "FLANK_RIGHT", "delay": 4.5, "affix": AFFIX_VOLATILE}
+				{"type": DRONE_CARRIER, "count": 2, "pattern": "FLANK_SPLIT", "delay": 3.5, "affix": AFFIX_NONE},
+				{"type": PHANTOM, "count": 5, "pattern": "HORIZON_SPREAD", "delay": 7.5, "affix": AFFIX_NONE},
+				{"type": SNIPER, "count": 3, "pattern": "FLANK_SPLIT", "delay": 11.5, "affix": AFFIX_VOLATILE},
+				{"type": WARP_STALKER, "count": 3, "pattern": "ROW", "delay": 12.0, "affix": AFFIX_NONE}
 			]
 		},
 		{
@@ -320,12 +377,14 @@ static func get_all_templates() -> Array[Dictionary]:
 			"name": "ELECTRO-MINE PHALANX",
 			"min_sector": 3,
 			"hazards": [
-				{"type": HZ_ASTEROID, "count": 5}
+				{"type": HZ_ASTEROID, "count": 5},
+				{"type": HZ_STORM_CELL, "count": 2}
 			],
 			"spawns": [
 				{"type": MINE_TETHER, "count": 4, "pattern": "ROW", "delay": 0.0, "affix": AFFIX_VOLATILE},
-				{"type": KNIGHT_VANGUARD, "count": 3, "pattern": "ROW", "delay": 2.0, "affix": AFFIX_ARMORED},
-				{"type": DRAINER_LEECH, "count": 2, "pattern": "FLANK_SPLIT", "delay": 3.5, "affix": AFFIX_SWIFT}
+				{"type": KNIGHT_VANGUARD, "count": 3, "pattern": "ROW", "delay": 3.5, "affix": AFFIX_ARMORED},
+				{"type": DRAINER_LEECH, "count": 3, "pattern": "FLANK_SPLIT", "delay": 7.5, "affix": AFFIX_SWIFT},
+				{"type": MISSILE_CORVETTE, "count": 4, "pattern": "ROW", "delay": 12.0, "affix": AFFIX_NONE}
 			]
 		},
 		{
@@ -333,12 +392,15 @@ static func get_all_templates() -> Array[Dictionary]:
 			"name": "OUROBOROS VANGUARD",
 			"min_sector": 3,
 			"hazards": [
-				{"type": HZ_PLASMA_BARREL, "count": 3}
+				{"type": HZ_PLASMA_BARREL, "count": 3},
+				{"type": HZ_ASTEROID, "count": 3}
 			],
 			"spawns": [
 				{"type": HEAVY_CRUISER, "count": 2, "pattern": "FLANK_SPLIT", "delay": 0.0, "affix": AFFIX_VOLATILE},
-				{"type": MISSILE_CORVETTE, "count": 2, "pattern": "ROW", "delay": 2.0, "affix": AFFIX_ARMORED},
-				{"type": WARP_STALKER, "count": 3, "pattern": "SWEEP_ROW", "delay": 4.0, "affix": AFFIX_NONE}
+				{"type": MISSILE_CORVETTE, "count": 3, "pattern": "ROW", "delay": 4.0, "affix": AFFIX_ARMORED},
+				{"type": WARP_STALKER, "count": 4, "pattern": "SWEEP_ROW", "delay": 8.0, "affix": AFFIX_NONE},
+				{"type": SHIELD_FRIGATE, "count": 2, "pattern": "CENTER", "delay": 12.0, "affix": AFFIX_NONE},
+				{"type": INTERCEPTOR, "count": 4, "pattern": "ROW", "delay": 12.5, "affix": AFFIX_NONE}
 			]
 		},
 		{
@@ -346,13 +408,14 @@ static func get_all_templates() -> Array[Dictionary]:
 			"name": "DEEP VOID INFERNO",
 			"min_sector": 3,
 			"hazards": [
-				{"type": HZ_STORM_CELL, "count": 2},
-				{"type": HZ_PLASMA_BARREL, "count": 2}
+				{"type": HZ_STORM_CELL, "count": 3},
+				{"type": HZ_PLASMA_BARREL, "count": 3}
 			],
 			"spawns": [
 				{"type": DRONE_CARRIER, "count": 2, "pattern": "ROW", "delay": 0.0, "affix": AFFIX_NONE},
-				{"type": DRAINER_LEECH, "count": 2, "pattern": "FLANK_SPLIT", "delay": 2.0, "affix": AFFIX_SWIFT},
-				{"type": PHANTOM, "count": 4, "pattern": "HORIZON_SPREAD", "delay": 3.5, "affix": AFFIX_VOLATILE}
+				{"type": DRAINER_LEECH, "count": 3, "pattern": "FLANK_SPLIT", "delay": 3.5, "affix": AFFIX_SWIFT},
+				{"type": PHANTOM, "count": 6, "pattern": "HORIZON_SPREAD", "delay": 7.5, "affix": AFFIX_VOLATILE},
+				{"type": HEAVY_CRUISER, "count": 1, "pattern": "CENTER", "delay": 12.0, "affix": AFFIX_ARMORED}
 			]
 		},
 		{
@@ -360,13 +423,15 @@ static func get_all_templates() -> Array[Dictionary]:
 			"name": "QUANTUM ANOMALY NEXUS",
 			"min_sector": 3,
 			"hazards": [
-				{"type": HZ_STORM_CELL, "count": 2},
-				{"type": HZ_PLASMA_BARREL, "count": 2}
+				{"type": HZ_STORM_CELL, "count": 3},
+				{"type": HZ_PLASMA_BARREL, "count": 3}
 			],
 			"spawns": [
 				{"type": HEAVY_CRUISER, "count": 1, "pattern": "CENTER", "delay": 0.0, "affix": AFFIX_ARMORED},
-				{"type": MINE_TETHER, "count": 3, "pattern": "ROW", "delay": 2.0, "affix": AFFIX_VOLATILE},
-				{"type": WARP_STALKER, "count": 3, "pattern": "SWEEP_ROW", "delay": 3.5, "affix": AFFIX_SWIFT}
+				{"type": MINE_TETHER, "count": 4, "pattern": "ROW", "delay": 3.5, "affix": AFFIX_VOLATILE},
+				{"type": WARP_STALKER, "count": 4, "pattern": "SWEEP_ROW", "delay": 7.5, "affix": AFFIX_SWIFT},
+				{"type": DRONE_CARRIER, "count": 2, "pattern": "FLANK_SPLIT", "delay": 12.0, "affix": AFFIX_NONE},
+				{"type": SNIPER, "count": 3, "pattern": "FLANK_SPLIT", "delay": 12.5, "affix": AFFIX_NONE}
 			]
 		}
 	]

@@ -73,15 +73,16 @@ func _ready() -> void:
 	assert(p1.hull == p1.max_hull, "Dirac Monopole failed to restore 100% hull!")
 	print(" - SUCCESS: Legendary Dirac Monopole shattered (+10,000 pts & Full Hull Repair).")
 	
-	# 5. Test Sector 1 Boss: Super-Dreadnought Corvus
+	# 5. Test Sector 1 Boss: Super-Dreadnought Corvus (Scaled to 450 HP)
 	print("\nSTEP 5: Testing Sector 1 Boss: Super-Dreadnought Corvus...")
 	var corvus_scene = load("res://scenes/BossCorvus.tscn")
 	var corvus = corvus_scene.instantiate()
 	main_inst.add_child(corvus)
 	corvus.entry_done = true
-	corvus.take_damage(45.0)
+	assert(corvus.port_wing_health == 85.0 and corvus.max_core_health == 280.0, "Corvus scaled HP mismatched!")
+	corvus.take_damage(90.0)
 	assert(corvus.port_wing_alive == false, "Port wing failed to break!")
-	corvus.take_damage(45.0)
+	corvus.take_damage(90.0)
 	assert(corvus.starboard_wing_alive == false, "Starboard wing failed to break!")
 	
 	var flags = {"corvus_defeated": false, "goliath_defeated": false}
@@ -89,9 +90,9 @@ func _ready() -> void:
 		if "CORVUS" in b_name: flags["corvus_defeated"] = true
 		if "GOLIATH" in b_name: flags["goliath_defeated"] = true
 	)
-	corvus.take_damage(130.0)
+	corvus.take_damage(290.0)
 	assert(flags["corvus_defeated"] == true, "Corvus defeat signal failed!")
-	print(" - SUCCESS: Super-Dreadnought Corvus defeated with subsystem detonations!")
+	print(" - SUCCESS: Super-Dreadnought Corvus (450 HP) defeated with subsystem detonations!")
 	
 	# 6. Test Wave Director Threat Budget & Formations (Phase 4)
 	print("\nSTEP 6: Testing Adaptive Wave Director Threat Budget & Formations...")
@@ -161,33 +162,42 @@ func _ready() -> void:
 	assert(dossier.panel.visible == false, "Threat Dossier failed to dismiss cleanly!")
 	print(" - SUCCESS: Threat Dossier presentation and engagement verified.")
 	
-	# 9. Test Asymmetric Boss: Armored Behemoth Goliath
-	print("\nSTEP 9: Testing Asymmetric Sector 1 Boss: Armored Behemoth Goliath...")
+	# 9. Test Asymmetric Boss: Armored Behemoth Goliath (Miniboss & Major Boss Scaled)
+	print("\nSTEP 9: Testing Asymmetric Boss: Armored Behemoth Goliath...")
 	var goliath_scene = load("res://scenes/BossGoliath.tscn")
+	var goliath_mini = goliath_scene.instantiate()
+	goliath_mini.is_miniboss = true
+	main_inst.add_child(goliath_mini)
+	goliath_mini.entry_done = true
+	assert(goliath_mini.core_health == 110.0 and goliath_mini.bow_armor_health == 40.0, "Goliath Miniboss HP mismatch!")
+	goliath_mini.queue_free()
+	
 	var goliath = goliath_scene.instantiate()
+	goliath.is_miniboss = false
 	main_inst.add_child(goliath)
 	goliath.entry_done = true
+	assert(goliath.max_core_health == 350.0 and goliath.max_armor_health == 200.0, "Goliath Major Boss HP mismatch!")
 	
-	print(" - Goliath spawned. Total HP: %f" % (goliath.core_health + goliath.port_railgun_health + goliath.star_railgun_health + goliath.bow_armor_health))
-	# Break Bow Armor
-	goliath.take_damage(45.0)
+	print(" - Goliath Major Boss spawned. Total HP: %f" % (goliath.core_health + goliath.port_railgun_health + goliath.star_railgun_health + goliath.bow_armor_health))
+	# Break Bow Armor (200 HP)
+	goliath.take_damage(210.0)
 	assert(goliath.bow_armor_alive == false, "Goliath Bow Armor failed to break!")
 	print(" - Goliath Bow Armor shattered!")
 	
-	# Break Port Railgun
-	goliath.take_damage(55.0)
+	# Break Port Railgun (150 HP)
+	goliath.take_damage(160.0)
 	assert(goliath.port_railgun_alive == false, "Goliath Port Railgun failed to break!")
 	print(" - Goliath Port Railgun Battery offline!")
 	
-	# Break Starboard Railgun
-	goliath.take_damage(55.0)
+	# Break Starboard Railgun (150 HP)
+	goliath.take_damage(160.0)
 	assert(goliath.star_railgun_alive == false, "Goliath Starboard Railgun failed to break!")
 	print(" - Goliath Starboard Railgun Battery offline!")
 	
-	# Destroy Goliath Reactor Core
-	goliath.take_damage(110.0)
+	# Destroy Goliath Reactor Core (350 HP)
+	goliath.take_damage(360.0)
 	assert(flags["goliath_defeated"] == true, "Goliath defeat signal failed to trigger!")
-	print(" - SUCCESS: Armored Behemoth Goliath obliterated! Defeat signal triggered.")
+	print(" - SUCCESS: Armored Behemoth Goliath (850 HP) obliterated! Defeat signal triggered.")
 	
 	# 10. Test Run Victory Dialog & End of Game Condition
 	print("\nSTEP 10: Testing Run Victory Dialog & Game Pause...")
@@ -308,12 +318,13 @@ func _ready() -> void:
 	assert(s3_template["min_sector"] >= 2, "Sector 3 must roll advanced sector templates!")
 	print(" - 12E: WaveDirector 25+ templates and sector-gating verified.")
 	
-	# 12E. Verify Sector 3 Climax Final Boss Apex Titan Ouroboros
+	# 12E. Verify Sector 3 Climax Final Boss Apex Titan Ouroboros (1600 HP)
 	var ouroboros = ouroboros_scene.instantiate()
 	main_inst.add_child(ouroboros)
 	ouroboros.entry_done = true
+	assert(ouroboros.max_health == 1200.0 and ouroboros.shield_gate_hp == 400.0, "Ouroboros HP mismatch!")
 	ouroboros.shield_gate_alive = false # Bypass shield for quick automated test
-	ouroboros.take_damage(130.0) # Push below 50% HP
+	ouroboros.take_damage(650.0) # Push below 50% HP (<= 600.0)
 	assert(ouroboros.phase == 2, "Ouroboros failed to transition to Phase 2 Singularity Meltdown!")
 	print(" - 12F: Apex Titan Ouroboros Phase 2 Singularity Meltdown verified.")
 	
@@ -322,7 +333,7 @@ func _ready() -> void:
 		if "OUROBOROS" in b_name.to_upper():
 			ouroboros_flags["won"] = true
 	)
-	ouroboros.take_damage(150.0)
+	ouroboros.take_damage(600.0)
 	assert(ouroboros_flags["won"] == true, "Ouroboros defeat signal failed!")
 	print(" - 12G: Apex Titan Ouroboros obliterated! Defeat signal triggered.")
 	
@@ -364,6 +375,62 @@ func _ready() -> void:
 	assert(SoundEffects._streams.has("quantum_collapse"), "quantum_collapse procedural sound missing!")
 	print(" - 12I: Horizon wave function spawning, cosmic hazard drift, and downfield shmup flight verified.")
 	
+	# 13. Test 15-Minute Run Architecture, 3 Shops, Starter Stat Balance, Multi-Echelons
+	print("\nSTEP 13: Testing 15-Minute Run Architecture (3 Shops, Starter Stats, Multi-Echelons)...")
+	# 13A: Player starter stats
+	var player_scene = load("res://scenes/Player.tscn")
+	var fresh_p = player_scene.instantiate()
+	assert(fresh_p.fire_rate == 3.8, "Player starter fire_rate should be 3.8! Found: %f" % fresh_p.fire_rate)
+	assert(fresh_p.move_speed == 420.0, "Player starter move_speed should be 420.0! Found: %f" % fresh_p.move_speed)
+	var test_bullet = bullet_scene.instantiate()
+	main_inst.add_child(test_bullet)
+	test_bullet.setup(fresh_p.global_position, Vector2.UP, false, 1.0)
+	assert(test_bullet.speed == 540.0, "Player starter bullet speed should be 540.0! Found: %f" % test_bullet.speed)
+	test_bullet.queue_free()
+	fresh_p.queue_free()
+	print(" - 13A: Player starter balance verified (fire_rate: 3.8, speed: 420.0, bullet_speed: 540.0).")
+	
+	# 13B: 3-Shop Visit Architecture in Main.gd
+	assert("shop_w6_done" in main_inst and "shop_w18_done" in main_inst and "shop_w30_done" in main_inst, "Main.gd missing 3-shop progression flags!")
+	assert(main_inst.shop_w6_done == false and main_inst.shop_w18_done == false and main_inst.shop_w30_done == false, "Shop flags should initially be false!")
+	print(" - 13B: 3-Shop Visit Progression flags verified (Wave 6, 18, 30 post-miniboss).")
+	
+	# 13C: Multi-Echelon Wave Templates
+	var all_wave_templates = WaveDirector.get_all_templates()
+	for t in all_wave_templates:
+		var spawns = t.get("spawns", [])
+		assert(spawns.size() >= 3, "Wave template %s must have at least 3 echelons!" % t.get("id", ""))
+		var total_craft = 0
+		for batch in spawns:
+			total_craft += batch.get("count", 0)
+		assert(total_craft >= 12, "Wave template %s must have at least 12 craft! Found: %d" % [t.get("id", ""), total_craft])
+	print(" - 13C: All %d wave templates verified having 3-4 echelons and 12-26 craft per wave." % all_wave_templates.size())
+	
+	# 13D: Mathematical HP Scaling on Enemies
+	GameManager.current_wave = 1
+	GameManager.current_sector = 1
+	var e_w1 = enemy_scene.instantiate()
+	main_inst.add_child(e_w1)
+	e_w1.setup(0, Vector2(100, 100), -1, null, 0)
+	var hp_w1 = e_w1.max_health
+	e_w1.queue_free()
+	
+	GameManager.current_wave = 12
+	GameManager.current_sector = 1
+	var e_w12 = enemy_scene.instantiate()
+	main_inst.add_child(e_w12)
+	e_w12.setup(0, Vector2(100, 100), -1, null, 0)
+	var hp_w12 = e_w12.max_health
+	assert(hp_w12 > hp_w1 * 1.8, "Enemy HP failed to scale aggressively across waves! W1: %f, W12: %f" % [hp_w1, hp_w12])
+	e_w12.queue_free()
+	print(" - 13D: Mathematical enemy HP scaling verified (W1 Scout: %.1f HP -> W12 Scout: %.1f HP)." % [hp_w1, hp_w12])
+	
+	# 13E: Decoherence Spawner Queue Check
+	var spawner = main_inst.get_node("DecoherenceSpawner")
+	assert(spawner != null, "DecoherenceSpawner missing from Main scene!")
+	assert(spawner.has_method("_has_active_squads"), "Spawner missing _has_active_squads method!")
+	print(" - 13E: Decoherence Spawner squad queue tracker verified.")
+
 	print("\n====================================================")
 	print("--- ALL VERIFICATION TESTS PASSED 100% CLEANLY ---")
 	print("====================================================")

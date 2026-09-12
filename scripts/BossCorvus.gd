@@ -5,12 +5,12 @@ extends Area2D
 signal subsystem_destroyed(name: String)
 signal boss_defeated()
 
-@export var max_core_health: float = 120.0
-var core_health: float = 120.0
+@export var max_core_health: float = 280.0
+var core_health: float = 280.0
 
-@export var max_wing_health: float = 40.0
-var port_wing_health: float = 40.0
-var starboard_wing_health: float = 40.0
+@export var max_wing_health: float = 85.0
+var port_wing_health: float = 85.0
+var starboard_wing_health: float = 85.0
 
 var port_wing_alive: bool = true
 var starboard_wing_alive: bool = true

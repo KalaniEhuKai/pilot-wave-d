@@ -17,7 +17,7 @@ var shields: int = 2
 var shield_recharge_delay: float = 4.0
 var shield_timer: float = 0.0
 
-@export var move_speed: float = 540.0
+@export var move_speed: float = 420.0
 var current_velocity: Vector2 = Vector2.ZERO
 
 # 1942 Barrel Roll / Quantum Tunneling
@@ -31,7 +31,7 @@ var roll_elapsed: float = 0.0
 var is_invulnerable: bool = false
 
 # Synchrotron Cannon
-var fire_rate: float = 9.0
+var fire_rate: float = 3.8
 var fire_timer: float = 0.0
 var is_firing: bool = false
 var auto_fire: bool = false

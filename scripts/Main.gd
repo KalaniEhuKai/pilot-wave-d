@@ -23,15 +23,18 @@ var shake_intensity: float = 0.0
 var shake_duration: float = 0.0
 var shake_timer: float = 0.0
 
-# Multi-shop checkpoints
-var shop_w4_done: bool = false
-var shop_w10_done: bool = false
-var shop_w16_done: bool = false
+# 3 Shop checkpoints (one post-miniboss per sector)
+var shop_w6_done: bool = false
+var shop_w18_done: bool = false
+var shop_w30_done: bool = false
 
-# Boss encounter checkpoints
-var boss_w6_done: bool = false
+# Boss and Miniboss encounter checkpoints
+var miniboss_w6_done: bool = false
 var boss_w12_done: bool = false
-var boss_w18_done: bool = false
+var miniboss_w18_done: bool = false
+var boss_w24_done: bool = false
+var miniboss_w30_done: bool = false
+var boss_w36_done: bool = false
 
 var current_boss_name: String = "Super-Dreadnought Corvus"
 
@@ -119,44 +122,62 @@ func _evaluate_progression_triggers() -> void:
 	var enemies = get_tree().get_nodes_in_group("enemy")
 	var has_bubbles = is_instance_valid(spawner) and not spawner.active_bubbles.is_empty()
 	var airspace_clear = enemies.is_empty() and not has_bubbles
-	
-	# --- SHOP DOCKING CHECKPOINTS ---
-	# Shop 1: Wave 4 (Sector 1 Mid-Point)
-	if GameManager.current_wave >= 4 and not shop_w4_done and airspace_clear and GameManager.current_sector == 1:
-		shop_w4_done = true
-		_trigger_shop_docking()
-		return
-		
-	# Shop 2: Wave 10 (Sector 2 Mid-Point)
-	if GameManager.current_wave >= 10 and not shop_w10_done and airspace_clear and GameManager.current_sector == 2:
-		shop_w10_done = true
-		_trigger_shop_docking()
-		return
-		
-	# Shop 3: Wave 16 (Sector 3 Pre-Final Boss)
-	if GameManager.current_wave >= 16 and not shop_w16_done and airspace_clear and GameManager.current_sector == 3:
-		shop_w16_done = true
-		_trigger_shop_docking()
-		return
-	
-	# --- BOSS ENCOUNTER CHECKPOINTS ---
-	# Boss 1: Wave 6 -> Sector 1 Miniboss Super-Dreadnought Corvus
-	if GameManager.current_wave >= 6 and not boss_w6_done and airspace_clear and GameManager.current_sector == 1:
-		boss_w6_done = true
-		_spawn_boss(boss_corvus_scene, "Super-Dreadnought Corvus")
-		return
-		
-	# Boss 2: Wave 12 -> Sector 2 Miniboss Armored Behemoth Goliath
-	if GameManager.current_wave >= 12 and not boss_w12_done and airspace_clear and GameManager.current_sector == 2:
-		boss_w12_done = true
-		_spawn_boss(boss_goliath_scene, "Armored Behemoth Goliath")
-		return
-		
-	# Boss 3: Wave 18 -> Sector 3 Climax Final Boss Apex Titan Ouroboros
-	if GameManager.current_wave >= 18 and not boss_w18_done and airspace_clear and GameManager.current_sector == 3:
-		boss_w18_done = true
-		_spawn_boss(boss_ouroboros_scene, "Apex Titan Ouroboros")
-		return
+	if is_instance_valid(spawner) and spawner.has_method("_has_active_squads") and spawner._has_active_squads():
+		airspace_clear = false
+
+	# --- SECTOR 1 (Waves 1-12) ---
+	if GameManager.current_sector == 1:
+		# Wave 6: Miniboss 1 (Siege Goliath-Lite)
+		if GameManager.current_wave >= 6 and not miniboss_w6_done and airspace_clear:
+			miniboss_w6_done = true
+			_spawn_boss(boss_goliath_scene, "MINIBOSS: SIEGE GOLIATH", true)
+			return
+		# Post-Miniboss Shop 1: Wave 6
+		if GameManager.current_wave >= 6 and miniboss_w6_done and not shop_w6_done and airspace_clear:
+			shop_w6_done = true
+			_trigger_shop_docking()
+			return
+		# Wave 12: Sector 1 Climax Boss (Super-Dreadnought Corvus)
+		if GameManager.current_wave >= 12 and not boss_w12_done and airspace_clear:
+			boss_w12_done = true
+			_spawn_boss(boss_corvus_scene, "Super-Dreadnought Corvus")
+			return
+
+	# --- SECTOR 2 (Waves 13-24) ---
+	elif GameManager.current_sector == 2:
+		# Wave 18: Miniboss 2 (Siege Goliath-Lite Variant)
+		if GameManager.current_wave >= 18 and not miniboss_w18_done and airspace_clear:
+			miniboss_w18_done = true
+			_spawn_boss(boss_goliath_scene, "MINIBOSS: SIEGE GOLIATH", true)
+			return
+		# Post-Miniboss Shop 2: Wave 18
+		if GameManager.current_wave >= 18 and miniboss_w18_done and not shop_w18_done and airspace_clear:
+			shop_w18_done = true
+			_trigger_shop_docking()
+			return
+		# Wave 24: Sector 2 Climax Boss (Armored Behemoth Goliath)
+		if GameManager.current_wave >= 24 and not boss_w24_done and airspace_clear:
+			boss_w24_done = true
+			_spawn_boss(boss_goliath_scene, "Armored Behemoth Goliath")
+			return
+
+	# --- SECTOR 3 (Waves 25-36) ---
+	elif GameManager.current_sector == 3:
+		# Wave 30: Miniboss 3 (Quantum Corvus Miniboss)
+		if GameManager.current_wave >= 30 and not miniboss_w30_done and airspace_clear:
+			miniboss_w30_done = true
+			_spawn_boss(boss_corvus_scene, "MINIBOSS: QUANTUM CORVUS")
+			return
+		# Post-Miniboss Shop 3: Wave 30 (Final Shop Visit)
+		if GameManager.current_wave >= 30 and miniboss_w30_done and not shop_w30_done and airspace_clear:
+			shop_w30_done = true
+			_trigger_shop_docking()
+			return
+		# Wave 36: Grand Finale Climax Boss (Apex Titan Ouroboros)
+		if GameManager.current_wave >= 36 and not boss_w36_done and airspace_clear:
+			boss_w36_done = true
+			_spawn_boss(boss_ouroboros_scene, "Apex Titan Ouroboros")
+			return
 
 func _trigger_shop_docking() -> void:
 	GameManager.current_phase = GameManager.RunPhase.SHOP_DOCKING
@@ -168,7 +189,7 @@ func _trigger_shop_docking() -> void:
 	if is_instance_valid(shop):
 		shop.open_shop()
 
-func _spawn_boss(boss_packed: PackedScene, b_name: String) -> void:
+func _spawn_boss(boss_packed: PackedScene, b_name: String, is_mini: bool = false) -> void:
 	GameManager.current_phase = GameManager.RunPhase.BOSS_BATTLE
 	current_boss_name = b_name
 	
@@ -178,21 +199,30 @@ func _spawn_boss(boss_packed: PackedScene, b_name: String) -> void:
 			b.queue_free()
 	
 	var boss = boss_packed.instantiate()
+	if is_mini and "is_miniboss" in boss:
+		boss.is_miniboss = true
 	add_child(boss)
 	SoundEffects.play_sfx("bonus", 0.3, -3.0)
 
 func _on_boss_defeated_progression(b_name: String) -> void:
-	if "CORVUS" in b_name.to_upper():
+	if "MINIBOSS" in b_name.to_upper():
+		# Miniboss cleared: return to combat phase so post-miniboss shop check can trigger
+		GameManager.current_phase = GameManager.RunPhase.COMBAT_WAVES
+		if is_instance_valid(spawner):
+			spawner.wave_timer = 1.0
+		return
+
+	if "CORVUS" in b_name.to_upper() and GameManager.current_sector == 1:
 		# Sector 1 Cleared -> Transition to Sector 2
 		get_tree().create_timer(1.2).timeout.connect(func():
 			_transition_to_sector(2, "Armored Behemoth Goliath")
 		)
-	elif "GOLIATH" in b_name.to_upper():
+	elif "GOLIATH" in b_name.to_upper() and GameManager.current_sector == 2:
 		# Sector 2 Cleared -> Transition to Sector 3
 		get_tree().create_timer(1.2).timeout.connect(func():
 			_transition_to_sector(3, "Apex Titan Ouroboros")
 		)
-	else:
+	elif "OUROBOROS" in b_name.to_upper() and GameManager.current_sector == 3:
 		# Final Boss Ouroboros Defeated -> True Victory!
 		get_tree().create_timer(1.4).timeout.connect(func():
 			GameManager.trigger_victory(b_name)
