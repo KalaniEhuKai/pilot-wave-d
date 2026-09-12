@@ -438,6 +438,34 @@ func _ready() -> void:
 	assert(w1_template["hazards"].is_empty(), "Wave 1 should have zero hazards for gentle onboarding!")
 	print(" - 13F: Wave 1 gentle onboarding encounter (FIRST CONTACT) verified.")
 
+	# 13G: On-Screen Horizon Spawning Verification
+	print("\nSTEP 13G: Testing On-Screen Forward Horizon Spawning & Clamping...")
+	var vp_rect = GameAxis.get_viewport_rect()
+	
+	# Test horizontal spawn line
+	GameAxis.set_axis_vertical(false)
+	for lat_i in [0.0, 0.25, 0.5, 0.75, 1.0]:
+		var pt = GameAxis.get_spawn_line(lat_i)
+		assert(vp_rect.has_point(pt), "Horizontal spawn point %s must be inside viewport!" % pt)
+		var clamped = spawner._clamp_to_spawn_zone(pt)
+		assert(vp_rect.has_point(clamped), "Clamped spawn point %s must be inside viewport!" % clamped)
+		assert(clamped.x <= vp_rect.position.x + vp_rect.size.x - 60.0, "Clamped X must have at least 60px margin from right edge!")
+		assert(clamped.x >= vp_rect.position.x + vp_rect.size.x - 260.0, "Clamped X must be on the forward horizon band!")
+	
+	# Test vertical spawn line
+	GameAxis.set_axis_vertical(true)
+	var vp_rect_v = GameAxis.get_viewport_rect()
+	for lat_i in [0.0, 0.25, 0.5, 0.75, 1.0]:
+		var pt = GameAxis.get_spawn_line(lat_i)
+		assert(vp_rect_v.has_point(pt), "Vertical spawn point %s must be inside viewport!" % pt)
+		var clamped = spawner._clamp_to_spawn_zone(pt)
+		assert(vp_rect_v.has_point(clamped), "Clamped vertical point %s must be inside viewport!" % clamped)
+		assert(clamped.y >= vp_rect_v.position.y + 60.0, "Clamped Y must have at least 60px margin from top edge!")
+	
+	# Reset axis back to horizontal
+	GameAxis.set_axis_vertical(false)
+	print(" - 13G: Horizon spawn points and clamping verified strictly on-screen in both orientations.")
+
 	print("\n====================================================")
 	print("--- ALL VERIFICATION TESTS PASSED 100% CLEANLY ---")
 	print("====================================================")

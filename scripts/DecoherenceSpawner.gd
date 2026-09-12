@@ -83,18 +83,18 @@ func _execute_encounter_template(template: Dictionary, squad_id: int) -> void:
 	# 0. Clean up any stale hazards from previous waves to prevent clutter
 	_cleanup_stale_hazards()
 	
-	# 1. Spawn Environmental Hazards along the forward horizon
+	# 1. Spawn Environmental Hazards along the forward horizon (visible on screen)
 	var hazards = template.get("hazards", [])
+	var oncoming_h = -GameAxis.forward
 	for h_data in hazards:
 		var h_type = h_data.get("type", 0)
-		var count = h_data.get("count", 1)
+		var count = h_data.get("count", 0)
 		for i in range(count):
 			var hz = hazard_scene.instantiate()
 			get_parent().add_child(hz)
-			var lat_step = randf_range(0.15, 0.85)
-			# Spawn off-screen along forward horizon, drifting naturally downfield
-			var deep_offset = -GameAxis.scroll_dir * (i * 45.0 + randf_range(15.0, 40.0))
-			var pos = GameAxis.get_spawn_line(lat_step) + deep_offset
+			var lat_step = randf_range(0.14, 0.86)
+			var stagger = oncoming_h * (i * 36.0)
+			var pos = _clamp_to_spawn_zone(GameAxis.get_spawn_line(lat_step) + stagger)
 			hz.setup(h_type, pos)
 	
 	# 2. Spawn Enemies from collapsing wave functions along the forward horizon
@@ -113,6 +113,19 @@ func _execute_encounter_template(template: Dictionary, squad_id: int) -> void:
 		var affix = batch.get("affix", 0)
 		_spawn_pattern_batch(e_type, count, pattern, delay, squad_id, affix)
 
+func _clamp_to_spawn_zone(pos: Vector2) -> Vector2:
+	var rect = GameAxis.get_viewport_rect()
+	if GameAxis.is_vertical:
+		return Vector2(
+			clampf(pos.x, rect.position.x + 60.0, rect.position.x + rect.size.x - 60.0),
+			clampf(pos.y, rect.position.y + 64.0, rect.position.y + 200.0)
+		)
+	else:
+		return Vector2(
+			clampf(pos.x, rect.position.x + rect.size.x - 260.0, rect.position.x + rect.size.x - 64.0),
+			clampf(pos.y, rect.position.y + 60.0, rect.position.y + rect.size.y - 60.0)
+		)
+
 func _cleanup_stale_hazards() -> void:
 	for h in get_tree().get_nodes_in_group("hazard"):
 		if is_instance_valid(h):
@@ -122,61 +135,60 @@ func _cleanup_stale_hazards() -> void:
 				h.queue_free()
 
 func _spawn_pattern_batch(e_type: int, count: int, pattern: String, base_delay: float, squad_id: int, affix: int) -> void:
-	var scroll = GameAxis.scroll_dir
+	var oncoming = -GameAxis.forward
 	
 	match pattern:
 		"ROW", "HORIZON_SPREAD":
 			for i in range(count):
-				var lateral_step = 0.18 + (float(i) / maxi(1, count - 1)) * 0.64
-				var pos = GameAxis.get_spawn_line(lateral_step)
+				var lateral_step = 0.15 + (float(i) / maxi(1, count - 1)) * 0.70
+				var pos = _clamp_to_spawn_zone(GameAxis.get_spawn_line(lateral_step))
 				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.1, affix)
 				
 		"SWEEP_ROW", "ECHELON":
 			for i in range(count):
-				var lateral_step = 0.15 + (float(i) / maxi(1, count - 1)) * 0.7
-				var deep_offset = -scroll * (i * 26.0)
-				var pos = GameAxis.get_spawn_line(lateral_step) + deep_offset
-				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.16, affix)
+				var lateral_step = 0.12 + (float(i) / maxi(1, count - 1)) * 0.76
+				var stagger = oncoming * (i * 14.0)
+				var pos = _clamp_to_spawn_zone(GameAxis.get_spawn_line(lateral_step) + stagger)
+				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.15, affix)
 				
 		"V_SHAPE":
 			var mid = int(count * 0.5)
 			for i in range(count):
 				var lateral_step = (float(i) - mid) / float(maxi(1, mid)) * 0.35 + 0.5
-				var deep_offset = -scroll * (absf(float(i - mid)) * 34.0)
-				var pos = GameAxis.get_spawn_line(lateral_step) + deep_offset
+				var stagger = oncoming * ((mid - absf(float(i - mid))) * 18.0)
+				var pos = _clamp_to_spawn_zone(GameAxis.get_spawn_line(lateral_step) + stagger)
 				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + absf(float(i - mid)) * 0.12, affix)
 				
 		"CENTER", "CENTER_STREAM":
 			for i in range(count):
-				var deep_offset = -scroll * (i * 45.0)
-				var pos = GameAxis.get_spawn_line(0.5) + deep_offset
-				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.18, affix)
+				var stagger = oncoming * (i * 20.0)
+				var pos = _clamp_to_spawn_zone(GameAxis.get_spawn_line(0.5) + stagger)
+				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.16, affix)
 				
 		"FLANK_LEFT":
 			for i in range(count):
-				var deep_offset = -scroll * (i * 32.0)
-				var pos = GameAxis.get_spawn_line(0.18) + deep_offset
+				var stagger = oncoming * (i * 18.0)
+				var pos = _clamp_to_spawn_zone(GameAxis.get_spawn_line(0.18) + stagger)
 				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.14, affix)
 				
 		"FLANK_RIGHT":
 			for i in range(count):
-				var deep_offset = -scroll * (i * 32.0)
-				var pos = GameAxis.get_spawn_line(0.82) + deep_offset
+				var stagger = oncoming * (i * 18.0)
+				var pos = _clamp_to_spawn_zone(GameAxis.get_spawn_line(0.82) + stagger)
 				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.14, affix)
 				
 		"FLANK_SPLIT", "PINCER_FLANK":
 			for i in range(count):
 				var is_left = (i % 2 == 0)
 				var lateral_step = 0.18 if is_left else 0.82
-				var deep_offset = -scroll * ((i / 2) * 32.0)
-				var pos = GameAxis.get_spawn_line(lateral_step) + deep_offset
+				var stagger = oncoming * ((i / 2) * 18.0)
+				var pos = _clamp_to_spawn_zone(GameAxis.get_spawn_line(lateral_step) + stagger)
 				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.12, affix)
 				
 		_: # RANDOM_HORIZON / Fallback
 			for i in range(count):
 				var lat_step = randf_range(0.15, 0.85)
-				var deep_offset = -scroll * randf_range(0.0, 40.0)
-				var pos = GameAxis.get_spawn_line(lat_step) + deep_offset
+				var pos = _clamp_to_spawn_zone(GameAxis.get_spawn_line(lat_step))
 				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.12, affix)
 
 func _register_squad(squad_id: int, total_count: int) -> void:
