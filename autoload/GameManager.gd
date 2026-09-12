@@ -15,6 +15,7 @@ signal screen_shake_requested(intensity: float, duration: float)
 signal joules_changed(p1: int, p2: int)
 signal boss_health_updated(current_hp: float, max_hp: float, boss_name: String)
 signal boss_defeated(boss_name: String)
+signal victory_triggered(final_score: int, wipes: int, survival_time: float, boss_name: String)
 signal sector_cleared(sector_num: int, rank: String, bonus_points: int)
 signal secret_discovered(secret_name: String, bonus_pts: int)
 
@@ -46,13 +47,13 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
 func _process(delta: float) -> void:
-	if not is_game_over and not is_paused:
+	if not is_game_over and not is_paused and current_phase != RunPhase.SECTOR_VICTORY:
 		survival_time += delta
 	
 	if Input.is_action_just_pressed("toggle_axis"):
 		GameAxis.toggle_axis()
 	
-	if Input.is_action_just_pressed("restart") and is_game_over:
+	if Input.is_action_just_pressed("restart") and (is_game_over or current_phase == RunPhase.SECTOR_VICTORY):
 		restart_game()
 
 func add_score(amount: int) -> void:
@@ -119,7 +120,12 @@ func trigger_game_over() -> void:
 	player_died.emit(1)
 	game_over_triggered.emit(score, wipe_count, survival_time)
 
+func trigger_victory(boss_name: String = "FLAGSHIP") -> void:
+	current_phase = RunPhase.SECTOR_VICTORY
+	victory_triggered.emit(score, wipe_count, survival_time, boss_name)
+
 func restart_game() -> void:
+	get_tree().paused = false
 	score = 0
 	wipe_count = 0
 	enemies_destroyed = 0

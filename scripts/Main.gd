@@ -51,6 +51,12 @@ func _ready() -> void:
 		get_tree().create_timer(0.05).timeout.connect(func():
 			dossier.show_dossier(GameManager.current_sector, chosen_boss_name)
 		)
+	
+	GameManager.boss_defeated.connect(func(b_name):
+		get_tree().create_timer(1.2).timeout.connect(func():
+			GameManager.trigger_victory(b_name)
+		)
+	)
 
 func _center_camera() -> void:
 	var vp = get_viewport_rect().size

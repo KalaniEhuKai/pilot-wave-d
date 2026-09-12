@@ -189,7 +189,16 @@ func _ready() -> void:
 	assert(flags["goliath_defeated"] == true, "Goliath defeat signal failed to trigger!")
 	print(" - SUCCESS: Armored Behemoth Goliath obliterated! Defeat signal triggered.")
 	
+	# 10. Test Run Victory Dialog & End of Game Condition
+	print("\nSTEP 10: Testing Run Victory Dialog & Game Pause...")
+	var victory = main_inst.get_node("VictoryOverlay")
+	GameManager.trigger_victory("ARMORED BEHEMOTH GOLIATH")
+	assert(victory.panel.visible == true, "VictoryOverlay failed to display!")
+	assert(get_tree().paused == true, "Game tree must be paused upon run victory!")
+	assert("GOLIATH" in victory.subtitle_label.text, "Victory subtitle must identify the vanquished boss!")
+	print(" - SUCCESS: 'RUN WON' Victory dialog displayed and gameplay safely stopped.")
+	
 	print("\n====================================================")
-	print("--- ALL PHASE 4 EXPANDED SYNERGY & BOSS TESTS PASSED 100% ---")
+	print("--- ALL VERIFICATION TESTS PASSED 100% CLEANLY ---")
 	print("====================================================")
 	get_tree().quit(0)
