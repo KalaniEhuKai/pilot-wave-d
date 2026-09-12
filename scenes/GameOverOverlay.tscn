@@ -136,6 +136,7 @@ size_flags_vertical = 3
 [node name="RestartButton" type="Button" parent="Panel/VBox"]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
+focus_mode = 0
 theme_override_colors/font_color = Color(0.2, 1, 0.85, 1)
 theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")

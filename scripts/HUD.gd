@@ -34,6 +34,7 @@ var target_score: int = 0
 var banner_timer: float = 0.0
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	add_to_group("hud")
 	GameManager.score_changed.connect(_on_score_changed)
 	GameManager.wipe_bonus_awarded.connect(_on_wipe_bonus_awarded)
@@ -141,10 +142,8 @@ func open_item_choice_modal() -> void:
 	_populate_card(current_choice_a, title_a, tier_a, desc_a)
 	_populate_card(current_choice_b, title_b, tier_b, desc_b)
 	
+	choice_modal.modulate.a = 1.0
 	choice_modal.visible = true
-	choice_modal.modulate.a = 0.0
-	var tw = create_tween()
-	tw.tween_property(choice_modal, "modulate:a", 1.0, 0.2)
 	get_tree().paused = true
 
 func _populate_card(item: ItemModifier, t_lbl: Label, tier_lbl: Label, d_lbl: Label) -> void:
@@ -165,8 +164,13 @@ func _populate_card(item: ItemModifier, t_lbl: Label, tier_lbl: Label, d_lbl: La
 	d_lbl.text = item.description
 
 func _select_choice(item: ItemModifier) -> void:
-	get_tree().paused = false
 	choice_modal.visible = false
+	get_tree().paused = false
+	
+	# Release any GUI focus so player flight controls immediately receive all keyboard inputs
+	var focused = get_viewport().gui_get_focus_owner()
+	if focused:
+		focused.release_focus()
 	
 	var players = get_tree().get_nodes_in_group("player")
 	if not players.is_empty() and is_instance_valid(players[0]):
