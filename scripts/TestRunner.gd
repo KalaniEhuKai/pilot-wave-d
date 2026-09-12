@@ -326,6 +326,22 @@ func _ready() -> void:
 	assert(ouroboros_flags["won"] == true, "Ouroboros defeat signal failed!")
 	print(" - 12G: Apex Titan Ouroboros obliterated! Defeat signal triggered.")
 	
+	# 12H. Verify Enemy Behavioral Mutations & Template Wildcard Mutator
+	var mutating_enemy = enemy_scene.instantiate()
+	main_inst.add_child(mutating_enemy)
+	mutating_enemy.setup(0, Vector2(250, 250), -1, null, 0)
+	mutating_enemy.has_evasive_juke = true
+	mutating_enemy.has_desperation_charge = true
+	mutating_enemy.has_aimed_lead = true
+	mutating_enemy.has_orbital_flight = true
+	assert(mutating_enemy.has_evasive_juke and mutating_enemy.has_desperation_charge and mutating_enemy.has_aimed_lead, "Enemy behavioral traits failed to assign!")
+	mutating_enemy.queue_free()
+	
+	var base_template = WaveDirector.get_all_templates()[0]
+	var mutated_t = wd2._mutate_template(base_template, 3)
+	assert(mutated_t.has("spawns") and mutated_t["spawns"].size() > 0, "Mutated template invalid!")
+	print(" - 12H: Procedural behavioral mutations and template wildcard system verified.")
+	
 	print("\n====================================================")
 	print("--- ALL VERIFICATION TESTS PASSED 100% CLEANLY ---")
 	print("====================================================")

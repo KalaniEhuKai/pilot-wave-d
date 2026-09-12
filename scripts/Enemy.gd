@@ -63,6 +63,17 @@ var warp_timer: float = 0.0
 var is_charging: bool = false
 var charge_vector: Vector2 = Vector2.ZERO
 
+# Behavioral Mutation Traits (Procedural Variety)
+var has_evasive_juke: bool = false
+var juke_cooldown: float = 0.0
+var has_desperation_charge: bool = false
+var is_desperation_ramming: bool = false
+var has_orbital_flight: bool = false
+var orbital_direction: float = 1.0
+var orbital_radius: float = 240.0
+var has_aimed_lead: bool = false
+var has_burst_spread: bool = false
+
 # Visuals & Juice
 var hit_flash_timer: float = 0.0
 var main_color: Color = Color(1.0, 0.2, 0.4, 1.0)
@@ -244,9 +255,23 @@ func _setup_stats() -> void:
 		EliteAffix.SHIELDED:
 			max_health *= 1.3
 			energy_shield_hp = max_health * 0.6
-			score_value *= 2
-			main_color = Color(0.4, 0.6, 1.0, 1.0)
-			accent_color = Color(0.8, 0.9, 1.0, 1.0)
+	# Procedural Behavioral Mutation Traits
+	lateral_frequency = randf_range(1.8, 3.6)
+	lateral_amplitude = randf_range(50.0, 110.0)
+	orbital_direction = 1.0 if randf() > 0.5 else -1.0
+	orbital_radius = randf_range(200.0, 320.0)
+	
+	var trait_chance = 0.25 + (sec - 1) * 0.15
+	if randf() < trait_chance and enemy_type in [EnemyType.SCOUT, EnemyType.INTERCEPTOR, EnemyType.KNIGHT_VANGUARD]:
+		has_evasive_juke = true
+	if randf() < trait_chance and enemy_type in [EnemyType.SCOUT, EnemyType.BOMBER]:
+		has_desperation_charge = true
+	if randf() < (trait_chance * 0.7) and enemy_type in [EnemyType.SCOUT, EnemyType.SNIPER, EnemyType.DRAINER_LEECH]:
+		has_orbital_flight = true
+	if randf() < trait_chance:
+		has_aimed_lead = true
+	if randf() < (trait_chance * 0.6) and enemy_type in [EnemyType.SCOUT, EnemyType.BOMBER, EnemyType.MISSILE_CORVETTE]:
+		has_burst_spread = true
 
 	health = max_health
 
@@ -292,6 +317,39 @@ func _check_shield_frigate_buffs() -> void:
 func _handle_flight_movement(delta: float) -> void:
 	var fwd = GameAxis.forward
 	var lat = GameAxis.lateral
+
+	# 1. Evasive Juking (Dodging close player bullets)
+	if juke_cooldown > 0.0:
+		juke_cooldown -= delta
+	if has_evasive_juke and juke_cooldown <= 0.0:
+		for b in get_tree().get_nodes_in_group("bullet"):
+			if is_instance_valid(b) and not b.get("is_enemy"):
+				if global_position.distance_to(b.global_position) <= 85.0:
+					var dodge_dir = lat * (1.0 if randf() > 0.5 else -1.0)
+					global_position += dodge_dir * 55.0
+					juke_cooldown = 1.4
+					SoundEffects.play_sfx("roll", 0.06, 5.0)
+					break
+
+	# 2. Desperation Kamikaze Charge on Low Health
+	if has_desperation_charge and health <= max_health * 0.35:
+		var target = _get_closest_player()
+		if target != null:
+			var ram_dir = (target.global_position - global_position).normalized()
+			global_position += ram_dir * speed * 1.8 * delta
+			rotation = ram_dir.angle()
+			is_desperation_ramming = true
+			return
+
+	# 3. Dynamic Orbital Circling
+	if has_orbital_flight:
+		var target = _get_closest_player()
+		if target != null:
+			var to_player = global_position - target.global_position
+			var angle = to_player.angle() + (orbital_direction * 1.6 * delta)
+			global_position = target.global_position + Vector2(cos(angle), sin(angle)) * orbital_radius
+			rotation = (target.global_position - global_position).angle()
+			return
 
 	match enemy_type:
 		EnemyType.SCOUT:
@@ -411,6 +469,23 @@ func _execute_attack() -> void:
 
 	var fwd = GameAxis.forward
 	var lat = GameAxis.lateral
+
+	# Procedural Attack Trait: Aimed Lead Prediction
+	if has_aimed_lead and enemy_type in [EnemyType.SCOUT, EnemyType.INTERCEPTOR, EnemyType.KNIGHT_VANGUARD]:
+		var target = _get_closest_player()
+		if target != null:
+			var target_vel = target.get("current_velocity")
+			var lead_offset = (target_vel * 0.28) if target_vel != null else Vector2.ZERO
+			var lead_dir = ((target.global_position + lead_offset) - global_position).normalized()
+			_spawn_enemy_bullet(global_position + lead_dir * 18.0, lead_dir, 1.0, 440.0)
+			return
+
+	# Procedural Attack Trait: Burst Spread
+	if has_burst_spread and enemy_type in [EnemyType.SCOUT, EnemyType.BOMBER, EnemyType.MISSILE_CORVETTE]:
+		for a in [-16.0, 0.0, 16.0]:
+			var d = fwd.rotated(deg_to_rad(a))
+			_spawn_enemy_bullet(global_position + d * 18.0, d, 1.0, 400.0)
+		return
 
 	match enemy_type:
 		EnemyType.SCOUT:

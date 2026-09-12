@@ -404,7 +404,45 @@ func select_template_for_wave(sector_idx: int, wave_idx: int) -> Dictionary:
 	if recent_templates.size() > 6:
 		recent_templates.pop_front()
 
-	return chosen
+	return _mutate_template(chosen, sector_idx)
+
+func _mutate_template(template: Dictionary, sector_idx: int) -> Dictionary:
+	var mutated = template.duplicate(true)
+	
+	# Sector-appropriate enemy pools for wildcard swaps
+	var s1_pool = [SCOUT, BOMBER, INTERCEPTOR, TURRET_PLATFORM, MICRO_DRONE]
+	var s2_pool = [SCOUT, BOMBER, INTERCEPTOR, TURRET_PLATFORM, MICRO_DRONE, SNIPER, SHIELD_FRIGATE, KNIGHT_VANGUARD, MISSILE_CORVETTE, DRAINER_LEECH]
+	var s3_pool = [SCOUT, BOMBER, INTERCEPTOR, TURRET_PLATFORM, MICRO_DRONE, SNIPER, SHIELD_FRIGATE, KNIGHT_VANGUARD, MISSILE_CORVETTE, DRAINER_LEECH, HEAVY_CRUISER, PHANTOM, DRONE_CARRIER, WARP_STALKER, MINE_TETHER]
+	var current_pool = s1_pool if sector_idx == 1 else (s2_pool if sector_idx == 2 else s3_pool)
+	
+	var elite_chance = 0.10 if sector_idx == 1 else (0.30 if sector_idx == 2 else 0.55)
+	var possible_affixes = [AFFIX_ARMORED, AFFIX_VOLATILE, AFFIX_SWIFT, AFFIX_SHIELDED]
+	
+	# 1. Procedural Spawn Batch Mutation (Wildcards & Elite Promotions)
+	var spawns = mutated.get("spawns", [])
+	for batch in spawns:
+		# Wildcard swap (35% chance)
+		if randf() < 0.35 and not current_pool.is_empty():
+			current_pool.shuffle()
+			batch["type"] = current_pool[0]
+		
+		# Elite Affix Promotion
+		if randf() < elite_chance and batch.get("affix", 0) == 0 and batch["type"] != MICRO_DRONE:
+			possible_affixes.shuffle()
+			batch["affix"] = possible_affixes[0]
+		
+		# Timing jitter
+		if batch.has("delay"):
+			batch["delay"] = maxf(0.0, batch["delay"] + randf_range(-0.3, 0.3))
+	
+	# 2. Procedural Hazard Mutation
+	var hazards = mutated.get("hazards", [])
+	if randf() < 0.35:
+		var bonus_hazard = HZ_ASTEROID if randf() > 0.5 else HZ_PLASMA_BARREL
+		hazards.append({"type": bonus_hazard, "count": randi_range(1, 2)})
+		mutated["hazards"] = hazards
+	
+	return mutated
 
 func calculate_wave_budget(sector_idx: int, wave_idx: int, players: Array) -> float:
 	var base_budget = 45.0
