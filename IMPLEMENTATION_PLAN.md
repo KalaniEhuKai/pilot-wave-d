@@ -205,7 +205,7 @@ graph TD
 
 ---
 
-### Phase 1: The 60-Second Playable Arcade Prototype [COMPLETED]
+### Phase 1: The 60-Second Playable Arcade Prototype [COMPLETED - Core Loop]
 *Goal: Build an immediately playable, satisfying combat loop within minutes: fly, shoot, dodge, destroy enemy squadrons telegraphed by the Decoherence Spawner, earn formation wipe bonuses, and restart on death.*
 
 1. **Godot 4 Project Setup & Universal WebGL Configuration** [COMPLETED]:
@@ -215,13 +215,10 @@ graph TD
 2. **`GameAxis` Autoload (Coordinate System Abstraction)** [COMPLETED]:
    - Dynamic `forward`, `lateral`, `spawn_edge`, and `scroll_dir` vectors.
    - Screen bounds management for 16:9 Landscape vs 9:16 Portrait with real-time toggle.
-3. **Player Flight Model & Dual-Platform Controls (`Player.gd`)** [COMPLETED]:
-   - 0.04s micro-damped momentum model.
-   - Dual platform inputs:
-     - PC: Keyboard WASD/Arrows, Mouse, and Gamepad analog stick.
-     - Mobile: Relative touch drag steering (1:1 finger displacement without blocking ship) + dedicated on-screen Primary Fire button.
-   - **1942 Barrel Roll / Quantum Tunneling**:
-     - 1.2s invulnerability window with scale-squash tweening and cooldown timer.
+3. **Player Flight Model & Dual-Platform Controls (`Player.gd`)** [COMPLETED - Simplified]:
+   - 0.04s micro-damped momentum model with relative touch drag steering for mobile and keyboard/mouse/gamepad on PC.
+   - **1942 Barrel Roll / Quantum Tunneling** [COMPLETED - Built-in]: 1.2s invulnerability window with scale-squash tweening and 3 stock charges.
+   - *Deferred*: Un-hardcoding Barrel Roll into the modular Utility Active Item slot; dedicated mobile on-screen touch buttons (Fire, Utility, Special).
 4. **Primary Weapon: Synchrotron Cannon** [COMPLETED]:
    - Dual forward stream of relativistic charged particles.
    - High-contrast player bullet palette (bright cyan core with luminous border).
@@ -240,11 +237,11 @@ graph TD
 
 ---
 
-### Phase 2: The First Broken Synergies & Elite Drops [COMPLETED]
+### Phase 2: The First Broken Synergies & Elite Drops [COMPLETED - Core Loop]
 *Goal: Introduce the Isaac-style modular item architecture and test first combinatorial game-breaking builds.*
 
 1. **Modular `ItemModifier` Resource Architecture** [COMPLETED]:
-   - Extensible hook pipeline: `on_ship_init`, `on_fire`, `on_projectile_tick`, `on_hit`, `on_kill`, `on_roll`.
+   - Extensible hook pipeline: `on_ship_init`, `on_fire`, `on_projectile_tick`, `on_hit`, `on_kill`, `on_roll`, `on_wave_start`, `on_take_damage`.
 2. **5 Foundational Multi-Tier Relics** [COMPLETED]:
    - *Tier 1 Trajectory*: **Birefringence Prism** (projectiles split into 3 refracted beams).
    - *Tier 1 Trajectory*: **Gravitational Lensing** (bends projectile paths toward enemies; homing).
@@ -254,53 +251,249 @@ graph TD
 3. **Elite Enemy Affixes & Item Choice Crates** [COMPLETED]:
    - Champion variants: *Armored* (+150% HP) and *Volatile* (bullet death-burst).
    - Defeating an elite wave drops a floating Item Choice Crate (choose 1 of 2 relics).
-4. **Synergy Ribbon HUD** [COMPLETED]:
-   - Real-time HUD tray displaying acquired item icons with inspect tooltips.
+4. **Synergy Ribbon HUD** [COMPLETED - In-Flight View]:
+   - Real-time HUD tray displaying acquired item icons with tooltips.
+   - *Deferred*: Full Pause Menu with interactive Synergy Inspector modal.
 
 ---
 
-### Phase 3: Run Structure, Sky Merchant & 2-Player Co-Op [COMPLETED]
+### Phase 3: Run Structure, Sky Merchant & 2-Player Co-Op [COMPLETED - Core Loop]
 *Goal: Expand from a combat prototype into a complete roguelite run with economy, shopping, co-op, and a multi-part boss.*
 
 1. **Sector Progression Architecture** [COMPLETED]:
    - RunPhase state machine (`COMBAT_WAVES`, `SHOP_DOCKING`, `BOSS_BATTLE`, `SECTOR_VICTORY`).
-   - Wave 4 clear triggers Sky Merchant Docking; Wave 7 triggers Sector 1 Boss.
-2. **2-Player Local Co-Op Architecture** [COMPLETED]:
-   - 1P/2P mode toggle on HUD and project input mappings for P2.
+   - Wave-gated docking and boss encounters.
+2. **2-Player Local Co-Op Architecture** [COMPLETED - Dual Control & Shared Scrap]:
+   - 1P/2P mode toggle and project input mappings for P2.
    - Distinct ship hulls & neon color coding (P1 Cyan / P2 Amber-Gold).
    - Independent player wallets with zero-friction scrap drop replication (+10 for P1, +10 for P2 on drop pickup).
-3. **The Sky Merchant Zeppelin (`SkyMerchant.gd`)** [COMPLETED]:
+   - *Deferred*: Downed "Plasma Ghost" state and Sky Merchant Revive Pods.
+3. **The Sky Merchant Zeppelin (`SkyMerchant.gd`)** [COMPLETED - Basic Shop]:
    - Mid-sector in-flight docking sequence.
    - Completely separate shop stalls and independent escalating Reroll Terminals (5 J -> 10 J -> 20 J -> 35 J).
    - Hull Repair Nano-Injectors (15 J).
+   - *Deferred*: Tier-based pricing, optional Risk Contracts, and D6 active charge reroll synergy.
 4. **Sector 1 Boss: Super-Dreadnought Corvus (`BossCorvus.gd`)** [COMPLETED]:
    - Multi-part boss: Independent breakable Port and Starboard wing batteries (+2,500 pts each).
    - Central Singularity Core exposed with Phase 2 Enrage 4-spoke rotating spiral bullet vortex.
    - Victory bounty: +15,000 pts, guaranteed Elite Relic Crate, and Sector Cleared banner.
-5. **Secret Systems & Environmental Rifts (`SecretDirector.gd`)** [COMPLETED]:
+5. **Secret Systems & Environmental Rifts (`SecretDirector.gd`)** [COMPLETED - Basic Secrets]:
    - Hidden Quantum Anomalies in background parallax (destructible for scrap caches and +500 pts).
    - Dirac Monopole landmark (the 1942 Yashichi homage: 100% full hull repair + 10,000 pts).
+   - *Deferred*: Sub-Space Wormhole pocket rooms (crawlspace homage) and Observer's Visor secret detection relic.
 
 ---
 
-### Phase 4: Threat Director, Deep Item Roster & Boss Asymmetry [COMPLETED]
+### Phase 4: Threat Director, Deep Item Roster & Boss Asymmetry [COMPLETED - Core Loop]
 *Goal: Dynamic procedural variety and tactical boss matchups.*
 
 1. **Threat Budget Director (`WaveDirector.gd`)** [COMPLETED]:
    - Point-budgeted dynamic wave generator scaling with sector difficulty and player synergy DPS.
    - Formation library: V-Formation, Sine Dive, Pincer Flank, Escort Column, and Elite Champion.
-2. **Asymmetric Boss Encounters & Threat Dossier** [COMPLETED]:
+2. **Asymmetric Boss Encounters & Threat Dossier** [COMPLETED - Linear Sequence]:
    - Threat Dossier briefing card displayed at sector entry before waves begin.
-   - Asymmetric encounters: Swarm Hive *Corvus* vs Armored Behemoth *Goliath* (railguns, drone bays, bow armor) in Sector 1.
-3. **Expansion to 20+ Tri-Tier Synergies** [COMPLETED]:
-   - *Tachyon Capacitor* (hold-to-charge piercing relativistic beam).
-   - *Elastic Momentum Transfer* (viewport boundary ricochets with +25% kinetic damage).
-   - *Lagrange Satellites* (quantum orbital drones that erase hostile bullets).
-   - *Carnot Efficiency* (50% shop & reroll discount).
-   - *Dirac Inversion* (fatal damage rewind & EMP screen clear).
-   - *Bell State Entanglement*, *Zeeman Splitting*, *Cherenkov Radiator*, *Heisenberg Lens*, *Carnot Heat Sink*, *Quantum Tunneling*, *Feynman Propagator*.
+   - Bosses implemented: Super-Dreadnought *Corvus*, Armored Behemoth *Goliath*, and Apex Titan *Ouroboros*.
+   - *Deferred*: Branching / alternative boss matchups per sector (scouting Swarm Hive Corvus vs Armored Goliath in S1; Tachyon Wraith vs Pulsar Station in S2; Ayako-Prime in S3).
+3. **Expansion to 20+ Tri-Tier Synergies** [COMPLETED - 60 Item Catalog]:
+   - 60 cataloged items in `ItemDatabase.gd` including Tachyon Capacitor, Elastic Momentum, Lagrange Satellites, Carnot Efficiency, Dirac Inversion, Bell State Entanglement, Zeeman Splitting, etc.
+   - *Deferred Relic*: *Quantum Singularity Node* (Ludovico-style permanent controllable death orb).
+   - *Deferred Subsystem*: Item pools & deterministic pity timer (scheduled below for immediate refinement).
 
 ---
+
+### Current Milestone & Pre-Phase 5 Roadmap: Refinement Stage
+
+> [!IMPORTANT]
+> **Current Status**: Phase 4 completed (+ gameplay calibration and bestiary extensions).
+> Before advancing into **Phase 5 (Game Modes, Telemetry, and Web Export)**, we are entering an essential **Pre-Phase 5 Refinement Stage** to make Sector 1 genuinely exciting, dynamic, and balanced. The two core pillars of this refinement are:
+> 1. **System 1: Core Combat Loop, Enemy Variety & Wave Choreography** (Fixing the slow trickle, straight-line movement, and unvaried bullets).
+> 2. **System 2: Target-Driven Progression, Item Economy & Difficulty Curves** (Unifying player DPS targets, item rarity budgets, scrap generation, and tiered shop pricing).
+
+---
+
+#### Pre-Phase 5 Priority 1: Core Combat Loop, Enemy Variety & Wave Choreography (`WaveDirector.gd`, `Enemy.gd`, `DecoherenceSpawner.gd`)
+
+##### 1. Forward Horizon Decoherence Constraint (Lore & Fairness Anchor)
+- [ ] **Strict Forward Horizon Spawning**:
+  - All enemies strictly materialize along the oncoming forward horizon (right edge in 16:9 Landscape; top edge in 9:16 Portrait) via the quantum Decoherence Spawner.
+  - Zero blind spawns from the rear or off-screen sides; eliminates cheap "telefrags" and guarantees fair telegraphing.
+- [ ] **Snappy Decoherence Telegraphing**:
+  - Tighten quantum probability bubble duration from 0.72s to **0.35s–0.45s**.
+  - Crisp audio-visual feedback: sharp iridescent interference ripple $\rightarrow$ Cherenkov flash $\rightarrow$ instantaneous squadron materialization with thruster flare.
+- [ ] **Synchronized Squad Materialization**:
+  - Squadrons materialize together in cohesive formation geometries (V-shape, staggered echelon, or pincer pairs) rather than dripping in one ship at a time over 12 seconds.
+
+##### 2. Wave Pacing & Shmup Cadence (Tension and Release)
+- [ ] **Eliminate the Conveyor Belt Trickle**:
+  - Replace 4-second drip delays with punchy, high-energy **squad encounters (3–6 seconds)** followed by a **1.5s–2.0s collection/breather window** for vacuuming scrap and repositioning.
+- [ ] **Encounter Archetypes**:
+  - **The Swarm Blitz**: High-density popcorn waves (8–12 Micro-Drones / Scouts) sweeping across in rapid staggered waves (tests flak/spread weapons).
+  - **The Pincer Crossfire**: Coordinated twin squads materializing at top-right and bottom-right horizons, arcing inward to trap the player in a crossfire.
+  - **The Armored Bastion & Escorts**: A heavy anchor ship (Shield Frigate or Heavy Cruiser) holding forward ground while agile Interceptors peel off its flanks.
+  - **The Hazard Ambush**: Enemies materializing behind explosive plasma barrels and floating asteroids, rewarding clever players who trigger chain-reaction clears.
+- [ ] **Dynamic Deck-Shuffling Director**:
+  - Shuffled archetype pool with anti-repetition memory so identical wave templates never repeat consecutively.
+  - Varied wave tempo: alternating fast 3-second popcorn reflex checks with heavier 7-second tactical duels.
+
+##### 3. Parametric Flight Trajectories & Kinematic Profiles (`Enemy.gd`)
+- [ ] **Trajectory Profile Engine**:
+  - Replace uniform straight-line flight (`oncoming * speed * delta`) with configurable parametric flight kinematics:
+    1. **The Deep Swoop (1942 Arc / U-Turn)**: High-speed entry, diving curve across the center corridor, leveling out at apex to fire, and sweeping upward/downward to exit.
+    2. **The S-Weave Slalom**: Aggressive sinusoidal oscillation across the lateral axis with variable amplitude/frequency while advancing forward.
+    3. **The Diagonal Strafer**: Materializes near top/bottom corners and streaks diagonally across the playfield at high speed (350+ px/s) to force lateral dodging.
+    4. **The Dive & Peel (Peck-and-Run)**: Interceptor cruise $\rightarrow$ locks onto player flight corridor $\rightarrow$ aggressive forward dive with thruster flare $\rightarrow$ sharp banking peel toward the screen edge.
+    5. **The Forward Anchor**: Heavy platforms glide 200–250px from the right edge, fire reverse maneuvering thrusters to halt, lock into an anchored siege state, and deploy multi-stage patterns.
+
+##### 4. Layered Bullet Patterns & Weapon Geometry
+- [ ] **Distinct Enemy Attack Roles**:
+  - **Scouts**: Tight 2-shot bursts directly aimed at current player coordinates (forces player movement).
+  - **Bombers**: 3-shot or 5-shot fan spreads (creates tight bullet corridors the player must weave through).
+  - **Shield Frigates / Turrets**: Slow, expanding radial ring pulses (creates spatial zoning that demands distance or barrel roll evasion).
+  - **Snipers**: High-contrast, narrow telegraphed laser sights (0.8s lock) followed by a high-velocity Cherenkov rail slug (850 px/s).
+- [ ] **Staggered Salvo Rhythms**:
+  - Squadrons fire in rolling ripples (e.g. 0.0s, 0.15s, 0.30s) rather than robotic simultaneous firing, generating organic neon bullet streams.
+
+##### 5. Procedural Variance & Behavioral Mutations
+- [ ] **Dynamic Threat Budgets**:
+  - Director dynamically spends a wave threat point budget (e.g. 50 pts) across varied compositions (e.g. 10 cheap swarming Scouts vs 1 Cruiser + 2 Interceptors), providing distinct flavor on every run.
+- [ ] **Performance-Responsive Threat Surges**:
+  - Flawlessly wiping consecutive formations without taking damage triggers an optional **Elite Threat Surge** (champion variant with an immediate Item Crate bounty), rewarding skilled play with extra loot.
+- [ ] **Micro-Mutations**:
+  - Low-health desperation afterburners/ramming charges.
+  - Reactive evasive jukes when taking heavy sustained fire.
+  - Random Champion Affixes (*Swift* cyan, *Armored* gold, *Volatile* orange, *Shielded* blue).
+
+---
+
+#### Pre-Phase 5 Priority 2: Target-Driven Progression, Item Economy & Difficulty Curves (`ProgressionModel.gd`, `LootDirector.gd`, `SkyMerchant.gd`)
+
+##### 1. Calibrated Item Collection & Discovery Curve (6–7 Items / Sector)
+- [ ] **Run Item Budget Target**:
+  - Target **6–7 items collected per sector** ($\approx \mathbf{18–20\text{ items total}}$ for a full 3-sector victory run).
+  - Prevents catalog exhaustion: Evaluating ~32–36 items per run keeps the 60-item catalog feeling fresh, distinct, and discovery-rich across dozens of runs.
+  - Typical Sector 1 Item Pipeline:
+    - *Wave 2 Starter Crate*: 1 item (Choice of 2)
+    - *Wave 6 Miniboss / Elite Squad*: 1 item (Choice of 2)
+    - *Wave 6 Sky Merchant Dock*: 2–3 items (3 wares + rerolls)
+    - *Waves 7–11 Secret / Anomaly*: 1 bonus item
+    - *Wave 12 Sector Boss*: 1 guaranteed Tier 3 Singularity item
+- [ ] **Dynamic Tier Probability Curves (No Hard Gating)**:
+  - Every item in the catalog is theoretically accessible from the start, but **Tier roll chances scale dynamically by Sector**:
+    - **Sector 1 (Perimeter)**: $75\%$ Tier 1 (Common), $20\%$ Tier 2 (Uncommon), $5\%$ Tier 3 (Exotic/Lucky Jackpot).
+    - **Sector 2 (Asteroid Belt)**: $45\%$ Tier 1, $40\%$ Tier 2, $15\%$ Tier 3.
+    - **Sector 3 (Core)**: $25\%$ Tier 1, $45\%$ Tier 2, $30\%$ Tier 3.
+    - **Elite Champion Crate**: $0\%$ Tier 1, $70\%$ Tier 2, $30\%$ Tier 3 (guarantees a high-threat reward).
+    - **Sector Boss Singularity Crate**: $100\%$ Tier 3 (always awards a game-defining legendary relic).
+- [ ] **Item-Level Stacking Rules (`max_stacks`)**:
+  - Decoupled from Tier: each item explicitly declares its own `max_stacks` property:
+    - *Stackable Stat Boosters* (e.g. Tungsten Core, Pulse Synchronizer, Aegis Capacitor): `max_stacks = 2` or `3`. Enables players to specialize into preferred build archetypes.
+    - *Unique Mechanical Mutators* (e.g. Birefringence Prism, Antimatter Suspension, Meissner Shield): `max_stacks = 1` (strictly unique; removed from drop pool once equipped).
+
+##### 2. Mathematical Power, DPS Anchors & Stat Stacking Architecture
+- [ ] **Target Player DPS Curve**:
+  - Base Starter Ship (Wave 1): $\sim 7.6\text{ DPS}$ in engine units ($3.8\text{ shots/s} \times 2\text{ bolts} \times 1.0\text{ dmg}$).
+  - End of Sector 1 (Wave 12 / Boss 1): Target **$\sim 22–26\text{ DPS}$** ($\sim 3.0\text{x}$ to $3.5\text{x}$ power scaling).
+  - End of Sector 2 (Wave 24 / Boss 2): Target **$\sim 60–75\text{ DPS}$** ($\sim 8.0\text{x}$ to $10.0\text{x}$ power scaling).
+  - End of Sector 3 (Wave 36 / Boss 3): Target **$\sim 180–250+\text{ DPS}$** (synergistic god-run peak).
+- [ ] **The "Additive Within Stat, Multiplicative Across Categories" Pipeline**:
+  - Formula: $\text{Final Stat} = \text{ShipBase} \times (1.0 + \sum \text{Item Additive Bonuses}) \times \prod \text{Exotic Multipliers}$.
+  - Stacking the same stat (e.g. $+25\%$ damage and $+35\%$ damage) adds into a single damage bonus pool ($1.0 + 0.25 + 0.35 = 1.60\text{x}$), preventing exponential runaway.
+  - Cross-category pools (Damage $\times$ Fire Rate $\times$ Projectile Count $\times$ Crit Chance) multiply together, rewarding diverse, hybrid build crafting.
+- [ ] **Chassis Calibration Baseline (The Anchor Principle)**:
+  - Global difficulty, wave threat budgets, and boss health are **always calibrated to the baseline NX-01 Tesla (1.0x)**.
+  - Ship chassis variants express starting archetype flavor without breaking the curve:
+    - *HA-70 Newton (Tank)*: $-15\%$ DPS offset by $+5$ Hull / $+2$ Shields.
+    - *PL-99 Einstein (Glass Cannon)*: $+35\%$ DPS offset by $2$ Hull / $0$ Shields.
+    - All ships naturally converge into end-game viability as the 18 collected relics provide $80\%\text{–}90\%$ of total run power.
+- [ ] **Auxiliary Damage Sources (Drones & Missiles)**:
+  - Drones and missiles inherit the player's global `damage_mult` and `crit_chance`, keeping them relevant late-game.
+  - Drones and missiles do *not* inherit weapon fire rate or projectile spread geometry, preventing explosive double-dipping loops.
+  - Proc throttling: Triggered projectiles set `can_proc = false` (no recursive proc loops) and use an Internal Cooldown (e.g. $0.25\text{s}$) to normalize high-spread weapons.
+
+##### 3. Closed-Loop Economy & Internal Stat Exchange Rate
+- [ ] **Internal Stat Exchange Rate (Designer Balance Rubric)**:
+  - We balance item value behind the scenes using equivalent power units:
+    - **Tier 1 (Value: 20 J)**: $+15\%\text{–}25\%$ DPS $\approx +1$ Shield $\approx +1$ Hull $\approx +20\%$ Speed $\approx +150\text{px}$ Magnet $\approx +1$ Roll Charge.
+    - **Tier 2 (Value: 45 J)**: $+35\%\text{–}55\%$ DPS $\approx +2$ Shields $\approx +2$ Hull $\approx +1$ Spread Pair $\approx$ Homing $\approx +2$ Rolls (with CD).
+    - **Tier 3 (Value: 85 J)**: $+75\%\text{–}120\%$ DPS $\approx +2$ Shields AND $+3$ Hull $\approx$ Full-Screen Magnet $\approx$ Screen Nukes.
+- [ ] **Clean Player-Facing Shop Pricing (`SkyMerchant.gd`)**:
+  - Tier 1 (Common): **20 Joules**
+  - Tier 2 (Uncommon): **45 Joules**
+  - Tier 3 (Exotic): **85 Joules**
+  - Nano Hull Repair: **15 Joules**
+  - Stall Reroll: **5 Joules base** ($+5\text{ J}$ escalating per roll).
+  - Store Slot Rules: Guarantees at least 1 Offensive item, 1 Defense/Utility item, and 1 Wildcard per stall refresh.
+- [ ] **Calibrated Scrap Generation Curve**:
+  - Enemy drop quantities and values calibrated so clearing Waves 1–5 yields **$\sim 100–115\text{ Joules}$** total ($\sim 20–23\text{ J / wave}$).
+  - Allows an attentive player at the Wave 6 Sky Merchant to comfortably afford **1 Tier-2 item + 1 Tier-1 item + 1 Hull repair** (or **2 Tier-1 items + 1 Hull repair + 1 reroll**).
+
+##### 4. Centralized Balance Engine (`ProgressionModel.gd`)
+- [ ] Create a single source of truth class (`ProgressionModel.gd`) containing all balance curves, pricing formulas, rarity weightings, and enemy HP functions, allowing the entire game's difficulty and economy to be re-tuned by adjusting high-level target parameters.
+
+---
+
+#### Systems Designer Operational Tuning Guide (How Antigravity Keeps the Game Balanced)
+
+To maintain long-term balance integrity based on player feedback and telemetry without disrupting the codebase, Antigravity acts as the game's **Systems Balance Designer** using the following translation protocols:
+
+##### 1. Qualitative Player Feedback Translation Matrix
+When playtesters or the user provide natural-language feedback, Antigravity directly maps that feedback to specific, isolated dials in `ProgressionModel.gd`:
+
+| Player / User Feedback | Root Cause Diagnosis | Designer Tuning Action in `ProgressionModel.gd` |
+| :--- | :--- | :--- |
+| **"Enemies feel like bullet sponges; combat drags."** | Enemy HP scaling curve is outpacing average DPS growth. | Decrease `hp_scaling_exponent` (e.g. $0.78 \rightarrow 0.70$), making enemies softer in mid/late waves while keeping early waves intact. |
+| **"Sector 1 is way too hard; dying before Wave 6."** | Early wave threat budget is overwhelming starter weapon. | Lower `sector_1_base_threat_budget` (e.g. $40 \rightarrow 30$) or increase starter scrap yield for an earlier defensive buy. |
+| **"I feel underpowered against the Sector Boss."** | Player DPS corridor at Wave 12 is below the 22–26 target. | Increase `s1_target_dps` anchor or raise Tier 2 drop probability from $20\% \rightarrow 25\%$ in Waves 8–11. |
+| **"I can never afford anything at the Sky Merchant."** | Scrap economy is starved relative to shop prices. | Increase `base_scrap_yield_per_wave` (e.g. $20\text{ J} \rightarrow 25\text{ J}$) or reduce Tier 1 price ($20\text{ J} \rightarrow 15\text{ J}$). |
+| **"I'm swimming in Joules; money feels meaningless."** | Scrap generation is oversaturated or reroll cost is too low. | Lower scrap drop count on popcorn enemies; increase reroll inflation ($+5\text{ J} \rightarrow +10\text{ J}$ per roll). |
+| **"The game is brainless; I melted the boss in 10s."** | Synergies are running away or boss HP pool is undersized. | Increase boss health scalar `boss_effective_hp_mult` or check for unthrottled multiplicative relic stacking. |
+| **"Relic X feels like a trap; I never pick it."** | Item falls below its Tier's Power Budget or has excessive penalties. | Audit Relic X: reduce downside penalty (e.g. $-15\%$ speed $\rightarrow -5\%$) or bump primary stat into Tier compliance. |
+
+##### 2. Telemetry-Driven Data Balancing Protocol (`TelemetryClient.gd`)
+When aggregated run telemetry is available (`user://run_history.json` or backend analytics), Antigravity balances against objective telemetry benchmarks:
+
+- **Benchmark 1: Win Rate by Ship Chassis (Target: 20%–25% on Normal Mode)**:
+  - If Einstein win rate $> 35\%$ while Newton $< 12\%$: Einstein's starting damage bonus is trimmed ($+35\% \rightarrow +25\%$) and Newton's armor mitigation is boosted.
+- **Benchmark 2: Death Location Heatmap (Tension & Bottleneck Analysis)**:
+  - If $> 40\%$ of all run deaths occur on Wave 6 (Miniboss): Miniboss health is tuned down by $15\%$, or a guaranteed defensive drop is scheduled on Wave 5.
+- **Benchmark 3: Relic Pick Rate & Win-Contribution Index**:
+  - Any item with $< 5\%$ pick rate in Choice Crates is automatically flagged for a stat buff or mechanical rework.
+  - Any item with $> 80\%$ win rate across all runs is audited for runaway multiplicative interactions.
+- **Benchmark 4: Unspent Currency at Run Conclusion**:
+  - Target: Average player should finish Sector 1 with $\le 15\text{ unspent Joules}$.
+  - If average unspent Joules $> 50\text{ J}$, shop inventory capacity or consumable utility sinks (e.g. Emergency Overclocks) are introduced.
+- **Benchmark 5: Boss Combat Duration (Target: 50s–75s)**:
+  - If average clear time $< 30\text{s}$: Boss is too weak / player DPS is overshooting.
+  - If average clear time $> 90\text{s}$: Boss is an exhausting slog; reduce phase transition shielding.
+
+---
+
+### Deferred Scope Backlog (Scheduled for Future Phases)
+The following features from the original Phase 1–4 design specifications are deferred until after current systems are refined:
+
+1. **Two Active Item Slots (Utility & Special/Weapon)**:
+   - **Utility Slot (Active 1)**: Survival, mobility, sustain. Un-hardcode the 1942 Barrel Roll into a starter Utility item; add active items like Nanite Repair Injector, Quantum D6 Re-coder, and Chrono Bullet-Time.
+   - **Special / Offensive Slot (Active 2)**: Screen nukes, hyper-beams, and deployables (e.g. Nanite Screen Bomb, Hyper-Beam Railgun, Hunter Drones).
+   - Controls: `[Shift]` for Utility, `[Q]` / Right-Click for Special; HUD active cooldown/charge meters.
+2. **Mobile On-Screen Action Buttons**:
+   - Right-side touch layout with dedicated on-screen buttons for Primary Fire, Utility (Slot 1), Special (Slot 2), and Auto-Fire toggle.
+3. **Physicist Ship Chassis Roster (`ShipData.tres`)**:
+   - Data-driven ship architecture (`ShipData.gd`) defining base stats, alternate starter weapons (Cavitation Flak Cannon, Cherenkov Lance), and innate traits for 4 playable ships: NX-01 Tesla, HA-70 Newton, PL-99 Einstein, QP-00 Schrödinger.
+4. **2-Player Co-Op "Plasma Ghost" & Revive Pods**:
+   - Downed players enter an invulnerable Plasma Ghost state firing a disruption beam and vacuuming scrap instead of instantly despawning.
+   - Full revives on sector boss victory or upon buying Revive Pods at the Sky Merchant.
+5. **Sky Merchant Risk Contracts & D6 Synergy**:
+   - High-risk/reward optional combat contracts at the merchant dock.
+   - Heisenberg Uncertainty Disperser (D6) active synergy granting free stall rerolls powered by charges.
+6. **Sub-Space Wormhole Rifts & Secret Relic (`SecretDirector.gd`)**:
+   - 12-second peaceful hazard-free wormhole pocket dimension with scrap and an item pedestal (*Isaac* crawlspace homage).
+   - *Observer's Visor* passive relic projecting neon targeting brackets around hidden rifts.
+7. **Missing Relic: Quantum Singularity Node**:
+   - Permanent player-steered death orb (*Isaac* Ludovico Technique homage).
+8. **Asymmetric Boss Matchups**:
+   - Threat Dossier previewing which of multiple asymmetric boss archetypes you face each run (e.g. Swarm Hive Corvus vs. Armored Goliath in S1; Tachyon Wraith vs. Pulsar Station in S2; Ayako-Prime in S3).
+9. **In-Game Pause Menu & Synergy Inspector**:
+   - Pausing the game with `[Esc]` to open an interactive inspector displaying detailed mechanical stats for all collected active and passive items.
 
 ### Phase 5: Game Modes, Telemetry, Polish & Web Export
 *Goal: Persistence, competitive integrity, final sensory juice, and web/mobile distribution.*

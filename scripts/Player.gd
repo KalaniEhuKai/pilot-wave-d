@@ -45,6 +45,19 @@ var bank_angle: float = 0.0
 var hit_flash_timer: float = 0.0
 var meissner_fx_timer: float = 0.0
 
+# Inter-Wave Quantum Warp & Shard Vacuum Pulse
+var warp_charge_ratio: float = 0.0
+var warp_charge_timer: float = 0.0
+var warp_charge_duration: float = 0.0
+var is_warping: bool = false
+var warp_leap_timer: float = 0.0
+var warp_leap_duration: float = 0.35
+var warp_start_pos: Vector2 = Vector2.ZERO
+var warp_target_pos: Vector2 = Vector2.ZERO
+var vacuum_pulse_active: bool = false
+var vacuum_pulse_timer: float = 0.0
+var warp_sfx_timer: float = 0.0
+
 # Colors based on player_id
 var primary_color: Color = Color(0.1, 0.9, 1.0, 1.0)
 var accent_color: Color = Color(0.4, 1.0, 0.9, 1.0)
@@ -60,7 +73,7 @@ var has_tachyon_capacitor: bool = false
 var has_carnot_heatsink: bool = false
 var has_carnot_efficiency: bool = false
 
-# Combat stat scaling
+# Combat stat scaling & Additive Bonus Pools
 var damage_mult: float = 1.0
 var bullet_speed_mult: float = 1.0
 var bullet_scale: float = 1.0
@@ -68,16 +81,76 @@ var crit_chance: float = 0.0
 var crit_mult: float = 2.0
 var extra_spread_shots: int = 0
 var bonus_scrap_val: int = 0
+var scrap_bonus_chance: float = 0.0
+var elite_bounty_bonus: int = 0
+var has_singularity_recovery: bool = false
+var wave_dividend_joules: int = 0
+
+# Base ship characteristics (chassis starter values)
+var base_max_hull: int = 4
+var base_max_shields: int = 2
+var base_max_rolls: int = 3
+var base_move_speed: float = 420.0
+var base_fire_rate: float = 3.8
+var base_roll_cooldown: float = 3.2
+var base_shield_delay: float = 4.0
+var base_scrap_magnet_radius: float = 130.0
+
+# Additive linear stat pools (prevents runaway compounding)
+var bonus_damage_pct: float = 0.0
+var bonus_fire_rate_pct: float = 0.0
+var bonus_move_speed_pct: float = 0.0
+var bonus_bullet_speed_pct: float = 0.0
+var bonus_bullet_scale_pct: float = 0.0
+var bonus_roll_cdr_pct: float = 0.0
+var bonus_shield_delay_reduction_pct: float = 0.0
+var bonus_max_hull: int = 0
+var bonus_max_shields: int = 0
+var bonus_max_rolls: int = 0
+var bonus_magnet_radius: float = 0.0
 
 func _ready() -> void:
 	add_to_group("player")
 	_setup_player_identity()
+	base_max_hull = max_hull
+	base_max_shields = max_shields
+	base_max_rolls = max_rolls
+	base_move_speed = move_speed
+	base_fire_rate = fire_rate
+	base_roll_cooldown = roll_cooldown
+	base_shield_delay = shield_recharge_delay
+	base_scrap_magnet_radius = scrap_magnet_radius
 	hull = max_hull
 	shields = max_shields
 	rolls = max_rolls
 	_emit_health()
 	_emit_rolls()
 	GameAxis.axis_changed.connect(_on_axis_changed)
+
+func recalculate_stats() -> void:
+	max_hull = maxi(1, base_max_hull + bonus_max_hull)
+	max_shields = maxi(0, base_max_shields + bonus_max_shields)
+	max_rolls = maxi(1, base_max_rolls + bonus_max_rolls)
+	
+	hull = mini(max_hull, hull)
+	shields = mini(max_shields, shields)
+	rolls = mini(max_rolls, rolls)
+	
+	fire_rate = base_fire_rate * maxf(0.25, 1.0 + bonus_fire_rate_pct)
+	damage_mult = maxf(0.1, 1.0 + bonus_damage_pct)
+	move_speed = base_move_speed * maxf(0.3, 1.0 + bonus_move_speed_pct)
+	bullet_speed_mult = maxf(0.2, 1.0 + bonus_bullet_speed_pct)
+	bullet_scale = maxf(0.2, 1.0 + bonus_bullet_scale_pct)
+	roll_cooldown = base_roll_cooldown * maxf(0.3, 1.0 - bonus_roll_cdr_pct)
+	shield_recharge_delay = base_shield_delay * maxf(0.3, 1.0 - bonus_shield_delay_reduction_pct)
+	scrap_magnet_radius = base_scrap_magnet_radius + bonus_magnet_radius
+
+func get_modifier_stack_count(mod_id: String) -> int:
+	var count = 0
+	for m in active_modifiers:
+		if m.id == mod_id:
+			count += 1
+	return count
 
 func _setup_player_identity() -> void:
 	if player_id == 2:
@@ -97,6 +170,7 @@ func add_modifier(mod: ItemModifier) -> void:
 	active_modifiers.append(mod)
 	mod.on_ship_init(self)
 	modifiers_updated.emit(active_modifiers)
+	GameManager.player_modifiers_updated.emit(active_modifiers, player_id)
 	SoundEffects.play_sfx("bonus", 0.05, 4.0)
 	GameManager.request_screen_shake(5.0, 0.2)
 
@@ -113,9 +187,65 @@ func trigger_wave_start_hooks(wave_idx: int) -> void:
 	for m in active_modifiers:
 		m.on_wave_start(self, wave_idx)
 
+func trigger_wave_cleared_hooks(wave_idx: int) -> void:
+	for m in active_modifiers:
+		if m.has_method("on_wave_cleared"):
+			m.on_wave_cleared(self, wave_idx)
+	if wave_dividend_joules > 0:
+		GameManager.add_joules(wave_dividend_joules)
+		GameManager.add_score(wave_dividend_joules * 2)
+		SoundEffects.play_sfx("bonus", 0.05, 3.0)
+
+func trigger_kill_hooks(victim: Node2D, pos: Vector2) -> void:
+	for m in active_modifiers:
+		m.on_kill(self, victim, pos)
+
 func spawn_meissner_fx() -> void:
 	meissner_fx_timer = 0.28
 	queue_redraw()
+
+func start_quantum_charge(duration: float = 5.0) -> void:
+	warp_charge_duration = duration
+	warp_charge_timer = duration
+	warp_charge_ratio = 0.0
+	warp_sfx_timer = 0.0
+	SoundEffects.play_sfx("warp_charge", 0.05, -3.0)
+
+func activate_vacuum_pulse(duration: float = 1.4) -> void:
+	vacuum_pulse_active = true
+	vacuum_pulse_timer = duration
+	scrap_magnet_radius = maxf(scrap_magnet_radius, 780.0)
+	SoundEffects.play_sfx("bonus", 0.08, 1.0)
+
+func trigger_quantum_jump(duration: float = 0.35) -> void:
+	is_warping = true
+	warp_leap_timer = duration
+	warp_leap_duration = duration
+	is_invulnerable = true
+	warp_start_pos = global_position
+	
+	# Determine destination: Left-middle of screen (or bottom-middle in vertical mode)
+	var vp = get_viewport_rect().size
+	if GameAxis.is_vertical:
+		var x_ratio = 0.42 if (player_id == 1 and GameManager.is_coop_mode) else (0.58 if player_id == 2 else 0.5)
+		warp_target_pos = Vector2(vp.x * x_ratio, vp.y * 0.75)
+	else:
+		var y_ratio = 0.42 if (player_id == 1 and GameManager.is_coop_mode) else (0.58 if player_id == 2 else 0.5)
+		warp_target_pos = Vector2(vp.x * 0.18, vp.y * y_ratio)
+	
+	SoundEffects.play_sfx("quantum_jump", 0.06, 2.5)
+	GameManager.request_screen_shake(8.0, 0.25)
+
+func reset_warp_state() -> void:
+	warp_charge_ratio = 0.0
+	warp_charge_timer = 0.0
+	is_warping = false
+	is_invulnerable = false
+	vacuum_pulse_active = false
+	vacuum_pulse_timer = 0.0
+	warp_start_pos = Vector2.ZERO
+	warp_target_pos = Vector2.ZERO
+	recalculate_stats()
 
 func _on_axis_changed(_is_vertical: bool) -> void:
 	global_position = GameAxis.clamp_position(global_position, 40.0)
@@ -124,11 +254,17 @@ func _emit_health() -> void:
 	health_changed.emit(hull, shields, max_hull, max_shields)
 	GameManager.player_health_changed.emit(hull, shields, max_hull, max_shields, player_id)
 
+func recharge_shields_full() -> void:
+	shields = max_shields
+	_emit_health()
+	queue_redraw()
+
 func _emit_rolls() -> void:
 	var ratio = 0.0
 	if rolls < max_rolls:
 		ratio = clampf(roll_timer / roll_cooldown, 0.0, 1.0)
 	roll_charges_changed.emit(rolls, max_rolls, ratio)
+	GameManager.player_roll_charges_changed.emit(rolls, max_rolls, ratio, player_id)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if player_id == 1:
@@ -173,6 +309,35 @@ func _handle_timers(delta: float) -> void:
 			_emit_rolls()
 		else:
 			_emit_rolls()
+	
+	if warp_charge_timer > 0.0:
+		warp_charge_timer -= delta
+		warp_charge_ratio = 1.0 - clampf(warp_charge_timer / maxf(0.001, warp_charge_duration), 0.0, 1.0)
+		warp_sfx_timer -= delta
+		if warp_sfx_timer <= 0.0 and warp_charge_timer > 0.15:
+			# Accelerating audio spin-up cycle
+			warp_sfx_timer = lerpf(0.55, 0.10, warp_charge_ratio)
+			var pitch = lerpf(-4.0, 4.0, warp_charge_ratio)
+			SoundEffects.play_sfx("warp_charge", 0.04 + warp_charge_ratio * 0.06, pitch)
+	
+	if vacuum_pulse_timer > 0.0:
+		vacuum_pulse_timer -= delta
+		if vacuum_pulse_timer <= 0.0:
+			vacuum_pulse_active = false
+			recalculate_stats()
+	
+	if is_warping:
+		warp_leap_timer -= delta
+		var warp_prog = 1.0 - clampf(warp_leap_timer / maxf(0.001, warp_leap_duration), 0.0, 1.0)
+		# Smooth quintic ease-in-out (Perlin smootherstep) for snappy, relativistic jump
+		var ease_prog = warp_prog * warp_prog * warp_prog * (warp_prog * (warp_prog * 6.0 - 15.0) + 10.0)
+		global_position = warp_start_pos.lerp(warp_target_pos, ease_prog)
+		
+		if warp_leap_timer <= 0.0:
+			global_position = warp_target_pos
+			reset_warp_state()
+			spawn_meissner_fx()
+			SoundEffects.play_sfx("bonus", 0.05, 4.0)
 
 func _handle_movement(delta: float) -> void:
 	var input_vec = Vector2.ZERO
@@ -202,7 +367,10 @@ func _handle_shooting(delta: float) -> void:
 	if is_firing:
 		fire_charge_time += delta
 	else:
-		fire_charge_time = 0.0
+		if has_tachyon_capacitor:
+			fire_charge_time = minf(fire_charge_time + delta * 1.5, 0.8)
+		else:
+			fire_charge_time = 0.0
 	
 	var effective_rate = fire_rate
 	if has_carnot_heatsink and shields <= 0:
@@ -239,8 +407,12 @@ func _fire_synchrotron() -> void:
 			new_list.append_array(results)
 		spawn_list = new_list
 	
+	if has_meta("tachyon_discharged") and get_meta("tachyon_discharged"):
+		set_meta("tachyon_discharged", false)
+		fire_charge_time = 0.0
+	
 	for sp in spawn_list:
-		var dmg = sp.get("damage", 1.0) * damage_mult
+		var dmg = sp.get("damage", sp.get("dmg", 1.0)) * damage_mult
 		if crit_chance > 0.0 and randf() < crit_chance:
 			dmg *= crit_mult
 			sp["is_crit"] = true
@@ -302,6 +474,8 @@ func _handle_barrel_roll(delta: float) -> void:
 		scale = Vector2.ONE
 
 func _start_barrel_roll() -> void:
+	if rolls <= 0 or is_rolling:
+		return
 	is_rolling = true
 	is_invulnerable = true
 	roll_elapsed = 0.0
@@ -354,7 +528,7 @@ func _die() -> void:
 	# Check if companion alive in co-op mode
 	var remaining_players = 0
 	for p in get_tree().get_nodes_in_group("player"):
-		if is_instance_valid(p) and p != self and p.hull > 0:
+		if is_instance_valid(p) and p != self and not p.is_queued_for_deletion() and p.hull > 0:
 			remaining_players += 1
 	
 	if remaining_players == 0:
@@ -411,3 +585,91 @@ func _draw() -> void:
 	if meissner_fx_timer > 0.0:
 		var m_alpha = meissner_fx_timer / 0.28
 		draw_arc(Vector2.ZERO, 38.0, 0, TAU, 32, Color(0.2, 1.0, 0.6, m_alpha), 3.5, true)
+	
+	# Quantum Vacuum Pulse (expanding concentric magnetic rings)
+	if vacuum_pulse_active:
+		var vac_t = fmod(Time.get_ticks_msec() / 450.0, 1.0)
+		var vac_r1 = lerpf(25.0, 120.0, vac_t)
+		var vac_r2 = lerpf(25.0, 120.0, fmod(vac_t + 0.5, 1.0))
+		draw_arc(Vector2.ZERO, vac_r1, 0, TAU, 32, Color(0.2, 0.9, 1.0, (1.0 - vac_t) * 0.7), 2.2, true)
+		draw_arc(Vector2.ZERO, vac_r2, 0, TAU, 32, Color(1.0, 0.85, 0.2, (1.0 - fmod(vac_t + 0.5, 1.0)) * 0.55), 1.6, true)
+	
+	# Inter-Wave Quantum Warp Charge (Spin-up matter wave harmonics)
+	if warp_charge_ratio > 0.0:
+		var t_sec = Time.get_ticks_msec() * 0.001
+		# Exponential spin-up acceleration
+		var spin_speed = lerpf(2.5, 18.0, warp_charge_ratio * warp_charge_ratio)
+		var spin_ang = t_sec * spin_speed
+		
+		# Orbiting quantum phase particles accelerating around the ship
+		for i in range(4):
+			var o_ang = spin_ang + i * (TAU / 4.0)
+			var o_dist = lerpf(54.0, 22.0, warp_charge_ratio)
+			var o_pos = Vector2(cos(o_ang), sin(o_ang)) * o_dist
+			draw_circle(o_pos, 3.0, Color.WHITE)
+			draw_arc(o_pos, 6.0, 0, TAU, 12, Color(0.2, 0.95, 1.0, warp_charge_ratio * 0.9), 1.5, true)
+		
+		# Converging matter wave arcs
+		for i in range(3):
+			var phase = fmod(t_sec * 2.5 + float(i) / 3.0, 1.0)
+			var r = lerpf(68.0, 16.0, phase)
+			var arc_col = Color(0.2, 0.95, 1.0, (1.0 - phase) * warp_charge_ratio * 0.9) if i % 2 == 0 else Color(0.9, 0.35, 1.0, (1.0 - phase) * warp_charge_ratio * 0.8)
+			draw_arc(Vector2.ZERO, r, 0, TAU, 32, arc_col, 2.0 + warp_charge_ratio * 2.0, true)
+		
+		# Inward quantum particle converging vectors
+		for i in range(6):
+			var ang = (float(i) / 6.0) * TAU + spin_ang * 0.3
+			var s_dir = Vector2(cos(ang), sin(ang))
+			var s_dist = lerpf(75.0, 20.0, warp_charge_ratio)
+			draw_line(s_dir * s_dist, s_dir * (s_dist - 8.0), Color(1.0, 1.0, 1.0, warp_charge_ratio * 0.95), 2.0)
+	
+	# Relativistic Warp Jump Speed Streaks
+	if is_warping:
+		var warp_prog = 1.0 - clampf(warp_leap_timer / maxf(0.001, warp_leap_duration), 0.0, 1.0)
+		var streak_len = sin(warp_prog * PI) * 140.0
+		var move_dir = (warp_target_pos - warp_start_pos).normalized()
+		if move_dir == Vector2.ZERO:
+			move_dir = GameAxis.forward
+		var trail_vec = -move_dir * streak_len
+		for off_lat in [-14.0, -7.0, 0.0, 7.0, 14.0]:
+			var s_start = GameAxis.lateral * off_lat
+			var s_end = s_start + trail_vec * (0.8 + randf() * 0.4)
+			draw_line(s_start, s_end, Color(0.2, 0.95, 1.0, 0.85), 3.4, true)
+			draw_line(s_start, s_start + trail_vec * 0.5, Color.WHITE, 2.0, true)
+		# Quantum teleport distortion ring expanding
+		draw_arc(Vector2.ZERO, 32.0 + sin(warp_prog * PI) * 28.0, 0, TAU, 32, Color(1.0, 0.85, 0.2, 0.9), 2.5, true)
+
+func get_estimated_dps() -> float:
+	var shots_per_sec = fire_rate
+	# Ship fires dual parallel synchrotron cannons (2.0 base projectiles).
+	# Each extra spread shot adds a pair of angled bolts at 0.85 damage (1.7 equivalent).
+	var projectiles_per_shot = 2.0 + float(extra_spread_shots) * 1.7
+	var avg_crit_factor = 1.0 + crit_chance * (crit_mult - 1.0)
+	var est = shots_per_sec * projectiles_per_shot * damage_mult * avg_crit_factor
+	
+	# Bespoke offensive item modifiers
+	var mod_factor = 1.0
+	if has_tachyon_capacitor:
+		# Tachyon lance triggers every ~0.8s, dealing 5.5x damage on that shot
+		# Average damage boost across fire cycle is ~+45%
+		mod_factor += 0.45
+	if has_modifier("heisenberg_lens"):
+		# 25% chance of 2.5x damage spike (+37.5% expected value)
+		mod_factor += 0.375
+	if has_modifier("zeeman_splitting"):
+		# Twin rear counter-bolts (2 x 0.6 = +1.2 relative damage)
+		mod_factor += 0.30
+	
+	return est * mod_factor
+
+func get_relic_counts_by_tier() -> Dictionary:
+	var counts = {
+		ItemModifier.ItemTier.TIER_1_BALLISTIC: 0,
+		ItemModifier.ItemTier.TIER_2_PARADIGM: 0,
+		ItemModifier.ItemTier.TIER_3_EXOTIC: 0,
+		"total": active_modifiers.size()
+	}
+	for mod in active_modifiers:
+		if counts.has(mod.tier):
+			counts[mod.tier] += 1
+	return counts

@@ -2,13 +2,17 @@ extends Area2D
 
 ## ScrapPickup.gd - Energy Scrap / Plasma Joules dropped by defeated enemies.
 
-@export var value: int = 5
+const ProgressionModel = preload("res://scripts/ProgressionModel.gd")
+
+@export var value: int = ProgressionModel.BASE_SCRAP_VALUE
+@export var drift_speed: float = 60.0
 var velocity: Vector2 = Vector2.ZERO
 var drift_friction: float = 0.95
 var lifetime: float = 18.0
 var elapsed: float = 0.0
 
 var magnet_speed: float = 0.0
+var is_collected: bool = false
 
 func _ready() -> void:
 	add_to_group("scrap")
@@ -23,7 +27,8 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	elapsed += delta
-	if elapsed >= lifetime:
+	if elapsed >= lifetime or GameAxis.is_out_of_bounds(global_position, 100.0):
+		_check_singularity_recovery()
 		queue_free()
 		return
 	
@@ -48,13 +53,15 @@ func _physics_process(delta: float) -> void:
 			var dir = (closest_player.global_position - global_position).normalized()
 			magnet_speed = move_toward(magnet_speed, 750.0, 1400.0 * delta)
 			velocity = dir * magnet_speed
+			global_position += velocity * delta
 		else:
 			magnet_speed = 0.0
 			velocity *= drift_friction
+			global_position += (velocity + GameAxis.scroll_dir * drift_speed) * delta
 	else:
 		velocity *= drift_friction
+		global_position += (velocity + GameAxis.scroll_dir * drift_speed) * delta
 	
-	global_position += velocity * delta
 	queue_redraw()
 
 func _on_body_entered(body: Node2D) -> void:
@@ -64,17 +71,36 @@ func _on_area_entered(area: Area2D) -> void:
 	_collect(area)
 
 func _collect(target: Node2D) -> void:
+	if is_collected or is_queued_for_deletion():
+		return
 	var player: Node2D = target
 	if not player.is_in_group("player") and target.get_parent() != null and target.get_parent().is_in_group("player"):
 		player = target.get_parent()
 	
 	if player.is_in_group("player"):
-		var bonus = player.get("bonus_scrap_val")
-		var add_val = value + (int(bonus) if bonus != null else 0)
+		is_collected = true
+		var bonus_chance = player.get("scrap_bonus_chance")
+		var legacy_bonus = player.get("bonus_scrap_val")
+		var extra_j = (int(legacy_bonus) if legacy_bonus != null else 0)
+		if bonus_chance != null and randf() < float(bonus_chance):
+			extra_j += 1
+		var add_val = value + extra_j
 		GameManager.add_joules(add_val) # 0 = shared pickup, credits both players in co-op
 		GameManager.add_score(add_val * 2)
 		SoundEffects.play_sfx("hit", 0.2, 4.0)
 		queue_free()
+
+func _check_singularity_recovery() -> void:
+	if is_collected:
+		return
+	var players = get_tree().get_nodes_in_group("player")
+	for p in players:
+		if is_instance_valid(p) and p.get("has_singularity_recovery"):
+			is_collected = true
+			GameManager.add_joules(value)
+			GameManager.add_score(value * 2)
+			SoundEffects.play_sfx("bonus", 0.05, 5.0)
+			break
 
 func _draw() -> void:
 	# Draw glowing plasma rhomboid / diamond

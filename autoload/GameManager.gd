@@ -8,6 +8,8 @@ signal phase_changed(new_phase: RunPhase)
 signal score_changed(new_score: int, delta: int)
 signal wipe_bonus_awarded(bonus_points: int, message: String)
 signal player_health_changed(hull: int, shields: int, max_hull: int, max_shields: int, player_id: int)
+signal player_roll_charges_changed(charges: int, max_charges: int, cooldown_ratio: float, player_id: int)
+signal player_modifiers_updated(modifiers: Array, player_id: int)
 signal player_died(player_id: int)
 signal game_over_triggered(final_score: int, wipes: int, survival_time: float)
 signal game_reset()
@@ -26,6 +28,7 @@ var current_phase: RunPhase = RunPhase.COMBAT_WAVES:
 
 var score: int = 0
 var wipe_count: int = 0
+var consecutive_wipes: int = 0
 var enemies_destroyed: int = 0
 var survival_time: float = 0.0
 var is_game_over: bool = false
@@ -36,6 +39,7 @@ var current_sector: int = 1
 # 2-Player Co-Op Economy
 var is_coop_mode: bool = false
 var scrap_joules: int = 0 # Single-player shared alias
+var total_joules_collected: int = 0 # Cumulative lifetime Joules collected across run
 var p1_joules: int = 0
 var p2_joules: int = 0
 
@@ -63,6 +67,7 @@ func add_score(amount: int) -> void:
 	score_changed.emit(score, amount)
 
 func add_joules(amount: int, target_player_id: int = 0) -> void:
+	total_joules_collected += amount
 	if is_coop_mode:
 		if target_player_id == 1:
 			p1_joules += amount
@@ -105,6 +110,7 @@ func award_wipe_bonus(amount: int = 1000) -> void:
 	if is_game_over:
 		return
 	wipe_count += 1
+	consecutive_wipes += 1
 	score += amount
 	score_changed.emit(score, amount)
 	wipe_bonus_awarded.emit(amount, "100% FORMATION WIPE! +" + str(amount) + " PTS")
@@ -117,6 +123,8 @@ func trigger_game_over() -> void:
 	if is_game_over:
 		return
 	is_game_over = true
+	consecutive_wipes = 0
+	get_tree().paused = false
 	player_died.emit(1)
 	game_over_triggered.emit(score, wipe_count, survival_time)
 
@@ -136,12 +144,14 @@ func restart_game() -> void:
 	get_tree().paused = false
 	score = 0
 	wipe_count = 0
+	consecutive_wipes = 0
 	enemies_destroyed = 0
 	survival_time = 0.0
 	is_game_over = false
 	current_wave = 1
 	current_sector = 1
 	scrap_joules = 0
+	total_joules_collected = 0
 	p1_joules = 0
 	p2_joules = 0
 	p1_reroll_cost = 5

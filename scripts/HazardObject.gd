@@ -17,6 +17,8 @@ var explosion_scene: PackedScene = preload("res://scenes/Explosion.tscn")
 var scrap_scene: PackedScene = preload("res://scenes/ScrapPickup.tscn")
 
 var is_detonating: bool = false
+var drop_guaranteed: int = 1
+var drop_chance: float = 0.0
 
 func _ready() -> void:
 	add_to_group("hazard")
@@ -56,9 +58,18 @@ func _setup_hazard() -> void:
 			var scroll_speed = 45.0
 			velocity = scroll * scroll_speed
 
-func setup(p_type: HazardType, p_pos: Vector2) -> void:
+func setup(p_type: HazardType, p_pos: Vector2, p_drop_profile: Dictionary = {}) -> void:
 	hazard_type = p_type
 	global_position = p_pos
+	if not p_drop_profile.is_empty():
+		drop_guaranteed = p_drop_profile.get("guaranteed", 1)
+		drop_chance = p_drop_profile.get("chance", 0.0)
+	elif p_type == HazardType.ASTEROID:
+		drop_guaranteed = 1
+		drop_chance = 0.0
+	else:
+		drop_guaranteed = 0
+		drop_chance = 0.0
 	_setup_hazard()
 	queue_redraw()
 
@@ -115,10 +126,11 @@ func _destroy_hazard() -> void:
 			ex.global_position = global_position
 			ex.scale = Vector2(0.8, 0.8)
 			
-			# Drop 2 scrap pellets
-			for i in range(2):
+			# Dynamic scrap drop
+			var count = drop_guaranteed + (1 if randf() < drop_chance else 0)
+			for i in range(count):
 				var s = scrap_scene.instantiate()
-				s.value = 5
+				s.value = 1
 				get_parent().add_child(s)
 				s.global_position = global_position + Vector2(randf_range(-15, 15), randf_range(-15, 15))
 			

@@ -10,6 +10,7 @@ extends CanvasLayer
 @onready var restart_button: Button = $Panel/VBox/RestartButton
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	panel.visible = false
 	GameManager.game_over_triggered.connect(_on_game_over)
 	restart_button.pressed.connect(_on_restart_pressed)
@@ -26,7 +27,11 @@ func _on_game_over(final_score: int, wipes: int, survival_time: float) -> void:
 	panel.visible = true
 	panel.modulate.a = 0.0
 	var tw = create_tween()
-	tw.tween_property(panel, "modulate:a", 1.0, 0.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	if tw:
+		tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		tw.tween_property(panel, "modulate:a", 1.0, 0.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	else:
+		panel.modulate.a = 1.0
 
 func _on_restart_pressed() -> void:
 	GameManager.restart_game()

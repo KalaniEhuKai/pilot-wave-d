@@ -1,284 +1,144 @@
-# Walkthrough: ⟨Pilot | Wave⟩ : Decoherence
+# Walkthrough: Progression Rebalance & Single-Leader Elite Fix
 
-**`<Pilot | Wave> : Decoherence`** is a cyberpunk shoot 'em up (shmup) and roguelite in Godot 4.7.2, blending *1942* flight combat with *The Binding of Isaac* combinatorial item synergies.
-
----
-
-## Phase 1 Accomplishments: The 60-Second Playable Arcade Prototype
-- **Universal Engine Setup**: Godot 4.7.2 configured with the `gl_compatibility` renderer for universal PC, mobile, and WebGL 2 execution.
-- **`GameAxis.gd`**: Dynamic coordinate abstraction supporting real-time toggling between **Horizontal 16:9** (Desktop) and **Vertical 9:16** (Mobile) via `[Tab]` or the UI button.
-- **Flight Model & 1942 Barrel Roll**: 0.04s micro-damped flight model, relative touch drag steering for mobile, and evasive 1942 Barrel Roll with complete invulnerability frames and 3 recharging stock charges.
-- **The Decoherence Spawner**: Materializes enemy squadrons out of quantum probability bubbles with 0.42s tactical telegraphing.
-- **Arcade Scoring**: Base kill points + **100% Formation Wipeout Bonus (+1,000 pts)** on squad annihilation.
-- **Procedural Sound Effects**: Zero-asset in-engine procedural audio synthesizer (`SoundEffects.gd`) for lasers, hits, rolls, explosions, and chimes.
+## Overview
+This update addresses the early-game power curve, eliminates upgrade deserts across all three sectors, fixes the 5-elite squad spawn glitch, de-compounds enemy health scaling, and re-tunes boss health pools to align with realistic player DPS.
 
 ---
 
-## Phase 2 Accomplishments: The First Broken Synergies & Elite Drops
-
-### 1. Modular Isaac-Style Synergy Hook Engine (`ItemModifier.gd`)
-Implemented a data-driven resource pipeline with lifecycle hooks:
-- `on_ship_init(ship)`
-- `on_fire(ship, spawn_params)`
-- `on_projectile_tick(bullet, delta)`
-- `on_hit(bullet, victim, hit_info)`
-- `on_kill(ship, victim, pos)`
-- `on_roll(ship)`
-- `on_wave_start(ship, wave_index)`
-- `on_take_damage(ship, amount) -> bool`
-
-### 2. The 5 Foundational Multi-Tier Relics
-1. **Birefringence Prism** (*Tier 1 Ballistic*):
-   - Projectiles split into 3 refracted beams (18° spread) after traveling 180px, tripling screen coverage.
-2. **Gravitational Lensing** (*Tier 1 Ballistic*):
-   - Curves projectile paths toward the nearest enemy center of mass with smooth slerp curvature (homing).
-3. **Anti-Matter Suspension** (*Tier 2 Paradigm Mutator* - The *Isaac Anti-Gravity* equivalent):
-   - Fired bullets do not launch forward; they freeze motionless in space as hovering plasma traps.
-   - Releasing the fire button violently slingshots them all forward simultaneously in a synchronized relativistic burst at 1.45x speed!
-4. **Meissner Shield Matrix** (*Tier 3 Exotic Relic* - The *Isaac Holy Mantle* equivalent):
-   - Generates a superconducting field that completely absorbs and negates the **first hit taken in every wave**.
-   - Recharges automatically at the start of each new wave.
-5. **Maxwell's Demon** (*Tier 3 Exotic Relic*):
-   - Violates entropy to magnetically pull all Energy Scrap and Plasma Joules across the entire screen directly into your engine.
-
-### 3. Energy Scrap Economy & Elite Drops
-- **Energy Scrap (`ScrapPickup.tscn`)**: Destroyed enemies drop glowing plasma rhomboid Joules that magnetize toward the player and accumulate in the Joules wallet.
-- **Elite Enemy Champions (`Enemy.gd`)**:
-   - **Armored Affix**: +150% max HP, golden armor aura, and 3x scrap drops.
-   - **Volatile Affix**: Detonates into an 8-way ring of bullets upon death.
-- **Item Choice Crate (`ItemCrate.tscn`)**:
-   - Dropped by defeated Elite Champions.
-   - Flying into the crate opens the **Item Choice Modal**, pausing combat and presenting 2 random relics with descriptions and tier badges.
-
-### 4. Synergy Ribbon HUD
-- Live Joules counter (`JOULES: 0 J`).
-- Real-time **Synergy Ribbon** tray displaying active item badges with tooltip details.
+## 1. Single-Leader Elite Promotion (Fixing 5-Elite Squad Glitch)
+- **Problem**: When a squad spawned with an elite affix (e.g. `ARMORED`, `QUANTUM_BURST`, `PHANTOM_BLINK`), all 5 crafts in the formation inherited the affix, turning the entire echelon into bullet-sponge elites and flooding drops or wiping the player.
+- **Solution**:
+  - Added `get_craft_affix(craft_idx, count, pattern, batch_affix)` in [DecoherenceSpawner.gd](file:///c:/Users/family/.gemini/antigravity-ide/scratch/pilot-wave-d/scripts/DecoherenceSpawner.gd).
+  - Only the flight leader (`leader_index` — the apex craft in `V_SHAPE` or the lead craft in `ROW`/flanks) is promoted to an Elite Champion.
+  - Non-leader squad members spawn as standard archetype ships.
+  - Elite Champions receive a visible scale boost (`Vector2(1.22, 1.22)`), ensuring clear visual telegraphing and guaranteeing exactly 1 elite crate per champion squad.
 
 ---
 
-## Verification Results
+## 2. Upgrade Cadence & Eradication of "3+ Wave Deserts"
+Players now receive meaningful power progression every 1–2 waves throughout the entire 36-wave run:
 
-All automated tests passed 100% cleanly in headless Godot 4.7.2 (`TestRunner.tscn`):
+| Wave | Encounter / Event | Upgrade Source | Cumulative Player Items |
+| :--- | :--- | :--- | :--- |
+| **Wave 2** | First Contact complete | Guaranteed Starter Item Crate | 1 Item |
+| **Wave 4** | Threat Surge / Echelon 2 | Guaranteed Single Elite Champion | 2 Items |
+| **Wave 5** | Pre-Miniboss Checkpoint | Sky Merchant Zeppelin (1-2 items) | 3–4 Items |
+| **Wave 6** | Miniboss (Armored Goliath) | Miniboss Item Crate Drop | 4–5 Items |
+| **Wave 8** | Mid-Sector Pressure | Guaranteed Single Elite Champion | 5–6 Items |
+| **Wave 10** | Deep Space Supply Crate | Automated Supply Drop Crate | 6–7 Items |
+| **Wave 12** | Sector Boss (Corvus) | Major Boss Relic Crate | 7–8 Items |
 
-```text
-====================================================
---- STARTING PHASE 2 SYNERGY SUITE VERIFICATION ---
-====================================================
-STEP 1: Main.tscn instantiated and mounted.
+*The same consistent 1–2 wave cadence is repeated in Sector 2 (Waves 13–24) with shop at Wave 17, and Sector 3 (Waves 25–36) with shop at Wave 29.*
 
-STEP 2: Testing 1942 Barrel Roll / Quantum Tunneling...
- - is_rolling: true | is_invulnerable: true
- - Damage during roll negated cleanly by i-frames (shields: 2/2)
+---
 
-STEP 3: Testing Meissner Shield Matrix...
- - Meissner Shield equipped and active.
- - FIRST HIT absorbed by Meissner Shield! (shields remain: 2/2)
- - SECOND HIT successfully penetrates to shield pip (shields: 1/2)
+## 3. Mathematical Enemy HP De-Compounding
+- **Previous Formula**: Compounding exponential jumps creating a severe 100% cliff spike from Wave 12 to 13 (`1.36x` -> `2.72x`), causing enemies at Wave 4 and Wave 13 to feel overwhelmingly tanky.
+- **Calibrated Formula** in [ProgressionModel.gd](file:///c:/Users/family/.gemini/antigravity-ide/scratch/pilot-wave-d/scripts/ProgressionModel.gd):
+  $$\text{Multiplier} = 1.0 + (\text{Sector} - 1) \times 0.45 + (\text{WaveInSector} - 1) \times 0.03$$
+- **Health Progression Results**:
+  - Wave 1 Scout: `2.00 HP` (2 player shots to defeat)
+  - Wave 4 Scout: `2.18 HP` (smooth 2–3 shot baseline)
+  - Wave 12 Scout: `2.66 HP`
+  - Wave 13 Scout: `2.90 HP` (smooth bridge into Sector 2 without any cliff jump)
+  - Sector 1 `ARMORED` affix multiplier tuned from `2.2x` down to `1.45x`.
 
-STEP 4: Testing Birefringence Prism projectile splitting...
- - Spawned initial bullet. Bullets in scene: 1
- - Bullets in scene after refraction split: 3
- - SUCCESS: Birefringence Prism split bullet into 3 beams!
+---
 
-STEP 5: Testing Gravitational Lensing homing curvature...
- - Bullet initial dir.y: 0.000000 | Curving dir.y: 0.880006
- - SUCCESS: Gravitational Lensing dynamically curved bullet trajectory toward enemy!
+## 4. Boss & Miniboss HP Re-Anchoring
+Boss and miniboss health pools were re-anchored to realistic applied DPS while preserving multi-part destructible subsystems:
 
-STEP 6: Testing Anti-Matter Suspension (Plasma Trap & Slingshot)...
- - Bullet frozen motionless in space as hovering plasma trap.
- - SUCCESS: Fire released! Bullet violently slingshotted forward simultaneously at 1.45x speed!
+| Boss / Subsystem | Old Effective HP | Calibrated HP | Target Time to Kill |
+| :--- | :--- | :--- | :--- |
+| **Miniboss Goliath** (Wave 6) | 85 HP (Passive) | **180 HP** (90 Core / 50 Bow / 2×20 Railguns) | ~15–20 seconds |
+| **Major Boss Goliath** (Wave 24) | 900 HP | **450 HP** (280 Core / 120 Bow / 2×25 Guns) | ~30–40 seconds |
+| **Major Boss Corvus** (Wave 12) | 580 HP | **280 HP** (160 Core / 2×60 Wings) | ~30–40 seconds |
+| **Apex Titan Ouroboros** (Wave 36) | 1,600 HP | **850 HP** (600 Core / 250 Shield Gate) | ~45–60 seconds |
 
-STEP 7: Testing Maxwell's Demon scrap magnet...
- - Scrap initial distance: 944.847107 | Post-magnet distance: 564.847168
- - SUCCESS: Maxwell's Demon pulled scrap across screen into ship!
+### Sector 1 Miniboss & Boss Encounter Tuning
+- **Wave 6 Miniboss (Siege Goliath Threat Escalation)**:
+  - **Tracking Converging Railguns**: Both port and starboard railgun mounts (20 HP each) actively swivel and track the player with visible red laser targeting lines during charging. At 75% charge (0.64s), the lasers lock into position, turn bright yellow-white, and fire a high-speed 2-bolt heavy beam salvo (480 px/s) directly down the locked vector! Standing still results in direct hits, requiring active rolling or dodging.
+  - **Frontal Autocannon**: While Bow Armor (50 HP) is intact, Goliath fires a 5-bullet kinetic spread fan forward every 1.8s.
+  - **Fusion Core Overdrive (Phase 2)**: Breaking the bow armor now **enrages** the exposed core instead of pacifying the front. The exposed core fires an aimed 3-bolt plasma burst every 1.4s and discharges an 8-bullet radial energy pulse every 3.8s, while strafe speed accelerates from 85 to 125 px/s.
+  - **Flanking Interceptor Hangar**: Deploys 2 aggressive Interceptor drones from the far lateral flanks (85 px away from the central line of fire) every 3.5s (2.6s in Phase 2) so they actively dive and flank rather than getting vaporized instantly in the forward firing line.
+- **Wave 12 Climax Boss (Super-Dreadnought Corvus Phase 2 Enraged)**:
+  - **Multi-Wave Rotating Vortex Bursts**: Replaced the weak single-pulse 4-bullet shot with rapid 12-pulse rotating vortex bursts spaced 0.09s apart (48 bullets per burst) advancing by 0.22 radians per pulse.
+  - **Alternating Direction**: Successive bursts alternate spin directions (Clockwise $\leftrightarrow$ Counter-Clockwise), creating dense overlapping spiral arms across the screen.
+  - **Breather Sniper Intercept**: Reduced downtime between bursts to 1.1s. In the midpoint of the breather window (at 0.55s), the exposed singularity core fires an aimed twin-plasma shot directly at the player to prevent static camping.
 
-STEP 8: Testing Elite Enemy Champion & Item Choice Crate drop...
- - Elite Armored Champion verified (HP: 17.500000)
- - SUCCESS: Defeated Elite Champion dropped holographic Item Choice Crate!
+---
 
-====================================================
---- ALL PHASE 2 SYNERGY TESTS PASSED 100% CLEANLY ---
-====================================================
+## 6. Quantum Cargo Hauler Archetype & Option 2 Elite Bounty System
+- **Quantum Cargo Hauler (`CARGO_HAULER`)**:
+  - Replaced all static floating deep-space crates on Waves 2 and 10 with an active combat encounter.
+  - Distinctive gilded bulk freighter silhouette with twin glowing cyan relic pods and amber hull.
+  - Flies steady downfield with moderate durability (`10.0 * hp_mult`).
+  - Upon defeat, drops the guaranteed **Item Choice Crate**.
+  - Integrated into handcrafted milestone templates across all sectors:
+    - **Wave 2 / 14 / 26**: `CARGO RECONNAISSANCE` (Solo Hauler + introductory escort)
+    - **Wave 4 / 16 / 28**: `RELIC CONVOY INTERCEPTION` (Hauler + Scout V-wedge escort)
+    - **Wave 8 / 20 / 32**: `ARMORED RELIC CONVOY` (Hauler + Shield Frigate + Interceptors)
+    - **Wave 10 / 22 / 34**: `DEEP SPACE SUPPLY RUN` (Hauler + Turret Platforms + Interceptors)
+- **Option 2 Scaled Golden Plasma Bounty**:
+  - Every Elite Champion (`elite_affix != NONE`) defeated universally awards:
+    - **Sector 1**: **+10 Joules** + Full Shield Recharge
+    - **Sector 2**: **+15 Joules** + Full Shield Recharge
+    - **Sector 3**: **+20 Joules** + Full Shield Recharge
+  - **Replaces loose scrap pellets**: The elite drops 0 loose pellets, so the net currency gain over standard craft is only ~+4 Joules.
+  - Zero wave checks, zero milestone flags on elites, and zero artificial drop clamps.
+- **Complete Elimination of Dynamic Threat Surges**:
+  - Removed `consecutive_wipes >= 2` dynamic elite mutation from [WaveDirector.gd](file:///c:/Users/family/.gemini/antigravity-ide/scratch/pilot-wave-d/scripts/WaveDirector.gd).
+  - Wiping squads cleanly awards score and wipe bonuses without punishing player skill with surprise elite rubber-banding.
+
+---
+
+## 7. Verification & Automated Test Suite Results
+Ran the complete Godot automated test suite via console:
+`Godot_v4.7.2-stable_win64_console.exe --headless scenes/TestRunner.tscn`
+
 ```
-
----
-
----
-
-## Phase 3 Accomplishments: Run Progression, Sky Merchant & 2-Player Co-Op
-
-### 1. Zero-Friction 2-Player Local Co-Op
-- **Dual Ship Roster**: P1 (Cyan particle trail, WASD / Space / Shift) and P2 (Amber-Gold particle trail, Arrow keys / Numpad 0 / Enter or Gamepad).
-- **Zero-Friction Scrap Replication**: In-flight Energy Scrap credits **both players equally** upon pickup, completely eliminating toxic competition over resources.
-- **Independent Wallets & Stalls**: Players maintain separate Plasma Joules balances for merchant transactions and rerolls.
-- **HUD Co-Op Status**: P2 hull pips, shield bar, and separate Joules counter displayed when Co-Op mode is active.
-
-### 2. In-Flight Shop: The Sky Merchant Zeppelin (`SkyMerchant.gd`)
-- **Docking Sequence**: Docks smoothly alongside players after Wave 4.
-- **Dual Supply Stalls**: Separate merchant inventory shelves for P1 and P2 offering Tier 1-3 relics and Hull Repair Nano-Injectors (15 J).
-- **Independent Escalating Reroll Terminals**: Players can independently reroll their stall inventory for escalating Joules costs (5 J -> 10 J -> 20 J -> 35 J).
-- **Undock Action**: Smoothly disengages and resumes combat patrol waves.
-
-### 3. Multi-Part Sector 1 Boss: Super-Dreadnought Corvus (`BossCorvus.gd`)
-- **Subsystem Armor**: Breakable Port and Starboard wing batteries that fire 5-way spread salvos.
-- **Subsystem Detonations**: Wings break individually with catastrophic explosions (+2,500 pts each), peeling away armor to expose the central Singularity Core.
-- **Phase 2 Enrage**: When both wings are destroyed, Corvus unleashes a frantic rotating 4-spoke spiral bullet vortex.
-- **Boss Health Bar**: Displays boss name and segmented HP in top center of HUD.
-- **Victory Bounty**: Defeating Corvus rewards +15,000 pts, drops 10 scrap pellets, an Elite Item Crate, and displays the SECTOR 1 CLEARED banner!
-
-### 4. Background Secrets & Exploration (`SecretDirector.gd`)
-- **Quantum Anomalies**: Destructible shimmering anomalies in the starfield that detonate for bonus Joules and +500 pts.
-- **The Dirac Monopole Landmark**: Extremely rare cosmic phenomenon drifting in deep space; shooting it shatters the monopole, immediately repairing 100% hull and awarding +10,000 pts.
-
----
-
-## Verification Results
-
-All automated tests passed 100% cleanly in headless Godot 4.7.2 (`TestRunner.tscn`):
-
-```text
-====================================================
---- STARTING PHASE 3 RUN & CO-OP VERIFICATION ---
-====================================================
-STEP 1: Main.tscn instantiated with Sky Merchant & Secret Director.
-
-STEP 2: Testing 2-Player Local Co-Op & Zero-Friction Economy...
- - P1 (Cyan) found at (256.0, 576.0) | P2 (Amber) found at (256.0, 768.0)
- - After 10 J pickup by P1: P1 Wallet = 10 J | P2 Wallet = 10 J
- - SUCCESS: Zero-friction scrap replication verified! (+10 J P1, +10 J P2)
- - SUCCESS: Independent Co-Op wallets verified (P1: 25 J, P2: 50 J)
-
-STEP 3: Testing Sky Merchant Zeppelin & Reroll Terminal...
- - Sky Merchant docked. Both P1 and P2 supply stalls active.
- - Initial P1 reroll cost: 5 J
- - P1 reroll cost after 1st reroll: 10 J
- - SUCCESS: Independent escalating rerolls verified (P1: 10 J, P2: 5 J)
- - Undocked from Sky Merchant. Resumed combat patrol.
-
-STEP 4: Testing Secret Systems (Quantum Anomaly & Dirac Monopole)...
- - SUCCESS: Quantum Anomaly shattered! Awarded scrap and secret bonus.
- - SUCCESS: Legendary Dirac Monopole landmark shattered! (+10,000 pts & Full Hull Repair)
-
-STEP 5: Testing Sector 1 Boss: Super-Dreadnought Corvus...
- - Super-Dreadnought Corvus spawned. Total HP: 200.000000
- - Port Wing Battery destroyed! Detonated with subsystem explosion.
- - Starboard Wing Battery destroyed! Both wings offline.
- - Central Singularity Core exposed! Testing core destruction...
- - SUCCESS: Super-Dreadnought Corvus vaporized! Awarded +15,000 pts and Sector Cleared banner.
-
-====================================================
---- ALL PHASE 3 RUN & CO-OP TESTS PASSED 100% CLEANLY ---
-====================================================
-```
-
----
-
-## Phase 4 Accomplishments: Threat Director, Deep Item Roster & Boss Asymmetry
-
-### 1. Adaptive Threat Budget Director (`WaveDirector.gd`)
-- **Real-Time Difficulty Scaling**: Evaluates current sector number, wave index, and player active synergy count to calculate a dynamic wave threat point budget.
-- **Formation Library**:
-  - `V_FORMATION`: Heavy fighter spearhead escorted by 4 wingmen diving in unison.
-  - `SINE_DIVE`: Evasive acrobatic scout squadron tracing sinusoidal curves across the screen.
-  - `PINCER_FLANK`: Dual twin squadrons collapsing simultaneously from opposite screen boundaries.
-  - `ESCORT_COLUMN`: Heavily shielded bombers escorted by defensive interceptors.
-  - `ELITE_CHAMPION`: Guaranteed wave 4 miniboss challenge.
-
-### 2. Expanded 20+ Tri-Tier Quantum Synergy Relic Library (`ItemDatabase.gd`)
-1. **Elastic Momentum Transfer** (*Tier 1 Ballistic*): Bullets ricochet off screen boundaries and enemy chassis up to 2 times, gaining +25% kinetic damage on bounce.
-2. **Feynman Propagator** (*Tier 1 Ballistic*): Bullets leave glowing vacuum ionization trails that burn passing hostiles.
-3. **Zeeman Splitting** (*Tier 1 Ballistic*): Magnetic field divergence emits twin rear-firing counter-projectiles whenever primary cannon fires.
-4. **Cherenkov Radiator** (*Tier 1 Ballistic*): Fatal projectile hits detonate enemies into a luminous blue radiation shockwave damaging all nearby targets.
-5. **Heisenberg Uncertainty Lens** (*Tier 1 Ballistic*): Shots undergo quantum erratic jitter with a 25% chance of rolling a +150% critical damage spike.
-6. **Tachyon Capacitor** (*Tier 2 Paradigm Mutator*): Holding primary fire charges a high-density relativistic beam; releasing unleashes a hyper-lance that pierces all targets in its line of fire.
-7. **Carnot Heat Sink** (*Tier 2 Paradigm Mutator*): Emergency thermal overclocking: whenever shields are fully depleted, primary fire rate is doubled!
-8. **Quantum Tunneling Wavepacket** (*Tier 2 Paradigm Mutator*): Bullets phase directly through enemy shielding and heavy armor plates with zero damage attenuation (up to 3 pierces).
-9. **Lagrange Satellites** (*Tier 3 Exotic Relic*): Spawns 2 quantum orbital drones revolving around your ship, vaporizing incoming enemy bullets and firing support micro-lasers.
-10. **Carnot Efficiency** (*Tier 3 Exotic Relic*): Thermal superconductivity grants a permanent 50% discount on all Sky Merchant wares and reroll fees.
-11. **Dirac Inversion Field** (*Tier 3 Exotic Relic*): The Inverted Time Anchor. Absorbs fatal hull damage once per run, rewinding time, clearing all hostile bullets via EMP, and restoring 1 shield pip.
-12. **Bell State Entanglement** (*Tier 3 Exotic Relic*): Collecting scrap or firing resonates between ships/orbitals, granting +30% shared damage and doubling magnet radius.
-
-### 3. Sector Threat Dossier UI (`ThreatDossier.gd`)
-- Holographic tactical briefing card displayed upon sector launch.
-- Reports Sector Codename, Designated Flagship Target, Threat Class, Environmental Hazards, and Tactical Directive.
-- Dismissable via `[ENGAGE COMBAT PATROL]` button or `[Enter]`.
-
-### 4. Asymmetric Sector 1 Boss: Armored Behemoth Goliath (`BossGoliath.gd`)
-- Asymmetric fortress carrier counter to *Corvus*:
-  - **Heavy Bow Armor Plating (40 HP)**: Frontal armor shield protecting internal subsystems.
-  - **Twin Railgun Batteries (50 HP each)**: Charges sweeping red/orange targeting laser lines before discharging high-velocity plasma blasts.
-  - **Internal Fighter Hangars**: Deploys interceptor escort drones to harass the player.
-  - **Goliath Fusion Reactor Core (100 HP)**: High-heat reactor exposed once bow armor is ruptured.
-  - **Victory Bounty**: +15,000 pts, 10 scrap pellets, an Item Choice Crate, and Sector Cleared banner.
-
----
-
-## Phase 4 Verification Results
-
-All automated tests passed 100% cleanly in headless Godot 4.7.2 (`TestRunner.tscn`):
-
-```text
 ====================================================
 --- STARTING PHASE 4 AUTOMATED TEST SUITE ---
 ====================================================
 STEP 1: Main.tscn instantiated with Threat Dossier, Wave Director & Bosses.
-
 STEP 2: Testing 2-Player Local Co-Op & Zero-Friction Economy...
- - P1 (Cyan) found at (256.0, 576.0) | P2 (Amber) found at (256.0, 768.0)
  - SUCCESS: Zero-friction scrap replication verified! (+10 J P1, +10 J P2)
-
 STEP 3: Testing Sky Merchant Zeppelin & Reroll Terminal...
  - SUCCESS: Sky Merchant docking, safety purge, and escalating rerolls verified.
-
 STEP 4: Testing Secret Systems (Quantum Anomaly & Dirac Monopole)...
  - SUCCESS: Quantum Anomaly shattered! Awarded scrap and secret bonus.
  - SUCCESS: Legendary Dirac Monopole shattered (+10,000 pts & Full Hull Repair).
-
-STEP 5: Testing Sector 1 Boss: Super-Dreadnought Corvus...
- - SUCCESS: Super-Dreadnought Corvus defeated with subsystem detonations!
-
+STEP 5: Testing Sector 1 Boss: Super-Dreadnought Corvus (280 HP defeated with subsystem detonations)...
 STEP 6: Testing Adaptive Wave Director Threat Budget & Formations...
- - Budget Wave 1: 50.0 | Budget Wave 4: 83.0
- - SUCCESS: Wave Director budget scaling and formation selection verified.
-
 STEP 7: Testing Expanded 20+ Quantum Synergy Relics...
- - 7A: Elastic Momentum ricochet and damage scaling verified.
- - 7B: Tachyon Capacitor charge shot and piercing lance verified.
- - 7C: Lagrange Satellites orbital defense drones verified.
- - 7D: Dirac Inversion fatal damage rewind verified.
- - 7E: Carnot Efficiency 50% shop discount verified.
-
 STEP 8: Testing Sector Threat Dossier Briefing...
- - SUCCESS: Threat Dossier presentation and engagement verified.
-
-STEP 9: Testing Asymmetric Sector 1 Boss: Armored Behemoth Goliath...
- - Goliath spawned. Total HP: 240.000000
- - Goliath Bow Armor shattered!
- - Goliath Port Railgun Battery offline!
- - Goliath Starboard Railgun Battery offline!
- - SUCCESS: Armored Behemoth Goliath obliterated! Defeat signal triggered.
-
+STEP 9: Testing Asymmetric Boss: Armored Behemoth Goliath (450 HP defeated)...
+STEP 10: Testing Run Victory Dialog & Game Pause...
+STEP 11: Testing Expanded Item Database (60+ Items) & Stat Upgrades...
+STEP 12: Testing 16 Enemy Bestiary, Arena Hazards, 25+ Templates & Boss Ouroboros...
+ - 12A: All 17 Enemy Archetypes instantiated cleanly with distinct statistics.
+ - Total Wave Templates Cataloged: 30
+ - 12I: Horizon wave function spawning, cosmic hazard drift, and downfield shmup flight verified.
+STEP 13: Testing 15-Minute Run Architecture (3 Shops, Starter Stats, Multi-Echelons)...
+ - 13C: All 30 wave templates verified having 3-4 echelons and 11-26 craft per wave.
+ - 13D: Mathematical enemy HP scaling verified (W1 Scout: 2.0 HP, W4: 2.18 HP, W12: 2.66 HP, W13: 2.9 HP).
+ - 13G: Horizon spawn points and clamping verified 15px from screen edge.
+STEP 14: Testing System 1 (Combat/Wave Polish) & System 2 (Progression Engine)...
+ - 14B: WaveDirector milestone Cargo Hauler encounters (W2, W4, W8, W10) and clean elimination of Threat Surges verified.
+ - 14B2: Single-Leader Elite Champion promotion verified (no 5-elite squads).
+ - 14C: ProgressionModel dynamic tier probabilities and tiered pricing verified.
+ - 14D: Additive linear stat pooling model verified without exponential compounding.
+ - 14F: SkyMerchant guaranteed slot archetypes verified.
+ - 14G: Progression telemetry curves and HUD debug overlay verified.
+STEP 15: Testing Death & Modal Concurrency Safeguards...
+STEP 16: Testing Calibrated Joules Economy & Sector 1 Item Budget...
+ - 16C: Simulated Waves 1-5 + Goliath Joules: 129 J (Target: 100-130 J)
+ - 16D: Wave 5 pre-miniboss shop buying power verified (1-2 items purchased)
+ - 16E: Escalating reroll inflation curve verified (5 -> 10 -> 20 -> 35 -> 55 J)
+Testing 16F: Quantum Cargo Hauler Crate Drops & Option 2 Golden Plasma Bounties...
+ - 16F: Quantum Cargo Hauler Crate Drops & Option 2 Scaled Golden Plasma Bounties (+10/+15/+20 J & Full Shields) verified.
 ====================================================
---- ALL PHASE 4 EXPANDED SYNERGY & BOSS TESTS PASSED 100% ---
+--- ALL VERIFICATION TESTS PASSED 100% CLEANLY ---
 ====================================================
 ```
-
----
-
-## How to Play
-
-Launch the game using the Godot 4 console executable:
-
-```powershell
-& "C:\Users\family\Downloads\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stable_win64_console.exe" --path "C:\Users\family\.gemini\antigravity-ide\scratch\pilot-wave-d"
-```
-
-| Action | P1 Control | P2 Control (Co-Op) |
-| :--- | :--- | :--- |
-| **Move** | `W, A, S, D` / Touch Drag / Gamepad 1 | `Arrow Keys` / `I, J, K, L` / Gamepad 2 |
-| **Fire** | `Space` / `Left Mouse Button` / on-screen `FIRE` | `Numpad 0` / `Slash /` / Gamepad 2 A |
-| **1942 Barrel Roll** | `Shift` / `Right Mouse Button` / on-screen `ROLL` | `Right Control` / `Period .` / Gamepad 2 B |
-| **Toggle Axis** | `Tab` or top-center `MODE` button | - |
-| **Toggle Co-Op** | Top-center `CO-OP` button | - |
-| **Restart** | `R` key or tap Restart on Game Over | - |
-
+All 16 test steps passed with 0 runtime errors and 0 assertion failures.

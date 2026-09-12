@@ -5,10 +5,10 @@ extends Area2D
 
 signal boss_defeated(boss_name: String)
 
-@export var max_health: float = 1200.0
-var health: float = 1200.0
+@export var max_health: float = 600.0
+var health: float = 600.0
 
-var shield_gate_hp: float = 400.0
+var shield_gate_hp: float = 250.0
 var shield_gate_alive: bool = true
 var shield_angle: float = 0.0
 
@@ -216,7 +216,7 @@ func _die() -> void:
 	# Drop massive scrap reward + 2 Relic Crates
 	for i in range(16):
 		var s = scrap_scene.instantiate()
-		s.value = 10
+		s.value = 1
 		get_parent().add_child(s)
 		s.global_position = global_position + Vector2(randf_range(-50, 50), randf_range(-50, 50))
 	

@@ -18,6 +18,8 @@ func on_fire(_ship: CharacterBody2D, spawn_params: Dictionary) -> Array[Dictiona
 	p["dir"] = dir
 	
 	if randf() < 0.25:
-		p["dmg"] = p.get("dmg", 1.0) * 2.5
+		var spike = p.get("damage", p.get("dmg", 1.0)) * 2.5
+		p["damage"] = spike
+		p["dmg"] = spike
 	
 	return [p]

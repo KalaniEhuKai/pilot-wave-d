@@ -23,10 +23,19 @@ var shake_intensity: float = 0.0
 var shake_duration: float = 0.0
 var shake_timer: float = 0.0
 
-# 3 Shop checkpoints (one post-miniboss per sector)
-var shop_w6_done: bool = false
-var shop_w18_done: bool = false
-var shop_w30_done: bool = false
+# 3 Shop checkpoints (one pre-miniboss per sector: Waves 5, 17, 29)
+var shop_w5_done: bool = false
+var shop_w17_done: bool = false
+var shop_w29_done: bool = false
+var shop_w6_done: bool:
+	get: return shop_w5_done
+	set(v): shop_w5_done = v
+var shop_w18_done: bool:
+	get: return shop_w17_done
+	set(v): shop_w17_done = v
+var shop_w30_done: bool:
+	get: return shop_w29_done
+	set(v): shop_w29_done = v
 
 # Boss and Miniboss encounter checkpoints
 var miniboss_w6_done: bool = false
@@ -55,6 +64,16 @@ func _ready() -> void:
 				spawner.wave_timer = 2.5
 		)
 	
+	if is_instance_valid(spawner) and spawner.has_signal("quantum_warp_started"):
+		spawner.quantum_warp_started.connect(func(dur):
+			GameManager.request_screen_shake(6.0, dur)
+			if is_instance_valid(background) and background.has_method("trigger_warp_streak"):
+				background.trigger_warp_streak(dur)
+			var hud = get_tree().get_first_node_in_group("hud")
+			if hud and hud.has_method("on_quantum_warp_started"):
+				hud.on_quantum_warp_started()
+		)
+	
 	# Display Sector 1 Threat Dossier briefing card at launch
 	if is_instance_valid(dossier):
 		get_tree().create_timer(0.05).timeout.connect(func():
@@ -76,6 +95,10 @@ func _spawn_p1() -> void:
 	p1_instance.player_id = 1
 	add_child(p1_instance)
 	p1_instance.global_position = initial_pos
+	
+	var hud = get_tree().get_first_node_in_group("hud")
+	if hud and hud.has_method("_connect_players"):
+		hud._connect_players()
 
 func _spawn_p2() -> void:
 	if is_instance_valid(p2_instance):
@@ -92,6 +115,8 @@ func _spawn_p2() -> void:
 	var hud = get_tree().get_first_node_in_group("hud")
 	if hud and hud.has_method("_on_health_changed"):
 		p2_instance.health_changed.connect(func(h, s, mh, ms): hud._on_health_changed(h, s, mh, ms, 2))
+	if hud and hud.has_method("_connect_players"):
+		hud._connect_players()
 
 func toggle_coop_player(enable: bool) -> void:
 	if enable:
@@ -124,18 +149,20 @@ func _evaluate_progression_triggers() -> void:
 	var airspace_clear = enemies.is_empty() and not has_bubbles
 	if is_instance_valid(spawner) and spawner.has_method("_has_active_squads") and spawner._has_active_squads():
 		airspace_clear = false
+	if is_instance_valid(spawner) and spawner.has_method("is_wave_in_progress") and spawner.is_wave_in_progress():
+		airspace_clear = false
 
 	# --- SECTOR 1 (Waves 1-12) ---
 	if GameManager.current_sector == 1:
+		# Pre-Miniboss Shop 1: Wave 5
+		if GameManager.current_wave >= 5 and not shop_w5_done and airspace_clear:
+			shop_w5_done = true
+			_trigger_shop_docking()
+			return
 		# Wave 6: Miniboss 1 (Siege Goliath-Lite)
 		if GameManager.current_wave >= 6 and not miniboss_w6_done and airspace_clear:
 			miniboss_w6_done = true
 			_spawn_boss(boss_goliath_scene, "MINIBOSS: SIEGE GOLIATH", true)
-			return
-		# Post-Miniboss Shop 1: Wave 6
-		if GameManager.current_wave >= 6 and miniboss_w6_done and not shop_w6_done and airspace_clear:
-			shop_w6_done = true
-			_trigger_shop_docking()
 			return
 		# Wave 12: Sector 1 Climax Boss (Super-Dreadnought Corvus)
 		if GameManager.current_wave >= 12 and not boss_w12_done and airspace_clear:
@@ -145,15 +172,15 @@ func _evaluate_progression_triggers() -> void:
 
 	# --- SECTOR 2 (Waves 13-24) ---
 	elif GameManager.current_sector == 2:
+		# Pre-Miniboss Shop 2: Wave 17
+		if GameManager.current_wave >= 17 and not shop_w17_done and airspace_clear:
+			shop_w17_done = true
+			_trigger_shop_docking()
+			return
 		# Wave 18: Miniboss 2 (Siege Goliath-Lite Variant)
 		if GameManager.current_wave >= 18 and not miniboss_w18_done and airspace_clear:
 			miniboss_w18_done = true
 			_spawn_boss(boss_goliath_scene, "MINIBOSS: SIEGE GOLIATH", true)
-			return
-		# Post-Miniboss Shop 2: Wave 18
-		if GameManager.current_wave >= 18 and miniboss_w18_done and not shop_w18_done and airspace_clear:
-			shop_w18_done = true
-			_trigger_shop_docking()
 			return
 		# Wave 24: Sector 2 Climax Boss (Armored Behemoth Goliath)
 		if GameManager.current_wave >= 24 and not boss_w24_done and airspace_clear:
@@ -163,15 +190,15 @@ func _evaluate_progression_triggers() -> void:
 
 	# --- SECTOR 3 (Waves 25-36) ---
 	elif GameManager.current_sector == 3:
+		# Pre-Miniboss Shop 3: Wave 29 (Final Shop Visit)
+		if GameManager.current_wave >= 29 and not shop_w29_done and airspace_clear:
+			shop_w29_done = true
+			_trigger_shop_docking()
+			return
 		# Wave 30: Miniboss 3 (Quantum Corvus Miniboss)
 		if GameManager.current_wave >= 30 and not miniboss_w30_done and airspace_clear:
 			miniboss_w30_done = true
 			_spawn_boss(boss_corvus_scene, "MINIBOSS: QUANTUM CORVUS")
-			return
-		# Post-Miniboss Shop 3: Wave 30 (Final Shop Visit)
-		if GameManager.current_wave >= 30 and miniboss_w30_done and not shop_w30_done and airspace_clear:
-			shop_w30_done = true
-			_trigger_shop_docking()
 			return
 		# Wave 36: Grand Finale Climax Boss (Apex Titan Ouroboros)
 		if GameManager.current_wave >= 36 and not boss_w36_done and airspace_clear:
@@ -179,7 +206,7 @@ func _evaluate_progression_triggers() -> void:
 			_spawn_boss(boss_ouroboros_scene, "Apex Titan Ouroboros")
 			return
 
-func _trigger_shop_docking() -> void:
+func _trigger_shop_docking(with_animation: bool = true) -> void:
 	GameManager.current_phase = GameManager.RunPhase.SHOP_DOCKING
 	# Clear lingering bullets
 	for b in get_tree().get_nodes_in_group("bullet"):
@@ -187,7 +214,12 @@ func _trigger_shop_docking() -> void:
 			b.queue_free()
 	
 	if is_instance_valid(shop):
-		shop.open_shop()
+		if not with_animation or DisplayServer.get_name() == "headless":
+			shop.open_shop()
+		elif shop.has_method("dock_with_animation"):
+			shop.dock_with_animation()
+		else:
+			shop.open_shop()
 
 func _spawn_boss(boss_packed: PackedScene, b_name: String, is_mini: bool = false) -> void:
 	GameManager.current_phase = GameManager.RunPhase.BOSS_BATTLE
@@ -206,7 +238,7 @@ func _spawn_boss(boss_packed: PackedScene, b_name: String, is_mini: bool = false
 
 func _on_boss_defeated_progression(b_name: String) -> void:
 	if "MINIBOSS" in b_name.to_upper():
-		# Miniboss cleared: return to combat phase so post-miniboss shop check can trigger
+		# Miniboss cleared: return to combat phase so wave progression continues to next wave
 		GameManager.current_phase = GameManager.RunPhase.COMBAT_WAVES
 		if is_instance_valid(spawner):
 			spawner.wave_timer = 1.0

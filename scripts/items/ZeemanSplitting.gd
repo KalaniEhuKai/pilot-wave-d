@@ -14,13 +14,14 @@ func on_fire(_ship: CharacterBody2D, spawn_params: Dictionary) -> Array[Dictiona
 	var results: Array[Dictionary] = [spawn_params]
 	var base_pos = spawn_params.get("pos", Vector2.ZERO)
 	var base_dir = spawn_params.get("dir", Vector2.RIGHT)
-	var base_dmg = spawn_params.get("dmg", 1.0)
+	var base_dmg = spawn_params.get("damage", spawn_params.get("dmg", 1.0))
 	
 	# Twin rear shots angled at 165 and 195 degrees from forward
 	var rear_1 = base_dir.rotated(PI * 0.9)
 	var rear_2 = base_dir.rotated(-PI * 0.9)
+	var rear_dmg = base_dmg * 0.6
 	
-	results.append({"pos": base_pos, "dir": rear_1, "dmg": base_dmg * 0.6})
-	results.append({"pos": base_pos, "dir": rear_2, "dmg": base_dmg * 0.6})
+	results.append({"pos": base_pos, "dir": rear_1, "damage": rear_dmg, "dmg": rear_dmg})
+	results.append({"pos": base_pos, "dir": rear_2, "damage": rear_dmg, "dmg": rear_dmg})
 	
 	return results

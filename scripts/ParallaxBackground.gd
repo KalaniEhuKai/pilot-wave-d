@@ -7,6 +7,12 @@ var stars_mid: Array[Dictionary] = []
 var speed_streaks: Array[Dictionary] = []
 
 var grid_offset: float = 0.0
+var warp_speed_mult: float = 1.0
+
+func trigger_warp_streak(duration: float = 0.45) -> void:
+	var tw = create_tween()
+	tw.tween_property(self, "warp_speed_mult", 5.0, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(self, "warp_speed_mult", 1.0, duration - 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 
 func _ready() -> void:
 	_init_particles()
@@ -48,22 +54,23 @@ func _init_particles() -> void:
 func _process(delta: float) -> void:
 	var vp = get_viewport_rect().size
 	var dir = GameAxis.scroll_dir
+	var speed_scaler = warp_speed_mult
 	
-	grid_offset = fmod(grid_offset + 90.0 * delta, 80.0)
+	grid_offset = fmod(grid_offset + 90.0 * delta * speed_scaler, 80.0)
 	
 	# Update far stars
 	for s in stars_far:
-		s.pos += dir * s.speed * delta
+		s.pos += dir * s.speed * delta * speed_scaler
 		_wrap_particle(s, vp)
 	
 	# Update mid stars
 	for s in stars_mid:
-		s.pos += dir * s.speed * delta
+		s.pos += dir * s.speed * delta * speed_scaler
 		_wrap_particle(s, vp)
 	
 	# Update speed streaks
 	for s in speed_streaks:
-		s.pos += dir * s.speed * delta
+		s.pos += dir * s.speed * delta * speed_scaler
 		_wrap_particle(s, vp)
 	
 	queue_redraw()

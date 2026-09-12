@@ -75,7 +75,7 @@ theme_override_constants/separation = 14
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
 theme_override_font_sizes/font_size = 20
-text = "SKY MERCHANT - DOCKED WITH FREIGHTER ZEPPELIN"
+text = "SUPER QUARKET STATION - ORBITAL CENTRIFUGE DEPÔT"
 horizontal_alignment = 1
 
 [node name="HBoxStalls" type="HBoxContainer" parent="Panel/VBox"]

@@ -90,8 +90,8 @@ func _shatter_anomaly(a: Dictionary) -> void:
 	exp_node.global_position = a.pos
 	exp_node.max_radius = 60.0
 	
-	# Drops 5 scrap pellets
-	for i in range(5):
+	# Drops 2 scrap pellets
+	for i in range(2):
 		var sc = scrap_scene.instantiate()
 		get_parent().add_child(sc)
 		sc.global_position = a.pos + Vector2(randf_range(-20, 20), randf_range(-20, 20))

@@ -4,6 +4,7 @@ extends Area2D
 
 signal crate_opened()
 
+@export var drift_speed: float = 60.0
 var elapsed: float = 0.0
 var is_opened: bool = false
 
@@ -16,8 +17,11 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	elapsed += delta
-	# Slow drift along scroll direction
-	global_position += GameAxis.scroll_dir * 30.0 * delta
+	# Drift along scroll direction
+	global_position += GameAxis.scroll_dir * drift_speed * delta
+	if GameAxis.is_out_of_bounds(global_position, 100.0):
+		queue_free()
+		return
 	queue_redraw()
 
 func _on_body_entered(body: Node2D) -> void:
@@ -27,28 +31,34 @@ func _on_area_entered(area: Area2D) -> void:
 	_open(area)
 
 func _open(target: Node2D) -> void:
-	if is_opened:
+	if is_opened or (GameManager != null and GameManager.is_game_over):
 		return
-	if target.is_in_group("player"):
-		is_opened = true
-		SoundEffects.play_sfx("bonus", 0.05, 3.0)
-		GameManager.request_screen_shake(6.0, 0.2)
-		
-		# Open item choice modal via HUD
-		var hud = get_tree().get_first_node_in_group("hud")
-		if hud and hud.has_method("open_item_choice_modal"):
-			hud.open_item_choice_modal()
-		else:
-			# Direct fallback: pick a random unequipped relic
-			var player = target
-			var current_ids: Array[String] = []
-			for m in player.active_modifiers:
-				current_ids.append(m.id)
-			var choices = ItemDatabase.get_random_choice(current_ids, 1)
-			if not choices.is_empty():
-				player.add_modifier(choices[0])
-		
-		queue_free()
+	var player: Node2D = target
+	if not player.is_in_group("player") and target.get_parent() != null and target.get_parent().is_in_group("player"):
+		player = target.get_parent()
+	if not player.is_in_group("player"):
+		return
+	if player.is_queued_for_deletion() or (player.get("hull") != null and player.hull <= 0):
+		return
+	
+	is_opened = true
+	SoundEffects.play_sfx("bonus", 0.05, 3.0)
+	GameManager.request_screen_shake(6.0, 0.2)
+	
+	# Open item choice modal via HUD
+	var hud = get_tree().get_first_node_in_group("hud")
+	if hud and hud.has_method("open_item_choice_modal"):
+		hud.open_item_choice_modal()
+	else:
+		# Direct fallback: pick a random unequipped relic
+		var current_ids: Array[String] = []
+		for m in player.active_modifiers:
+			current_ids.append(m.id)
+		var choices = ItemDatabase.get_random_choice(current_ids, 1)
+		if not choices.is_empty():
+			player.add_modifier(choices[0])
+	
+	queue_free()
 
 func _draw() -> void:
 	var pulse = 1.0 + sin(elapsed * 4.0) * 0.15

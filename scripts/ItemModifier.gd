@@ -12,6 +12,8 @@ enum ItemTier { TIER_1_BALLISTIC, TIER_2_PARADIGM, TIER_3_EXOTIC }
 @export var tier: ItemTier = ItemTier.TIER_1_BALLISTIC
 @export var icon_color: Color = Color(0.2, 0.9, 1.0, 1.0)
 @export var icon_symbol: String = "[*]"
+@export var max_stacks: int = 1
+@export var category: String = "general"
 
 # --- Synergy Hook Pipeline ---
 

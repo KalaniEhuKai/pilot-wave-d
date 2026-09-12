@@ -5,12 +5,12 @@ extends Area2D
 signal subsystem_destroyed(name: String)
 signal boss_defeated()
 
-@export var max_core_health: float = 280.0
-var core_health: float = 280.0
+@export var max_core_health: float = 160.0
+var core_health: float = 160.0
 
-@export var max_wing_health: float = 85.0
-var port_wing_health: float = 85.0
-var starboard_wing_health: float = 85.0
+@export var max_wing_health: float = 60.0
+var port_wing_health: float = 60.0
+var starboard_wing_health: float = 60.0
 
 var port_wing_alive: bool = true
 var starboard_wing_alive: bool = true
@@ -25,6 +25,17 @@ var strafe_direction: float = 1.0
 var turret_fire_timer: float = 1.5
 var core_fire_timer: float = 2.0
 var spiral_angle: float = 0.0
+
+# Phase 2 Enraged Vortex State
+var enrage_burst_active: bool = false
+var enrage_burst_cooldown: float = 0.5
+var enrage_pulse_timer: float = 0.0
+var enrage_pulses_remaining: int = 0
+var enrage_spin_dir: float = 1.0
+var enrage_mid_shot_fired: bool = false
+const ENRAGE_PULSES_PER_BURST: int = 12
+const ENRAGE_PULSE_INTERVAL: float = 0.09
+const ENRAGE_BURST_COOLDOWN: float = 1.1
 
 # Hit flashes
 var hit_flash_core: float = 0.0
@@ -103,16 +114,48 @@ func _physics_process(delta: float) -> void:
 	queue_redraw()
 
 func _handle_attacks(delta: float) -> void:
-	turret_fire_timer -= delta
-	if turret_fire_timer <= 0.0:
-		turret_fire_timer = 1.6 if (port_wing_alive and starboard_wing_alive) else 0.9
-		_fire_turret_barrage()
+	var is_enraged = not port_wing_alive and not starboard_wing_alive
 	
-	core_fire_timer -= delta
-	if core_fire_timer <= 0.0:
-		var is_enraged = not port_wing_alive and not starboard_wing_alive
-		core_fire_timer = 0.8 if is_enraged else 2.2
-		_fire_core_salvo(is_enraged)
+	if not is_enraged:
+		# Phase 1: Turret barrages & Aimed core salvos
+		turret_fire_timer -= delta
+		if turret_fire_timer <= 0.0:
+			turret_fire_timer = 1.6 if (port_wing_alive and starboard_wing_alive) else 0.9
+			_fire_turret_barrage()
+		
+		core_fire_timer -= delta
+		if core_fire_timer <= 0.0:
+			core_fire_timer = 2.2
+			_fire_core_aimed_salvo()
+	else:
+		# Phase 2 Enraged: Rapid rotating vortex bursts & breather plasma snipes
+		_handle_enraged_attacks(delta)
+
+func _handle_enraged_attacks(delta: float) -> void:
+	if enrage_burst_active:
+		enrage_pulse_timer -= delta
+		if enrage_pulse_timer <= 0.0:
+			enrage_pulse_timer = ENRAGE_PULSE_INTERVAL
+			_fire_enraged_vortex_pulse()
+			enrage_pulses_remaining -= 1
+			if enrage_pulses_remaining <= 0:
+				enrage_burst_active = false
+				enrage_burst_cooldown = ENRAGE_BURST_COOLDOWN
+				enrage_spin_dir = -enrage_spin_dir # Alternate spin direction
+				enrage_mid_shot_fired = false
+	else:
+		enrage_burst_cooldown -= delta
+		
+		# Mid-breather aimed shot from singularity core (prevents static camping)
+		if not enrage_mid_shot_fired and enrage_burst_cooldown <= (ENRAGE_BURST_COOLDOWN * 0.5):
+			enrage_mid_shot_fired = true
+			_fire_enraged_breather_snipe()
+		
+		if enrage_burst_cooldown <= 0.0:
+			enrage_burst_active = true
+			enrage_pulses_remaining = ENRAGE_PULSES_PER_BURST
+			enrage_pulse_timer = 0.0 # Trigger first pulse immediately
+			SoundEffects.play_sfx("laser", 0.08, 1.0)
 
 func _fire_turret_barrage() -> void:
 	var fwd = -GameAxis.forward
@@ -130,25 +173,45 @@ func _fire_turret_barrage() -> void:
 			var dir = fwd.rotated(i * 0.15)
 			_spawn_bullet(star_pos, dir)
 
-func _fire_core_salvo(is_enraged: bool) -> void:
+func _fire_core_aimed_salvo() -> void:
 	var fwd = -GameAxis.forward
+	var players = get_tree().get_nodes_in_group("player")
+	var target_dir = fwd
+	if not players.is_empty() and is_instance_valid(players[0]):
+		target_dir = (players[0].global_position - global_position).normalized()
+	
+	_spawn_bullet(global_position, target_dir)
+	_spawn_bullet(global_position + target_dir.orthogonal() * 16.0, target_dir)
+	_spawn_bullet(global_position - target_dir.orthogonal() * 16.0, target_dir)
+	SoundEffects.play_sfx("laser", 0.08, -1.0)
+
+func _fire_enraged_vortex_pulse() -> void:
+	for i in range(4):
+		var angle = spiral_angle + (i * PI * 0.5)
+		var dir = Vector2(cos(angle), sin(angle))
+		_spawn_bullet(global_position, dir)
+	spiral_angle += 0.22 * enrage_spin_dir
+	if enrage_pulses_remaining % 3 == 0:
+		SoundEffects.play_sfx("laser", 0.03, 3.5)
+
+func _fire_enraged_breather_snipe() -> void:
+	var fwd = -GameAxis.forward
+	var players = get_tree().get_nodes_in_group("player")
+	var target_dir = fwd
+	if not players.is_empty() and is_instance_valid(players[0]):
+		target_dir = (players[0].global_position - global_position).normalized()
+	
+	# Twin aimed heavy bolts
+	var orth = target_dir.orthogonal()
+	_spawn_bullet(global_position + orth * 14.0, target_dir)
+	_spawn_bullet(global_position - orth * 14.0, target_dir)
+	SoundEffects.play_sfx("laser", 0.08, -1.0)
+
+func _fire_core_salvo(is_enraged: bool) -> void:
 	if is_enraged:
-		# Frantic rotating spiral vortex in Phase 2
-		for i in range(4):
-			var angle = spiral_angle + (i * PI * 0.5)
-			var dir = Vector2(cos(angle), sin(angle))
-			_spawn_bullet(global_position, dir)
-		spiral_angle += 0.32
+		_fire_enraged_vortex_pulse()
 	else:
-		# Aimed heavy plasma shot at player
-		var players = get_tree().get_nodes_in_group("player")
-		var target_dir = fwd
-		if not players.is_empty() and is_instance_valid(players[0]):
-			target_dir = (players[0].global_position - global_position).normalized()
-		
-		_spawn_bullet(global_position, target_dir)
-		_spawn_bullet(global_position + target_dir.orthogonal() * 16.0, target_dir)
-		_spawn_bullet(global_position - target_dir.orthogonal() * 16.0, target_dir)
+		_fire_core_aimed_salvo()
 
 func _spawn_bullet(pos: Vector2, dir: Vector2) -> void:
 	var b = bullet_scene.instantiate()
