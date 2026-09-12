@@ -117,13 +117,13 @@ func _clamp_to_spawn_zone(pos: Vector2) -> Vector2:
 	var rect = GameAxis.get_viewport_rect()
 	if GameAxis.is_vertical:
 		return Vector2(
-			clampf(pos.x, rect.position.x + 60.0, rect.position.x + rect.size.x - 60.0),
-			clampf(pos.y, rect.position.y + 64.0, rect.position.y + 200.0)
+			clampf(pos.x, rect.position.x + 15.0, rect.position.x + rect.size.x - 15.0),
+			clampf(pos.y, rect.position.y + 15.0, rect.position.y + 180.0)
 		)
 	else:
 		return Vector2(
-			clampf(pos.x, rect.position.x + rect.size.x - 260.0, rect.position.x + rect.size.x - 64.0),
-			clampf(pos.y, rect.position.y + 60.0, rect.position.y + rect.size.y - 60.0)
+			clampf(pos.x, rect.position.x + rect.size.x - 220.0, rect.position.x + rect.size.x - 15.0),
+			clampf(pos.y, rect.position.y + 15.0, rect.position.y + rect.size.y - 15.0)
 		)
 
 func _cleanup_stale_hazards() -> void:

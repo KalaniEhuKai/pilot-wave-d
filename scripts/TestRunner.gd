@@ -439,7 +439,7 @@ func _ready() -> void:
 	print(" - 13F: Wave 1 gentle onboarding encounter (FIRST CONTACT) verified.")
 
 	# 13G: On-Screen Horizon Spawning Verification
-	print("\nSTEP 13G: Testing On-Screen Forward Horizon Spawning & Clamping...")
+	print("\nSTEP 13G: Testing On-Screen Forward Horizon Spawning & Clamping (15px Edge Margin)...")
 	var vp_rect = GameAxis.get_viewport_rect()
 	
 	# Test horizontal spawn line
@@ -449,8 +449,8 @@ func _ready() -> void:
 		assert(vp_rect.has_point(pt), "Horizontal spawn point %s must be inside viewport!" % pt)
 		var clamped = spawner._clamp_to_spawn_zone(pt)
 		assert(vp_rect.has_point(clamped), "Clamped spawn point %s must be inside viewport!" % clamped)
-		assert(clamped.x <= vp_rect.position.x + vp_rect.size.x - 60.0, "Clamped X must have at least 60px margin from right edge!")
-		assert(clamped.x >= vp_rect.position.x + vp_rect.size.x - 260.0, "Clamped X must be on the forward horizon band!")
+		assert(clamped.x <= vp_rect.position.x + vp_rect.size.x - 15.0, "Clamped X must be within 15px of right edge!")
+		assert(clamped.x >= vp_rect.position.x + vp_rect.size.x - 240.0, "Clamped X must be on the forward horizon band!")
 	
 	# Test vertical spawn line
 	GameAxis.set_axis_vertical(true)
@@ -460,11 +460,11 @@ func _ready() -> void:
 		assert(vp_rect_v.has_point(pt), "Vertical spawn point %s must be inside viewport!" % pt)
 		var clamped = spawner._clamp_to_spawn_zone(pt)
 		assert(vp_rect_v.has_point(clamped), "Clamped vertical point %s must be inside viewport!" % clamped)
-		assert(clamped.y >= vp_rect_v.position.y + 60.0, "Clamped Y must have at least 60px margin from top edge!")
+		assert(clamped.y >= vp_rect_v.position.y + 15.0, "Clamped Y must be within 15px of top edge!")
 	
 	# Reset axis back to horizontal
 	GameAxis.set_axis_vertical(false)
-	print(" - 13G: Horizon spawn points and clamping verified strictly on-screen in both orientations.")
+	print(" - 13G: Horizon spawn points and clamping verified 15px from screen edge in both orientations.")
 
 	print("\n====================================================")
 	print("--- ALL VERIFICATION TESTS PASSED 100% CLEANLY ---")

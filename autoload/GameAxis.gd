@@ -73,12 +73,12 @@ func is_out_of_bounds(pos: Vector2, extra_margin: float = 80.0) -> bool:
 func get_spawn_line(offset_along_lateral: float = 0.5) -> Vector2:
 	var rect = get_viewport_rect()
 	if is_vertical:
-		# Spawns near top edge, fully visible on-screen
-		var x = rect.position.x + rect.size.x * clampf(offset_along_lateral, 0.08, 0.92)
-		var y = rect.position.y + 100.0
+		# Spawns 15px from top edge, close to screen edge but on-screen
+		var x = rect.position.x + rect.size.x * clampf(offset_along_lateral, 0.05, 0.95)
+		var y = rect.position.y + 15.0
 		return Vector2(x, y)
 	else:
-		# Spawns near right edge, fully visible on-screen
-		var x = rect.position.x + rect.size.x - 120.0
-		var y = rect.position.y + rect.size.y * clampf(offset_along_lateral, 0.08, 0.92)
+		# Spawns 15px from right edge, close to screen edge but on-screen
+		var x = rect.position.x + rect.size.x - 15.0
+		var y = rect.position.y + rect.size.y * clampf(offset_along_lateral, 0.05, 0.95)
 		return Vector2(x, y)
