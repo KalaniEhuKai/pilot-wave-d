@@ -25,6 +25,7 @@ var suspension_timer: float = 0.0
 var suspension_ship: CharacterBody2D = null
 
 func _ready() -> void:
+	add_to_group("bullet")
 	_update_colors()
 	area_entered.connect(_on_area_entered)
 	body_entered.connect(_on_body_entered)

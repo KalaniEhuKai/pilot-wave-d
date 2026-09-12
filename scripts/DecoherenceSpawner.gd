@@ -14,13 +14,19 @@ var current_wave_num: int = 1
 var active_bubbles: Array[Dictionary] = []
 
 func _process(delta: float) -> void:
-	if GameManager.is_game_over:
+	if GameManager.is_game_over or GameManager.current_phase != GameManager.RunPhase.COMBAT_WAVES:
 		return
 	
 	wave_timer -= delta
 	if wave_timer <= 0.0:
-		_trigger_next_wave()
-		wave_timer = wave_interval
+		# If enemies or telegraph bubbles are still active, wait before starting next wave
+		var active_enemies = get_tree().get_nodes_in_group("enemy")
+		if not active_enemies.is_empty() or not active_bubbles.is_empty():
+			# Delay next wave check slightly until airspace is clear
+			wave_timer = 1.0
+		else:
+			_trigger_next_wave()
+			wave_timer = wave_interval
 	
 	var remaining_bubbles: Array[Dictionary] = []
 	for b in active_bubbles:

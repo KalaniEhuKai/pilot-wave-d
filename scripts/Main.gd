@@ -33,6 +33,12 @@ func _ready() -> void:
 	
 	if GameManager.is_coop_mode:
 		_spawn_p2()
+	
+	if is_instance_valid(shop):
+		shop.undocked.connect(func():
+			if is_instance_valid(spawner):
+				spawner.wave_timer = 2.5
+		)
 
 func _center_camera() -> void:
 	var vp = get_viewport_rect().size
@@ -84,23 +90,39 @@ func _process(delta: float) -> void:
 		shake_intensity = 0.0
 	
 	# Sector Progression Triggers
-	# Wave 4 clear -> Sky Merchant docking
+	# Wave 4 clear -> Sky Merchant docking (wait until wave 4 enemies are defeated)
 	if GameManager.current_wave >= 5 and not shop_visited:
-		shop_visited = true
-		_trigger_shop_docking()
+		var enemies = get_tree().get_nodes_in_group("enemy")
+		var has_bubbles = is_instance_valid(spawner) and not spawner.active_bubbles.is_empty()
+		if enemies.is_empty() and not has_bubbles:
+			shop_visited = true
+			_trigger_shop_docking()
 	
-	# Wave 7 -> Sector 1 Boss Super-Dreadnought Corvus
+	# Wave 7 -> Sector 1 Boss Super-Dreadnought Corvus (wait until wave 6 enemies are defeated)
 	if GameManager.current_wave >= 7 and not boss_spawned:
-		boss_spawned = true
-		_spawn_sector_boss()
+		var enemies = get_tree().get_nodes_in_group("enemy")
+		var has_bubbles = is_instance_valid(spawner) and not spawner.active_bubbles.is_empty()
+		if enemies.is_empty() and not has_bubbles:
+			boss_spawned = true
+			_spawn_sector_boss()
 
 func _trigger_shop_docking() -> void:
 	GameManager.current_phase = GameManager.RunPhase.SHOP_DOCKING
+	# Clear any lingering hostile bullets so player is 100% safe
+	for b in get_tree().get_nodes_in_group("bullet"):
+		if is_instance_valid(b) and b.get("is_enemy"):
+			b.queue_free()
+	
 	if is_instance_valid(shop):
 		shop.open_shop()
 
 func _spawn_sector_boss() -> void:
 	GameManager.current_phase = GameManager.RunPhase.BOSS_BATTLE
+	# Clear any lingering hostile bullets before boss arrival
+	for b in get_tree().get_nodes_in_group("bullet"):
+		if is_instance_valid(b) and b.get("is_enemy"):
+			b.queue_free()
+	
 	var boss = boss_scene.instantiate()
 	add_child(boss)
 

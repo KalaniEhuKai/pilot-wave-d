@@ -54,11 +54,18 @@ func _ready() -> void:
 	
 	# 3. Test The Sky Merchant Zeppelin & Escalating Reroll Terminal
 	print("\nSTEP 3: Testing Sky Merchant Zeppelin & Reroll Terminal...")
+	# Verify bullet clearing safety on shop docking
+	var bullet_scene = load("res://scenes/Bullet.tscn")
+	var stray_bullet = bullet_scene.instantiate()
+	main_inst.add_child(stray_bullet)
+	stray_bullet.setup(Vector2(200, 200), Vector2.DOWN, true, 1.0)
+	
 	var shop = main_inst.get_node("SkyMerchant")
-	shop.open_shop()
+	main_inst._trigger_shop_docking()
+	assert(not is_instance_valid(stray_bullet) or stray_bullet.is_queued_for_deletion(), "Hostile bullets must be purged on shop dock!")
 	assert(shop.panel.visible == true, "Sky Merchant panel failed to open!")
 	assert(shop.p2_stall.visible == true, "P2 stall should be visible in Co-Op mode!")
-	print(" - Sky Merchant docked. Both P1 and P2 supply stalls active.")
+	print(" - Sky Merchant docked safely. Stray bullets cleared. Both P1 and P2 supply stalls active.")
 	
 	# P1 rerolls: cost should escalate 5 -> 10 -> 20
 	print(" - Initial P1 reroll cost: %d J" % GameManager.p1_reroll_cost)
