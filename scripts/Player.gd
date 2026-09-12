@@ -60,6 +60,15 @@ var has_tachyon_capacitor: bool = false
 var has_carnot_heatsink: bool = false
 var has_carnot_efficiency: bool = false
 
+# Combat stat scaling
+var damage_mult: float = 1.0
+var bullet_speed_mult: float = 1.0
+var bullet_scale: float = 1.0
+var crit_chance: float = 0.0
+var crit_mult: float = 2.0
+var extra_spread_shots: int = 0
+var bonus_scrap_val: int = 0
+
 func _ready() -> void:
 	add_to_group("player")
 	_setup_player_identity()
@@ -214,6 +223,15 @@ func _fire_synchrotron() -> void:
 	
 	var spawn_list: Array[Dictionary] = [base_params_1, base_params_2]
 	
+	# Extra spread shot pairs if unlocked
+	if extra_spread_shots > 0:
+		for i in range(1, extra_spread_shots + 1):
+			var angle = deg_to_rad(8.0 * i)
+			var d_left = fwd.rotated(-angle)
+			var d_right = fwd.rotated(angle)
+			spawn_list.append({"pos": m1, "dir": d_left, "damage": 0.85})
+			spawn_list.append({"pos": m2, "dir": d_right, "damage": 0.85})
+	
 	for mod in active_modifiers:
 		var new_list: Array[Dictionary] = []
 		for p in spawn_list:
@@ -222,6 +240,11 @@ func _fire_synchrotron() -> void:
 		spawn_list = new_list
 	
 	for sp in spawn_list:
+		var dmg = sp.get("damage", 1.0) * damage_mult
+		if crit_chance > 0.0 and randf() < crit_chance:
+			dmg *= crit_mult
+			sp["is_crit"] = true
+		sp["damage"] = dmg
 		_spawn_bullet_from_params(sp)
 	
 	SoundEffects.play_sfx("laser", 0.08, -6.0)
@@ -231,9 +254,19 @@ func _spawn_bullet_from_params(params: Dictionary) -> void:
 	get_parent().add_child(b)
 	b.setup(params.get("pos", global_position), params.get("dir", GameAxis.forward), false, params.get("damage", 1.0))
 	
+	if bullet_speed_mult != 1.0:
+		b.speed *= bullet_speed_mult
+	
+	if bullet_scale != 1.0:
+		b.scale *= bullet_scale
+	
 	if player_id == 2:
 		# P2 bullets have amber tint
 		b.glow_color = Color(1.0, 0.7, 0.2, 0.9)
+	
+	if params.has("is_crit") and params["is_crit"]:
+		b.glow_color = Color(1.0, 0.95, 0.2, 1.0)
+		b.scale *= 1.25
 	
 	if params.has("is_suspended") and params["is_suspended"]:
 		b.is_suspended = true

@@ -64,9 +64,15 @@ func _on_area_entered(area: Area2D) -> void:
 	_collect(area)
 
 func _collect(target: Node2D) -> void:
-	if target.is_in_group("player"):
-		GameManager.add_joules(value) # 0 = shared pickup, credits both players in co-op
-		GameManager.add_score(value * 2)
+	var player: Node2D = target
+	if not player.is_in_group("player") and target.get_parent() != null and target.get_parent().is_in_group("player"):
+		player = target.get_parent()
+	
+	if player.is_in_group("player"):
+		var bonus = player.get("bonus_scrap_val")
+		var add_val = value + (int(bonus) if bonus != null else 0)
+		GameManager.add_joules(add_val) # 0 = shared pickup, credits both players in co-op
+		GameManager.add_score(add_val * 2)
 		SoundEffects.play_sfx("hit", 0.2, 4.0)
 		queue_free()
 

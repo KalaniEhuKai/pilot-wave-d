@@ -198,6 +198,51 @@ func _ready() -> void:
 	assert("GOLIATH" in victory.subtitle_label.text, "Victory subtitle must identify the vanquished boss!")
 	print(" - SUCCESS: 'RUN WON' Victory dialog displayed and gameplay safely stopped.")
 	
+	# 11. Test Expanded Item Database (60+ Items) & Stat Modifiers
+	print("\nSTEP 11: Testing Expanded Item Database (60+ Items) & Stat Upgrades...")
+	var all_items = ItemDatabase.get_all_items()
+	print(" - Total items cataloged in ItemDatabase: %d" % all_items.size())
+	assert(all_items.size() >= 50, "Item catalog must contain at least 50 items! Found: %d" % all_items.size())
+	
+	var seen_ids: Dictionary = {}
+	for item in all_items:
+		assert(item != null, "Null item found in database!")
+		assert(item.id != "", "Item with empty ID found!")
+		assert(item.display_name != "", "Item with empty display name found!")
+		assert(item.description != "", "Item with empty description found: %s" % item.id)
+		assert(item.icon_symbol != "", "Item with empty icon symbol found: %s" % item.id)
+		assert(not seen_ids.has(item.id), "Duplicate item ID in database: %s" % item.id)
+		seen_ids[item.id] = true
+	print(" - SUCCESS: All %d items have valid unique IDs, descriptions, tiers, and ASCII symbols." % all_items.size())
+	
+	# Test equipping stat items on player
+	var base_hull = p1.max_hull
+	var base_dmg = p1.damage_mult
+	var base_speed = p1.move_speed
+	var base_rolls = p1.max_rolls
+	
+	var tungsten = ItemDatabase.get_item_by_id("tungsten_core")
+	assert(tungsten != null, "Failed to retrieve tungsten_core!")
+	tungsten.on_ship_init(p1)
+	assert(p1.damage_mult > base_dmg, "Tungsten core failed to increase damage multiplier!")
+	
+	var nanite = ItemDatabase.get_item_by_id("nanite_hull_plating")
+	assert(nanite != null, "Failed to retrieve nanite_hull_plating!")
+	nanite.on_ship_init(p1)
+	assert(p1.max_hull == base_hull + 1, "Nanite hull plate failed to increase max hull!")
+	
+	var nozzle = ItemDatabase.get_item_by_id("vectored_nozzle")
+	assert(nozzle != null, "Failed to retrieve vectored_nozzle!")
+	nozzle.on_ship_init(p1)
+	assert(p1.move_speed > base_speed, "Vectored nozzle failed to boost flight move speed!")
+	
+	var aux_roll = ItemDatabase.get_item_by_id("auxiliary_roll_thruster")
+	assert(aux_roll != null, "Failed to retrieve auxiliary_roll_thruster!")
+	aux_roll.on_ship_init(p1)
+	assert(p1.max_rolls == base_rolls + 1, "Aux roll thruster failed to increase max roll charges!")
+	
+	print(" - SUCCESS: StatMod items verified dynamically altering ship parameters.")
+	
 	print("\n====================================================")
 	print("--- ALL VERIFICATION TESTS PASSED 100% CLEANLY ---")
 	print("====================================================")

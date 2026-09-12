@@ -124,20 +124,36 @@ func _on_boss_defeated(_b_name: String) -> void:
 	_show_banner("SECTOR 1 CLEARED! +15,000 PTS", Color(1.0, 0.85, 0.2, 1.0))
 
 func _on_health_changed(hull: int, shields: int, max_hull: int, max_shields: int, p_id: int) -> void:
-	if p_id == 2:
-		p2_shield_bar.max_value = max_shields
-		p2_shield_bar.value = shields
-		for i in range(p2_hull_container.get_child_count()):
-			var pip = p2_hull_container.get_child(i)
-			pip.modulate = Color(1.0, 0.75, 0.2, 1.0) if i < hull else Color(0.3, 0.1, 0.1, 0.4)
-	else:
-		shield_bar.max_value = max_shields
-		shield_bar.value = shields
-		for i in range(hull_container.get_child_count()):
-			var pip = hull_container.get_child(i)
-			pip.modulate = Color(0.1, 1.0, 0.6, 1.0) if i < hull else Color(0.3, 0.1, 0.1, 0.4)
+	var container = p2_hull_container if p_id == 2 else hull_container
+	var s_bar = p2_shield_bar if p_id == 2 else shield_bar
+	var active_color = Color(1.0, 0.75, 0.2, 1.0) if p_id == 2 else Color(0.1, 1.0, 0.6, 1.0)
+	
+	s_bar.max_value = max_shields
+	s_bar.value = shields
+	
+	while container.get_child_count() < max_hull:
+		var pip = ColorRect.new()
+		pip.custom_minimum_size = Vector2(16, 12)
+		container.add_child(pip)
+	while container.get_child_count() > max_hull:
+		var last = container.get_child(container.get_child_count() - 1)
+		container.remove_child(last)
+		last.queue_free()
+	
+	for i in range(container.get_child_count()):
+		var pip = container.get_child(i)
+		pip.modulate = active_color if i < hull else Color(0.3, 0.1, 0.1, 0.4)
 
-func _on_roll_charges_changed(charges: int, _max_charges: int, _cooldown_ratio: float) -> void:
+func _on_roll_charges_changed(charges: int, max_charges: int, _cooldown_ratio: float) -> void:
+	while roll_container.get_child_count() < max_charges:
+		var pip = ColorRect.new()
+		pip.custom_minimum_size = Vector2(16, 12)
+		roll_container.add_child(pip)
+	while roll_container.get_child_count() > max_charges:
+		var last = roll_container.get_child(roll_container.get_child_count() - 1)
+		roll_container.remove_child(last)
+		last.queue_free()
+
 	for i in range(roll_container.get_child_count()):
 		var pip = roll_container.get_child(i)
 		pip.modulate = Color(0.2, 0.9, 1.0, 1.0) if i < charges else Color(0.2, 0.4, 0.5, 0.3)
