@@ -61,6 +61,13 @@ func _trigger_next_wave() -> void:
 	if not players.is_empty() and is_instance_valid(players[0]):
 		players[0].trigger_wave_start_hooks(current_wave_num)
 	
+	# If completing Wave 1, award a starter Item Choice Crate so the player enters Wave 2 with their first synergy!
+	if current_wave_num == 2 and GameManager.current_sector == 1:
+		var crate_scene = preload("res://scenes/ItemCrate.tscn")
+		var crate = crate_scene.instantiate()
+		get_parent().add_child(crate)
+		crate.global_position = GameAxis.get_spawn_line(0.5)
+	
 	# Select sector-appropriate encounter template
 	var template = wave_director.select_template_for_wave(GameManager.current_sector, current_wave_num)
 	_execute_encounter_template(template, squad_id)

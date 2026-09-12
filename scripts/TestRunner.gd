@@ -403,8 +403,8 @@ func _ready() -> void:
 		var total_craft = 0
 		for batch in spawns:
 			total_craft += batch.get("count", 0)
-		assert(total_craft >= 12, "Wave template %s must have at least 12 craft! Found: %d" % [t.get("id", ""), total_craft])
-	print(" - 13C: All %d wave templates verified having 3-4 echelons and 12-26 craft per wave." % all_wave_templates.size())
+		assert(total_craft >= 11, "Wave template %s must have at least 11 craft! Found: %d" % [t.get("id", ""), total_craft])
+	print(" - 13C: All %d wave templates verified having 3-4 echelons and 11-26 craft per wave." % all_wave_templates.size())
 	
 	# 13D: Mathematical HP Scaling on Enemies
 	GameManager.current_wave = 1
@@ -413,6 +413,7 @@ func _ready() -> void:
 	main_inst.add_child(e_w1)
 	e_w1.setup(0, Vector2(100, 100), -1, null, 0)
 	var hp_w1 = e_w1.max_health
+	assert(hp_w1 == 2.0, "Starter Scout HP should be exactly 2.0 (2-shot kill)! Found: %f" % hp_w1)
 	e_w1.queue_free()
 	
 	GameManager.current_wave = 12
@@ -421,7 +422,7 @@ func _ready() -> void:
 	main_inst.add_child(e_w12)
 	e_w12.setup(0, Vector2(100, 100), -1, null, 0)
 	var hp_w12 = e_w12.max_health
-	assert(hp_w12 > hp_w1 * 1.8, "Enemy HP failed to scale aggressively across waves! W1: %f, W12: %f" % [hp_w1, hp_w12])
+	assert(hp_w12 > hp_w1 * 1.8, "Enemy HP failed to scale across waves! W1: %f, W12: %f" % [hp_w1, hp_w12])
 	e_w12.queue_free()
 	print(" - 13D: Mathematical enemy HP scaling verified (W1 Scout: %.1f HP -> W12 Scout: %.1f HP)." % [hp_w1, hp_w12])
 	
@@ -430,6 +431,12 @@ func _ready() -> void:
 	assert(spawner != null, "DecoherenceSpawner missing from Main scene!")
 	assert(spawner.has_method("_has_active_squads"), "Spawner missing _has_active_squads method!")
 	print(" - 13E: Decoherence Spawner squad queue tracker verified.")
+
+	# 13F: Wave 1 Guaranteed First Contact
+	var w1_template = wd2.select_template_for_wave(1, 1)
+	assert(w1_template["id"] == "WAVE_FIRST_CONTACT", "Wave 1 must select WAVE_FIRST_CONTACT!")
+	assert(w1_template["hazards"].is_empty(), "Wave 1 should have zero hazards for gentle onboarding!")
+	print(" - 13F: Wave 1 gentle onboarding encounter (FIRST CONTACT) verified.")
 
 	print("\n====================================================")
 	print("--- ALL VERIFICATION TESTS PASSED 100% CLEANLY ---")

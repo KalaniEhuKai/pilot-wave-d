@@ -100,136 +100,136 @@ func _setup_stats() -> void:
 	var wave_hp_mult = 1.0 + (wave - 1) * 0.08
 	var sec_hp_mult = 1.0 + (sec - 1) * 0.95
 	var hp_mult = wave_hp_mult * sec_hp_mult
-	var sec_spd_mult = 1.0 + (sec - 1) * 0.12 + (wave - 1) * 0.008
-	var sec_fire_mult = 1.0 + (sec - 1) * 0.25 + (wave - 1) * 0.035
+	var sec_spd_mult = 1.0 + (sec - 1) * 0.10 + (wave - 1) * 0.005
+	var sec_fire_mult = 1.0 + (sec - 1) * 0.20 + (wave - 1) * 0.02
 
 	match enemy_type:
 		EnemyType.SCOUT:
-			max_health = 6.0 * hp_mult
-			speed = 280.0 * sec_spd_mult
+			max_health = 2.0 * hp_mult
+			speed = 150.0 * sec_spd_mult
 			score_value = 100
 			main_color = Color(1.0, 0.25, 0.45, 1.0)
 			accent_color = Color(1.0, 0.7, 0.2, 1.0)
-			fire_interval = 1.4 / sec_fire_mult
-			fire_timer = randf_range(0.4, 1.0)
+			fire_interval = 2.4 / sec_fire_mult
+			fire_timer = randf_range(1.0, 2.0)
 		EnemyType.BOMBER:
-			max_health = 26.0 * hp_mult
-			speed = 140.0 * sec_spd_mult
+			max_health = 8.0 * hp_mult
+			speed = 105.0 * sec_spd_mult
 			score_value = 250
 			main_color = Color(0.95, 0.15, 0.85, 1.0)
 			accent_color = Color(0.3, 0.9, 1.0, 1.0)
-			fire_interval = 1.3 / sec_fire_mult
-			fire_timer = 0.6
+			fire_interval = 2.2 / sec_fire_mult
+			fire_timer = 1.0
 		EnemyType.INTERCEPTOR:
-			max_health = 12.0 * hp_mult
-			speed = 380.0 * sec_spd_mult
+			max_health = 3.5 * hp_mult
+			speed = 210.0 * sec_spd_mult
 			score_value = 150
 			main_color = Color(1.0, 0.5, 0.1, 1.0)
 			accent_color = Color(1.0, 0.9, 0.2, 1.0)
-			fire_interval = 2.0 / sec_fire_mult
-			fire_timer = 1.2
+			fire_interval = 2.5 / sec_fire_mult
+			fire_timer = 1.4
 		EnemyType.SNIPER:
-			max_health = 18.0 * hp_mult
-			speed = 100.0 * sec_spd_mult
+			max_health = 8.0 * hp_mult
+			speed = 90.0 * sec_spd_mult
 			score_value = 300
 			main_color = Color(1.0, 0.85, 0.2, 1.0)
 			accent_color = Color(1.0, 0.2, 0.2, 1.0)
-			fire_interval = 2.4 / sec_fire_mult
-			fire_timer = 1.2
+			fire_interval = 2.8 / sec_fire_mult
+			fire_timer = 1.5
 		EnemyType.SHIELD_FRIGATE:
-			max_health = 42.0 * hp_mult
-			speed = 110.0 * sec_spd_mult
+			max_health = 18.0 * hp_mult
+			speed = 95.0 * sec_spd_mult
 			score_value = 400
 			main_color = Color(0.1, 0.8, 1.0, 1.0)
 			accent_color = Color(0.3, 1.0, 0.9, 1.0)
-			fire_interval = 2.2 / sec_fire_mult
-			fire_timer = 0.8
+			fire_interval = 2.5 / sec_fire_mult
+			fire_timer = 1.0
 		EnemyType.HEAVY_CRUISER:
-			max_health = 75.0 * hp_mult
-			speed = 80.0 * sec_spd_mult
+			max_health = 38.0 * hp_mult
+			speed = 70.0 * sec_spd_mult
 			score_value = 750
 			main_color = Color(0.7, 0.2, 0.9, 1.0)
 			accent_color = Color(1.0, 0.3, 0.5, 1.0)
-			fire_interval = 1.6 / sec_fire_mult
-			fire_timer = 0.7
+			fire_interval = 1.8 / sec_fire_mult
+			fire_timer = 0.8
 		EnemyType.KNIGHT_VANGUARD:
-			max_health = 48.0 * hp_mult
-			speed = 130.0 * sec_spd_mult
+			max_health = 16.0 * hp_mult
+			speed = 90.0 * sec_spd_mult
 			score_value = 350
 			main_color = Color(0.4, 0.8, 0.9, 1.0)
 			accent_color = Color(0.9, 0.9, 1.0, 1.0)
-			fire_interval = 2.0 / sec_fire_mult
-			fire_timer = 0.8
+			fire_interval = 2.2 / sec_fire_mult
+			fire_timer = 1.0
 		EnemyType.PHANTOM:
-			max_health = 14.0 * hp_mult
-			speed = 260.0 * sec_spd_mult
+			max_health = 7.0 * hp_mult
+			speed = 175.0 * sec_spd_mult
 			score_value = 320
 			main_color = Color(0.5, 0.2, 0.8, 0.8)
 			accent_color = Color(0.8, 0.4, 1.0, 1.0)
-			fire_interval = 1.8 / sec_fire_mult
-			fire_timer = 0.8
+			fire_interval = 2.0 / sec_fire_mult
+			fire_timer = 1.0
 			phantom_timer = 2.0
 		EnemyType.DRONE_CARRIER:
-			max_health = 60.0 * hp_mult
-			speed = 75.0 * sec_spd_mult
+			max_health = 28.0 * hp_mult
+			speed = 65.0 * sec_spd_mult
 			score_value = 600
 			main_color = Color(0.9, 0.6, 0.1, 1.0)
 			accent_color = Color(1.0, 0.8, 0.3, 1.0)
-			carrier_spawn_timer = 2.0
-			fire_interval = 3.0
+			carrier_spawn_timer = 2.4
+			fire_interval = 3.2
 			fire_timer = 2.0
 		EnemyType.MICRO_DRONE:
-			max_health = 3.0 * hp_mult
-			speed = 340.0 * sec_spd_mult
+			max_health = 1.0 * hp_mult
+			speed = 220.0 * sec_spd_mult
 			score_value = 40
 			main_color = Color(1.0, 0.9, 0.3, 1.0)
 			accent_color = Color(1.0, 0.4, 0.1, 1.0)
-			fire_interval = 999.0 # Kamikaze only
+			fire_interval = 999.0
 			fire_timer = 999.0
 		EnemyType.TURRET_PLATFORM:
-			max_health = 45.0 * hp_mult
+			max_health = 16.0 * hp_mult
 			speed = 20.0
 			score_value = 450
 			main_color = Color(0.3, 0.7, 0.5, 1.0)
 			accent_color = Color(0.2, 1.0, 0.6, 1.0)
-			fire_interval = 1.2 / sec_fire_mult
-			fire_timer = 0.6
+			fire_interval = 1.6 / sec_fire_mult
+			fire_timer = 0.8
 		EnemyType.WARP_STALKER:
-			max_health = 22.0 * hp_mult
-			speed = 140.0
+			max_health = 12.0 * hp_mult
+			speed = 110.0
 			score_value = 380
 			main_color = Color(0.2, 0.4, 1.0, 1.0)
 			accent_color = Color(0.6, 0.8, 1.0, 1.0)
-			warp_timer = 2.8
-			fire_interval = 2.0 / sec_fire_mult
-			fire_timer = 1.0
+			warp_timer = 3.0
+			fire_interval = 2.2 / sec_fire_mult
+			fire_timer = 1.2
 		EnemyType.DRAINER_LEECH:
-			max_health = 24.0 * hp_mult
-			speed = 150.0 * sec_spd_mult
+			max_health = 12.0 * hp_mult
+			speed = 110.0 * sec_spd_mult
 			score_value = 340
 			main_color = Color(0.8, 0.1, 0.3, 1.0)
 			accent_color = Color(1.0, 0.4, 0.6, 1.0)
-			fire_interval = 2.2
-			fire_timer = 1.0
+			fire_interval = 2.4
+			fire_timer = 1.2
 		EnemyType.MISSILE_CORVETTE:
-			max_health = 45.0 * hp_mult
-			speed = 100.0 * sec_spd_mult
+			max_health = 18.0 * hp_mult
+			speed = 85.0 * sec_spd_mult
 			score_value = 480
 			main_color = Color(0.2, 0.8, 0.4, 1.0)
 			accent_color = Color(0.8, 1.0, 0.3, 1.0)
-			fire_interval = 2.2 / sec_fire_mult
-			fire_timer = 1.0
+			fire_interval = 2.5 / sec_fire_mult
+			fire_timer = 1.2
 		EnemyType.MINE_TETHER:
-			max_health = 25.0 * hp_mult
-			speed = 40.0
+			max_health = 10.0 * hp_mult
+			speed = 35.0
 			score_value = 200
 			main_color = Color(1.0, 0.3, 0.7, 1.0)
 			accent_color = Color(1.0, 0.8, 0.9, 1.0)
-			fire_interval = 2.2 / sec_fire_mult
-			fire_timer = 0.8
+			fire_interval = 2.5 / sec_fire_mult
+			fire_timer = 1.0
 		EnemyType.ORBITAL_REFLECTOR:
-			max_health = 32.0 * hp_mult
-			speed = 170.0
+			max_health = 16.0 * hp_mult
+			speed = 130.0
 			score_value = 220
 			main_color = Color(0.6, 0.8, 1.0, 1.0)
 			accent_color = Color(1.0, 1.0, 1.0, 1.0)
@@ -239,38 +239,43 @@ func _setup_stats() -> void:
 	# Apply Elite Affix modifiers
 	match elite_affix:
 		EliteAffix.ARMORED:
-			max_health *= 2.5
+			max_health *= 2.2
 			speed *= 0.85
 			score_value *= 3
 			main_color = Color(1.0, 0.85, 0.2, 1.0)
 			accent_color = Color(1.0, 0.95, 0.5, 1.0)
 		EliteAffix.VOLATILE:
-			max_health *= 1.4
+			max_health *= 1.3
 			score_value *= 2
 			main_color = Color(1.0, 0.35, 0.05, 1.0)
 			accent_color = Color(1.0, 0.8, 0.1, 1.0)
 		EliteAffix.SWIFT:
 			max_health *= 1.1
-			speed *= 1.7
+			speed *= 1.5
 			score_value *= 2
 			main_color = Color(0.2, 1.0, 0.7, 1.0)
 			accent_color = Color(0.7, 1.0, 0.9, 1.0)
 		EliteAffix.SHIELDED:
-			max_health *= 1.3
-			energy_shield_hp = max_health * 0.6
-	# Procedural Behavioral Mutation Traits
-	lateral_frequency = randf_range(1.8, 3.6)
-	lateral_amplitude = randf_range(50.0, 110.0)
+			max_health *= 1.2
+			energy_shield_hp = max_health * 0.5
+
+	# Procedural Behavioral Mutation Traits - Gated to Sector 1 Wave 4+ or later sectors
+	lateral_frequency = randf_range(1.5, 2.8)
+	lateral_amplitude = randf_range(40.0, 75.0)
 	has_evasive_juke = false
 	has_orbital_flight = false
-	
-	var trait_chance = 0.25 + (sec - 1) * 0.15
-	if randf() < trait_chance and enemy_type in [EnemyType.SCOUT, EnemyType.INTERCEPTOR]:
-		has_desperation_charge = true
-	if randf() < trait_chance:
-		has_aimed_lead = true
-	if randf() < (trait_chance * 0.6) and enemy_type in [EnemyType.SCOUT, EnemyType.BOMBER, EnemyType.MISSILE_CORVETTE]:
-		has_burst_spread = true
+	has_desperation_charge = false
+	has_aimed_lead = false
+	has_burst_spread = false
+
+	if sec > 1 or wave >= 4:
+		var trait_chance = 0.15 + (sec - 1) * 0.10
+		if randf() < trait_chance and enemy_type in [EnemyType.SCOUT, EnemyType.INTERCEPTOR]:
+			has_desperation_charge = true
+		if randf() < trait_chance:
+			has_aimed_lead = true
+		if randf() < (trait_chance * 0.5) and enemy_type in [EnemyType.SCOUT, EnemyType.BOMBER, EnemyType.MISSILE_CORVETTE]:
+			has_burst_spread = true
 
 	health = max_health
 
@@ -469,55 +474,59 @@ func _execute_attack() -> void:
 
 	var oncoming = -GameAxis.forward
 	var lat = GameAxis.lateral
+	var sec_num = GameManager.current_sector if GameManager != null else 1
+	var wave_num = GameManager.current_wave if GameManager != null else 1
+	var base_bullet_spd = 260.0 * (1.0 + (wave_num - 1) * 0.015 + (sec_num - 1) * 0.12)
 
-	# Procedural Attack Trait: Aimed Lead Prediction
+	# Procedural Attack Trait: Aimed Lead Prediction (gated to wave 4+)
 	if has_aimed_lead and enemy_type in [EnemyType.SCOUT, EnemyType.INTERCEPTOR, EnemyType.KNIGHT_VANGUARD]:
 		var target = _get_closest_player()
 		if target != null:
 			var target_vel = target.get("current_velocity")
-			var lead_offset = (target_vel * 0.28) if target_vel != null else Vector2.ZERO
+			var lead_offset = (target_vel * 0.22) if target_vel != null else Vector2.ZERO
 			var lead_dir = ((target.global_position + lead_offset) - global_position).normalized()
-			_spawn_enemy_bullet(global_position + lead_dir * 18.0, lead_dir, 1.0, 440.0)
+			_spawn_enemy_bullet(global_position + lead_dir * 18.0, lead_dir, 1.0, base_bullet_spd * 1.1)
 			return
 
-	# Procedural Attack Trait: Burst Spread
+	# Procedural Attack Trait: Burst Spread (gated to wave 4+)
 	if has_burst_spread and enemy_type in [EnemyType.SCOUT, EnemyType.BOMBER, EnemyType.MISSILE_CORVETTE]:
-		for a in [-16.0, 0.0, 16.0]:
+		for a in [-14.0, 0.0, 14.0]:
 			var d = oncoming.rotated(deg_to_rad(a))
-			_spawn_enemy_bullet(global_position + d * 18.0, d, 1.0, 400.0)
+			_spawn_enemy_bullet(global_position + d * 18.0, d, 1.0, base_bullet_spd)
 		return
 
 	match enemy_type:
 		EnemyType.SCOUT:
-			var wave_num = GameManager.current_wave if GameManager != null else 1
 			if wave_num >= 16:
-				for a in [-15.0, 0.0, 15.0]:
+				for a in [-14.0, 0.0, 14.0]:
 					var d = oncoming.rotated(deg_to_rad(a))
-					_spawn_enemy_bullet(global_position + d * 14.0, d, 1.0, 460.0)
+					_spawn_enemy_bullet(global_position + d * 14.0, d, 1.0, base_bullet_spd * 1.15)
 			elif wave_num >= 6:
-				_spawn_enemy_bullet(global_position + oncoming.rotated(-0.14) * 14.0, oncoming.rotated(-0.14), 1.0, 440.0)
-				_spawn_enemy_bullet(global_position + oncoming.rotated(0.14) * 14.0, oncoming.rotated(0.14), 1.0, 440.0)
+				_spawn_enemy_bullet(global_position + oncoming.rotated(-0.12) * 14.0, oncoming.rotated(-0.12), 1.0, base_bullet_spd)
+				_spawn_enemy_bullet(global_position + oncoming.rotated(0.12) * 14.0, oncoming.rotated(0.12), 1.0, base_bullet_spd)
 			else:
-				_spawn_enemy_bullet(global_position + oncoming * 14.0, oncoming, 1.0, 420.0)
+				_spawn_enemy_bullet(global_position + oncoming * 14.0, oncoming, 1.0, base_bullet_spd)
 		EnemyType.BOMBER:
-			_spawn_enemy_bullet(global_position + oncoming * 20.0 - lat * 14.0, oncoming, 1.5, 380.0)
-			_spawn_enemy_bullet(global_position + oncoming * 20.0, oncoming, 1.5, 410.0)
-			_spawn_enemy_bullet(global_position + oncoming * 20.0 + lat * 14.0, oncoming, 1.5, 380.0)
+			if wave_num < 4:
+				_spawn_enemy_bullet(global_position + oncoming * 20.0, oncoming, 1.0, base_bullet_spd)
+			else:
+				_spawn_enemy_bullet(global_position + oncoming * 20.0 - lat * 14.0, oncoming, 1.0, base_bullet_spd * 0.9)
+				_spawn_enemy_bullet(global_position + oncoming * 20.0, oncoming, 1.0, base_bullet_spd)
+				_spawn_enemy_bullet(global_position + oncoming * 20.0 + lat * 14.0, oncoming, 1.0, base_bullet_spd * 0.9)
 		EnemyType.HEAVY_CRUISER:
-			# 5-way sweeping fan volley
-			for a in [-26.0, -13.0, 0.0, 13.0, 26.0]:
+			for a in [-24.0, -12.0, 0.0, 12.0, 24.0]:
 				var d = oncoming.rotated(deg_to_rad(a))
-				_spawn_enemy_bullet(global_position + d * 22.0, d, 1.2, 420.0)
+				_spawn_enemy_bullet(global_position + d * 22.0, d, 1.0, base_bullet_spd * 1.05)
 		EnemyType.TURRET_PLATFORM:
 			var d = Vector2.RIGHT.rotated(turret_angle)
-			_spawn_enemy_bullet(global_position + d * 18.0, d, 1.0, 480.0)
+			_spawn_enemy_bullet(global_position + d * 18.0, d, 1.0, base_bullet_spd * 1.1)
 		EnemyType.MISSILE_CORVETTE:
-			_spawn_enemy_bullet(global_position - lat * 15.0, oncoming.rotated(-0.25), 1.0, 320.0)
-			_spawn_enemy_bullet(global_position + lat * 15.0, oncoming.rotated(0.25), 1.0, 320.0)
+			_spawn_enemy_bullet(global_position - lat * 15.0, oncoming.rotated(-0.2), 1.0, base_bullet_spd * 0.85)
+			_spawn_enemy_bullet(global_position + lat * 15.0, oncoming.rotated(0.2), 1.0, base_bullet_spd * 0.85)
 		EnemyType.MINE_TETHER:
-			_fire_radial_burst(8, 280.0)
+			_fire_radial_burst(6, base_bullet_spd * 0.8)
 		_:
-			_spawn_enemy_bullet(global_position + oncoming * 15.0, oncoming, 1.0, 420.0)
+			_spawn_enemy_bullet(global_position + oncoming * 15.0, oncoming, 1.0, base_bullet_spd)
 
 func _fire_sniper_beam() -> void:
 	var target = _get_closest_player()
