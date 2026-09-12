@@ -83,14 +83,40 @@ func _wrap_particle(p: Dictionary, vp: Vector2) -> void:
 		p.pos.y = -40.0
 		p.pos.x = randf() * vp.x
 
+var bg_color: Color = Color(0.03, 0.04, 0.07, 1.0)
+var grid_color: Color = Color(0.1, 0.35, 0.5, 0.12)
+var mid_star_color: Color = Color(0.2, 0.7, 1.0, 0.6)
+var streak_color: Color = Color(0.3, 0.9, 1.0, 0.4)
+
+func set_sector_theme(sector_num: int) -> void:
+	match sector_num:
+		1:
+			bg_color = Color(0.03, 0.04, 0.07, 1.0)
+			grid_color = Color(0.1, 0.35, 0.5, 0.12)
+			mid_star_color = Color(0.2, 0.7, 1.0, 0.6)
+			streak_color = Color(0.3, 0.9, 1.0, 0.4)
+		2:
+			bg_color = Color(0.06, 0.03, 0.08, 1.0)
+			grid_color = Color(0.5, 0.3, 0.1, 0.15)
+			mid_star_color = Color(1.0, 0.7, 0.2, 0.6)
+			streak_color = Color(1.0, 0.85, 0.3, 0.45)
+		3:
+			bg_color = Color(0.05, 0.01, 0.04, 1.0)
+			grid_color = Color(0.6, 0.1, 0.3, 0.16)
+			mid_star_color = Color(0.9, 0.2, 0.6, 0.65)
+			streak_color = Color(1.0, 0.2, 0.4, 0.5)
+	
+	for s in stars_mid:
+		s.color = mid_star_color
+	for st in speed_streaks:
+		st.color = streak_color
+	queue_redraw()
+
 func _draw() -> void:
 	var vp = get_viewport_rect().size
 	
 	# Background base tint
-	draw_rect(Rect2(Vector2.ZERO, vp), Color(0.03, 0.04, 0.07, 1.0))
-	
-	# Cyberpunk subtle neon grid
-	var grid_color = Color(0.1, 0.35, 0.5, 0.12)
+	draw_rect(Rect2(Vector2.ZERO, vp), bg_color)
 	var step = 80.0
 	
 	if GameAxis.is_vertical:

@@ -124,6 +124,14 @@ func trigger_victory(boss_name: String = "FLAGSHIP") -> void:
 	current_phase = RunPhase.SECTOR_VICTORY
 	victory_triggered.emit(score, wipe_count, survival_time, boss_name)
 
+func advance_sector() -> void:
+	current_sector += 1
+	var bonus = 10000 * (current_sector - 1)
+	score += bonus
+	score_changed.emit(score, bonus)
+	sector_cleared.emit(current_sector - 1, "S", bonus)
+	current_phase = RunPhase.COMBAT_WAVES
+
 func restart_game() -> void:
 	get_tree().paused = false
 	score = 0

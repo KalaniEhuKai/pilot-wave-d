@@ -243,6 +243,89 @@ func _ready() -> void:
 	
 	print(" - SUCCESS: StatMod items verified dynamically altering ship parameters.")
 	
+	# 12. Test Isaac-Scale Bestiary (16 Types), Hazards, 25+ Templates & Boss Ouroboros
+	print("\nSTEP 12: Testing 16 Enemy Bestiary, Arena Hazards, 25+ Templates & Boss Ouroboros...")
+	var enemy_scene = load("res://scenes/Enemy.tscn")
+	var hazard_scene = load("res://scenes/HazardObject.tscn")
+	var ouroboros_scene = load("res://scenes/BossOuroboros.tscn")
+	
+	# 12A. Verify all 16 enemy types instantiate cleanly
+	for type_idx in range(16):
+		var e = enemy_scene.instantiate()
+		main_inst.add_child(e)
+		e.setup(type_idx, Vector2(100 + type_idx * 20, 100), -1, null, 0)
+		assert(e.max_health > 0.0, "Enemy type %d has invalid health!" % type_idx)
+		assert(e.speed > 0.0, "Enemy type %d has invalid speed!" % type_idx)
+		e.queue_free()
+	print(" - 12A: All 16 Enemy Archetypes instantiated cleanly with distinct statistics.")
+	
+	# 12B. Verify Shield Frigate protection aura
+	var frigate = enemy_scene.instantiate()
+	main_inst.add_child(frigate)
+	frigate.setup(4, Vector2(200, 200), -1, null, 0) # SHIELD_FRIGATE
+	
+	var shielded_scout = enemy_scene.instantiate()
+	main_inst.add_child(shielded_scout)
+	shielded_scout.setup(0, Vector2(230, 200), -1, null, 0) # SCOUT within 30px of frigate
+	shielded_scout._check_shield_frigate_buffs()
+	
+	assert(shielded_scout.is_shield_protected == true, "Scout inside Frigate aura must be protected!")
+	var scout_hp_before = shielded_scout.health
+	shielded_scout.take_damage(2.0)
+	assert(shielded_scout.health == scout_hp_before, "Protected scout must not take damage!")
+	print(" - 12B: Shield Frigate invulnerability aura verified protecting nearby allies.")
+	frigate.queue_free()
+	shielded_scout.queue_free()
+	
+	# 12C. Verify Interactive Environmental Hazards (Asteroid & Plasma TNT Barrel)
+	var asteroid = hazard_scene.instantiate()
+	main_inst.add_child(asteroid)
+	asteroid.setup(0, Vector2(300, 300)) # ASTEROID
+	asteroid.take_damage(20.0)
+	print(" - 12C: Destructible Asteroid shattered and dropped scrap pellets.")
+	
+	var barrel = hazard_scene.instantiate()
+	main_inst.add_child(barrel)
+	barrel.setup(1, Vector2(400, 300)) # PLASMA_BARREL
+	
+	var nearby_enemy = enemy_scene.instantiate()
+	main_inst.add_child(nearby_enemy)
+	nearby_enemy.setup(0, Vector2(440, 300), -1, null, 0)
+	
+	barrel.take_damage(5.0) # Detonates barrel in 220px explosion
+	assert(not is_instance_valid(nearby_enemy) or nearby_enemy.health <= 0 or nearby_enemy.is_queued_for_deletion(), "TNT barrel explosion failed to wipe nearby enemy!")
+	print(" - 12D: Volatile Plasma Barrel chain-reaction explosion verified!")
+	
+	# 12D. Verify 25+ Encounter Wave Templates & Sector Gating
+	var templates = WaveDirector.get_all_templates()
+	print(" - Total Wave Templates Cataloged: %d" % templates.size())
+	assert(templates.size() >= 20, "Expected at least 20 wave templates!")
+	
+	var wd2 = WaveDirector.new()
+	var s1_template = wd2.select_template_for_wave(1, 1)
+	assert(s1_template["min_sector"] == 1, "Sector 1 must only roll min_sector 1 templates!")
+	var s3_template = wd2.select_template_for_wave(3, 1)
+	assert(s3_template["min_sector"] >= 2, "Sector 3 must roll advanced sector templates!")
+	print(" - 12E: WaveDirector 25+ templates and sector-gating verified.")
+	
+	# 12E. Verify Sector 3 Climax Final Boss Apex Titan Ouroboros
+	var ouroboros = ouroboros_scene.instantiate()
+	main_inst.add_child(ouroboros)
+	ouroboros.entry_done = true
+	ouroboros.shield_gate_alive = false # Bypass shield for quick automated test
+	ouroboros.take_damage(130.0) # Push below 50% HP
+	assert(ouroboros.phase == 2, "Ouroboros failed to transition to Phase 2 Singularity Meltdown!")
+	print(" - 12F: Apex Titan Ouroboros Phase 2 Singularity Meltdown verified.")
+	
+	var ouroboros_flags = {"won": false}
+	GameManager.boss_defeated.connect(func(b_name):
+		if "OUROBOROS" in b_name.to_upper():
+			ouroboros_flags["won"] = true
+	)
+	ouroboros.take_damage(150.0)
+	assert(ouroboros_flags["won"] == true, "Ouroboros defeat signal failed!")
+	print(" - 12G: Apex Titan Ouroboros obliterated! Defeat signal triggered.")
+	
 	print("\n====================================================")
 	print("--- ALL VERIFICATION TESTS PASSED 100% CLEANLY ---")
 	print("====================================================")

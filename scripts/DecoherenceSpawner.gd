@@ -1,17 +1,20 @@
 extends Node2D
 
-## DecoherenceSpawner.gd - Materializes enemy squadrons and elite champions from quantum probability bubbles.
+## DecoherenceSpawner.gd - Materializes 25+ sector-gated encounter wave templates from quantum probability bubbles.
+## Spawns interactive environmental hazards and coordinates squad wipe bonuses.
 
 var enemy_scene: PackedScene = preload("res://scenes/Enemy.tscn")
+var hazard_scene: PackedScene = preload("res://scenes/HazardObject.tscn")
 
 var next_squad_id: int = 1
 var squads: Dictionary = {}
 
 var wave_timer: float = 1.0
-var wave_interval: float = 5.2
+var wave_interval: float = 5.0
 var current_wave_num: int = 1
 
 var active_bubbles: Array[Dictionary] = []
+var wave_director: WaveDirector = WaveDirector.new()
 
 func _process(delta: float) -> void:
 	if GameManager.is_game_over or GameManager.current_phase != GameManager.RunPhase.COMBAT_WAVES:
@@ -19,10 +22,8 @@ func _process(delta: float) -> void:
 	
 	wave_timer -= delta
 	if wave_timer <= 0.0:
-		# If enemies or telegraph bubbles are still active, wait before starting next wave
 		var active_enemies = get_tree().get_nodes_in_group("enemy")
 		if not active_enemies.is_empty() or not active_bubbles.is_empty():
-			# Delay next wave check slightly until airspace is clear
 			wave_timer = 1.0
 		else:
 			_trigger_next_wave()
@@ -40,8 +41,6 @@ func _process(delta: float) -> void:
 	
 	queue_redraw()
 
-var wave_director: WaveDirector = WaveDirector.new()
-
 func _trigger_next_wave() -> void:
 	var squad_id = next_squad_id
 	next_squad_id += 1
@@ -54,22 +53,99 @@ func _trigger_next_wave() -> void:
 	if not players.is_empty() and is_instance_valid(players[0]):
 		players[0].trigger_wave_start_hooks(current_wave_num)
 	
-	var budget = wave_director.calculate_wave_budget(GameManager.current_sector, current_wave_num, players)
-	var formation = wave_director.select_formation_for_wave(current_wave_num, budget)
+	# Select sector-appropriate encounter template
+	var template = wave_director.select_template_for_wave(GameManager.current_sector, current_wave_num)
+	_execute_encounter_template(template, squad_id)
+
+func _execute_encounter_template(template: Dictionary, squad_id: int) -> void:
+	var template_name = template.get("name", "COMBAT WAVE")
 	
-	match formation:
-		WaveDirector.FormationType.ELITE_CHAMPION:
-			_spawn_elite_champion_wave(squad_id)
-		WaveDirector.FormationType.V_FORMATION:
-			_spawn_scout_v_formation(squad_id, 5)
-		WaveDirector.FormationType.SINE_DIVE:
-			_spawn_sine_dive(squad_id, 5)
-		WaveDirector.FormationType.PINCER_FLANK:
-			_spawn_pincer_formation(squad_id, 3)
-		WaveDirector.FormationType.ESCORT_COLUMN:
-			_spawn_bomber_echelon(squad_id, 3)
-		_:
-			_spawn_strike_group(squad_id)
+	# Banner on HUD
+	var hud = get_tree().get_first_node_in_group("hud")
+	if hud and hud.has_method("_show_banner"):
+		hud._show_banner("[ WAVE: " + template_name + " ]", Color(0.3, 0.9, 1.0, 1.0))
+	
+	# 1. Spawn Environmental Hazards
+	var hazards = template.get("hazards", [])
+	for h_data in hazards:
+		var h_type = h_data.get("type", 0)
+		var count = h_data.get("count", 1)
+		for i in range(count):
+			var hz = hazard_scene.instantiate()
+			get_parent().add_child(hz)
+			var vp = get_viewport_rect().size
+			var pos = Vector2(randf_range(80, vp.x - 80), randf_range(60, vp.y * 0.45))
+			hz.setup(h_type, pos)
+	
+	# 2. Spawn Enemies
+	var spawns = template.get("spawns", [])
+	var total_enemy_count = 0
+	for batch in spawns:
+		total_enemy_count += batch.get("count", 1)
+	
+	_register_squad(squad_id, total_enemy_count)
+	
+	for batch in spawns:
+		var e_type = batch.get("type", 0)
+		var count = batch.get("count", 1)
+		var pattern = batch.get("pattern", "ROW")
+		var delay = batch.get("delay", 0.0)
+		var affix = batch.get("affix", 0)
+		_spawn_pattern_batch(e_type, count, pattern, delay, squad_id, affix)
+
+func _spawn_pattern_batch(e_type: int, count: int, pattern: String, base_delay: float, squad_id: int, affix: int) -> void:
+	var vp = get_viewport_rect().size
+	var fwd = GameAxis.forward
+	var lat = GameAxis.lateral
+	
+	match pattern:
+		"RING":
+			var center = Vector2(vp.x * 0.5, vp.y * 0.35)
+			for i in range(count):
+				var a = (float(i) / count) * TAU
+				var r = randf_range(140.0, 220.0)
+				var pos = center + Vector2(cos(a) * r, sin(a) * r)
+				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.04, affix)
+				
+		"ROW":
+			for i in range(count):
+				var lateral_step = 0.2 + (float(i) / maxi(1, count - 1)) * 0.6
+				var pos = GameAxis.get_spawn_line(lateral_step)
+				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.1, affix)
+				
+		"FLANK_LEFT":
+			for i in range(count):
+				var pos = Vector2(-40, 80 + i * 65)
+				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.12, affix)
+				
+		"FLANK_RIGHT":
+			for i in range(count):
+				var pos = Vector2(vp.x + 40, 80 + i * 65)
+				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.12, affix)
+				
+		"FLANK_SPLIT":
+			for i in range(count):
+				var is_left = (i % 2 == 0)
+				var pos = Vector2(-40 if is_left else vp.x + 40, 80 + (i / 2) * 80)
+				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.1, affix)
+				
+		"CENTER":
+			for i in range(count):
+				var pos = GameAxis.get_spawn_line(0.5) + (fwd * i * 45.0)
+				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.2, affix)
+				
+		"V_SHAPE":
+			var mid = int(count * 0.5)
+			for i in range(count):
+				var lateral_step = (float(i) - mid) / float(maxi(1, mid)) * 0.35 + 0.5
+				var pos = GameAxis.get_spawn_line(lateral_step) + fwd * (absf(float(i - mid)) * 36.0)
+				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + absf(float(i - mid)) * 0.1, affix)
+				
+		_: # RANDOM_TOP
+			for i in range(count):
+				var lat_step = randf_range(0.15, 0.85)
+				var pos = GameAxis.get_spawn_line(lat_step) + fwd * randf_range(0, 50.0)
+				_queue_quantum_bubble(e_type, pos, squad_id, base_delay + i * 0.12, affix)
 
 func _register_squad(squad_id: int, total_count: int) -> void:
 	squads[squad_id] = {
@@ -97,67 +173,8 @@ func _materialize_enemy(type: int, pos: Vector2, squad_id: int, affix: int = 0) 
 	get_parent().add_child(enemy)
 	enemy.setup(type, pos, squad_id, self, affix)
 
-func _spawn_scout_v_formation(squad_id: int, count: int) -> void:
-	_register_squad(squad_id, count)
-	var mid = int(count * 0.5)
-	for i in range(count):
-		var lateral_step = (float(i) - mid) / float(mid) * 0.35 + 0.5
-		var pos = GameAxis.get_spawn_line(lateral_step)
-		var fwd_offset = absf(float(i - mid)) * 36.0
-		pos += GameAxis.forward * fwd_offset
-		_queue_quantum_bubble(0, pos, squad_id, absf(float(i - mid)) * 0.1)
-
-func _spawn_sine_dive(squad_id: int, count: int) -> void:
-	_register_squad(squad_id, count)
-	for i in range(count):
-		var t = float(i) / float(maxi(1, count - 1))
-		var lat_step = 0.2 + t * 0.6
-		var pos = GameAxis.get_spawn_line(lat_step)
-		var sine_fwd = sin(t * PI) * 50.0
-		pos += GameAxis.forward * sine_fwd
-		_queue_quantum_bubble(0, pos, squad_id, i * 0.12)
-
-func _spawn_pincer_formation(squad_id: int, per_side: int) -> void:
-	_register_squad(squad_id, per_side * 2)
-	for i in range(per_side):
-		var pos1 = GameAxis.get_spawn_line(0.18 + i * 0.08)
-		_queue_quantum_bubble(0, pos1, squad_id, i * 0.14)
-		var pos2 = GameAxis.get_spawn_line(0.82 - i * 0.08)
-		_queue_quantum_bubble(0, pos2, squad_id, i * 0.14)
-
-func _spawn_bomber_echelon(squad_id: int, count: int) -> void:
-	_register_squad(squad_id, count)
-	for i in range(count):
-		var lateral_step = 0.28 + (float(i) / (count - 1)) * 0.44
-		var pos = GameAxis.get_spawn_line(lateral_step)
-		pos += GameAxis.forward * (i * 45.0)
-		_queue_quantum_bubble(1, pos, squad_id, i * 0.2)
-
-func _spawn_strike_group(squad_id: int) -> void:
-	_register_squad(squad_id, 6)
-	var b_pos1 = GameAxis.get_spawn_line(0.4)
-	var b_pos2 = GameAxis.get_spawn_line(0.6)
-	_queue_quantum_bubble(1, b_pos1, squad_id, 0.0)
-	_queue_quantum_bubble(1, b_pos2, squad_id, 0.1)
-	
-	var s_positions = [0.22, 0.3, 0.7, 0.78]
-	for i in range(s_positions.size()):
-		var s_pos = GameAxis.get_spawn_line(s_positions[i])
-		s_pos += GameAxis.forward * 40.0
-		_queue_quantum_bubble(0, s_pos, squad_id, 0.25 + i * 0.08)
-
-func _spawn_elite_champion_wave(squad_id: int) -> void:
-	# 1 Armored or Volatile Bomber + 2 Elite Scouts
-	_register_squad(squad_id, 3)
-	var affix = 1 if (randf() > 0.5) else 2 # 1 = ARMORED, 2 = VOLATILE
-	
-	var b_pos = GameAxis.get_spawn_line(0.5)
-	_queue_quantum_bubble(1, b_pos, squad_id, 0.0, affix)
-	
-	var s1_pos = GameAxis.get_spawn_line(0.28) + GameAxis.forward * 30.0
-	var s2_pos = GameAxis.get_spawn_line(0.72) + GameAxis.forward * 30.0
-	_queue_quantum_bubble(0, s1_pos, squad_id, 0.2, 0)
-	_queue_quantum_bubble(0, s2_pos, squad_id, 0.2, 0)
+func notify_kill(squad_id: int) -> void:
+	record_squad_kill(squad_id)
 
 func record_squad_kill(squad_id: int) -> void:
 	if not squads.has(squad_id):
@@ -168,6 +185,9 @@ func record_squad_kill(squad_id: int) -> void:
 		sq.awarded = true
 		GameManager.award_wipe_bonus(1000)
 		SoundEffects.play_sfx("bonus", 0.04, 2.0)
+
+func notify_escape(squad_id: int) -> void:
+	record_squad_escaped(squad_id)
 
 func record_squad_escaped(squad_id: int) -> void:
 	if not squads.has(squad_id):
@@ -181,7 +201,6 @@ func _draw() -> void:
 		var bubble_pos = to_local(b.pos)
 		var base_radius = 28.0 * sin(progress * PI)
 		
-		# If elite, bubble has golden-amber interference rings!
 		var fringe_color = Color(0.2, 0.9, 1.0, (1.0 - progress) * 0.8)
 		if b.get("affix", 0) != 0:
 			fringe_color = Color(1.0, 0.8, 0.2, (1.0 - progress) * 0.9)

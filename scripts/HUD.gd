@@ -89,7 +89,7 @@ func _process(delta: float) -> void:
 	else:
 		joules_label.text = "JOULES: " + str(GameManager.scrap_joules) + " J"
 	
-	wave_label.text = "WAVE: " + str(GameManager.current_wave)
+	wave_label.text = "SEC %d | WAVE %d" % [GameManager.current_sector, GameManager.current_wave]
 	wipes_label.text = "WIPES: " + str(GameManager.wipe_count)
 	
 	if banner_timer > 0.0:
