@@ -205,56 +205,56 @@ graph TD
 
 ---
 
-### Phase 1: The 60-Second Playable Arcade Prototype (Vertical Slice)
+### Phase 1: The 60-Second Playable Arcade Prototype [COMPLETED]
 *Goal: Build an immediately playable, satisfying combat loop within minutes: fly, shoot, dodge, destroy enemy squadrons telegraphed by the Decoherence Spawner, earn formation wipe bonuses, and restart on death.*
 
-1. **Godot 4 Project Setup & Universal WebGL Configuration**:
+1. **Godot 4 Project Setup & Universal WebGL Configuration** [COMPLETED]:
    - Project directory: `C:\Users\family\.gemini\antigravity-ide\scratch\pilot-wave-d`.
    - Engine: Godot 4.7.2 (`gl_compatibility` renderer for universal WebGL 2 / mobile / desktop performance).
    - Window & viewport stretch: `stretch_mode="canvas_items"`, `stretch_aspect="expand"`.
-2. **`GameAxis` Autoload (Coordinate System Abstraction)**:
+2. **`GameAxis` Autoload (Coordinate System Abstraction)** [COMPLETED]:
    - Dynamic `forward`, `lateral`, `spawn_edge`, and `scroll_dir` vectors.
    - Screen bounds management for 16:9 Landscape vs 9:16 Portrait with real-time toggle.
-3. **Player Flight Model & Dual-Platform Controls (`Player.gd`)**:
+3. **Player Flight Model & Dual-Platform Controls (`Player.gd`)** [COMPLETED]:
    - 0.04s micro-damped momentum model.
    - Dual platform inputs:
      - PC: Keyboard WASD/Arrows, Mouse, and Gamepad analog stick.
      - Mobile: Relative touch drag steering (1:1 finger displacement without blocking ship) + dedicated on-screen Primary Fire button.
    - **1942 Barrel Roll / Quantum Tunneling**:
      - 1.2s invulnerability window with scale-squash tweening and cooldown timer.
-4. **Primary Weapon: Synchrotron Cannon**:
+4. **Primary Weapon: Synchrotron Cannon** [COMPLETED]:
    - Dual forward stream of relativistic charged particles.
    - High-contrast player bullet palette (bright cyan core with luminous border).
    - Dynamic fire rate and damage attributes.
-5. **The Decoherence Spawner & First Enemy Squadron Types**:
+5. **The Decoherence Spawner & First Enemy Squadron Types** [COMPLETED]:
    - `DecoherenceSpawner.gd`: Spawns shimmering quantum probability bubbles with interference fringes 0.4s prior to enemy arrival.
    - **Scout Fighter Squadrons**: 5-ship V-formations executing high-speed flybys.
    - **Heavy Bomber Squadrons**: 3-ship echelons firing aimed magenta plasma pulses.
-6. **Combat Feedback, Scoring & Formation Wipe Bonus**:
+6. **Combat Feedback, Scoring & Formation Wipe Bonus** [COMPLETED]:
    - Enemy hit flashes and multi-particle explosion bursts.
    - **Arcade Scoring**: Base kill points + **100% Formation Wipe Bonus (+1,000 pts)** prominently flashed on screen when all ships in a wave are eliminated before leaving the screen.
    - Micro screen shake on heavy explosions.
-7. **Playable Loop, HUD & Quick Restart**:
+7. **Playable Loop, HUD & Quick Restart** [COMPLETED]:
    - Clean HUD: Shields, Hull health, Roll charges, and Live Score.
    - Game Over overlay on hull zero with immediate one-key/tap Quick Restart (`R` key or tap).
 
 ---
 
-### Phase 2: The First Broken Synergies & Elite Drops
+### Phase 2: The First Broken Synergies & Elite Drops [COMPLETED]
 *Goal: Introduce the Isaac-style modular item architecture and test first combinatorial game-breaking builds.*
 
-1. **Modular `ItemModifier` Resource Architecture**:
+1. **Modular `ItemModifier` Resource Architecture** [COMPLETED]:
    - Extensible hook pipeline: `on_ship_init`, `on_fire`, `on_projectile_tick`, `on_hit`, `on_kill`, `on_roll`.
-2. **5 Foundational Multi-Tier Relics**:
+2. **5 Foundational Multi-Tier Relics** [COMPLETED]:
    - *Tier 1 Trajectory*: **Birefringence Prism** (projectiles split into 3 refracted beams).
    - *Tier 1 Trajectory*: **Gravitational Lensing** (bends projectile paths toward enemies; homing).
    - *Tier 2 Paradigm Mutator*: **Anti-Matter Suspension** (bullets freeze in space as hovering plasma traps; releasing fire slingshots them forward simultaneously).
    - *Tier 3 Systemic Relic*: **Meissner Shield Matrix** (Holy Mantle: completely absorbs the first hit taken in every wave).
    - *Tier 3 Systemic Relic*: **Maxwell's Demon** (energy scrap is magnetically drawn across the screen into the ship).
-3. **Elite Enemy Affixes & Item Choice Crates**:
+3. **Elite Enemy Affixes & Item Choice Crates** [COMPLETED]:
    - Champion variants: *Armored* (+150% HP) and *Volatile* (bullet death-burst).
    - Defeating an elite wave drops a floating Item Choice Crate (choose 1 of 2 relics).
-4. **Synergy Ribbon HUD**:
+4. **Synergy Ribbon HUD** [COMPLETED]:
    - Real-time HUD tray displaying acquired item icons with inspect tooltips.
 
 ---
