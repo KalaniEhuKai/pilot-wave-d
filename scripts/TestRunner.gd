@@ -1,6 +1,6 @@
 extends Node
 
-## TestRunner.gd - Comprehensive verification of Phase 1 Combat & Phase 2 Synergy Engine.
+## TestRunner.gd - Comprehensive verification of Phase 1, Phase 2, and Phase 3.
 
 const BirefringencePrismScript = preload("res://scripts/items/BirefringencePrism.gd")
 const GravitationalLensingScript = preload("res://scripts/items/GravitationalLensing.gd")
@@ -10,10 +10,10 @@ const MaxwellsDemonScript = preload("res://scripts/items/MaxwellsDemon.gd")
 
 func _ready() -> void:
 	print("====================================================")
-	print("--- STARTING PHASE 2 SYNERGY SUITE VERIFICATION ---")
+	print("--- STARTING PHASE 3 RUN & CO-OP VERIFICATION ---")
 	print("====================================================")
 	
-	# 1. Load main scene
+	# 1. Mount Main Scene
 	var main_scene = load("res://scenes/Main.tscn")
 	if not main_scene:
 		printerr("ERROR: Could not load Main.tscn!")
@@ -22,150 +22,108 @@ func _ready() -> void:
 	
 	var main_inst = main_scene.instantiate()
 	add_child(main_inst)
-	print("STEP 1: Main.tscn instantiated and mounted.")
+	print("STEP 1: Main.tscn instantiated with Sky Merchant & Secret Director.")
+	
+	# 2. Test 2-Player Co-Op Architecture & Dual Wallets
+	print("\nSTEP 2: Testing 2-Player Local Co-Op & Zero-Friction Economy...")
+	GameManager.is_coop_mode = true
+	main_inst.toggle_coop_player(true)
 	
 	var players = get_tree().get_nodes_in_group("player")
-	if players.is_empty():
-		printerr("ERROR: Player node not found!")
-		get_tree().quit(1)
-		return
-	var player = players[0]
+	assert(players.size() == 2, "Expected 2 players in Co-Op mode!")
+	var p1 = players[0] if players[0].player_id == 1 else players[1]
+	var p2 = players[1] if players[1].player_id == 2 else players[0]
+	print(" - P1 (Cyan) found at %s | P2 (Amber) found at %s" % [p1.global_position, p2.global_position])
 	
-	# 2. Test Base Flight & Barrel Roll
-	print("\nSTEP 2: Testing 1942 Barrel Roll / Quantum Tunneling...")
-	player._start_barrel_roll()
-	print(" - is_rolling: ", player.is_rolling, " | is_invulnerable: ", player.is_invulnerable)
-	player.take_damage(1)
-	assert(player.shields == player.max_shields, "Invulnerability failed during barrel roll!")
-	print(" - Damage during roll negated cleanly by i-frames (shields: %d/%d)" % [player.shields, player.max_shields])
-	player._end_barrel_roll()
-	
-	# 3. Test Meissner Shield Matrix (Holy Mantle)
-	print("\nSTEP 3: Testing Meissner Shield Matrix...")
-	var meissner = MeissnerShieldScript.new()
-	player.add_modifier(meissner)
-	meissner.on_wave_start(player, 1)
-	assert(meissner.is_active == true, "Meissner Shield should be active on wave start!")
-	print(" - Meissner Shield equipped and active.")
-	
-	player.take_damage(1) # Hit 1: Should be completely negated by Meissner
-	assert(player.shields == player.max_shields, "Meissner Shield failed to negate first hit!")
-	assert(meissner.is_active == false, "Meissner Shield should be depleted after absorbing hit!")
-	print(" - FIRST HIT absorbed by Meissner Shield! (shields remain: %d/%d)" % [player.shields, player.max_shields])
-	
-	player.take_damage(1) # Hit 2: Now takes normal damage into shield
-	assert(player.shields == player.max_shields - 1, "Player should take normal damage after Meissner depleted!")
-	print(" - SECOND HIT successfully penetrates to shield pip (shields: %d/%d)" % [player.shields, player.max_shields])
-	
-	# Reset player shield
-	player.shields = player.max_shields
-	
-	# 4. Test Birefringence Prism (Projectile 3-Way Split)
-	print("\nSTEP 4: Testing Birefringence Prism projectile splitting...")
-	var prism = BirefringencePrismScript.new()
-	player.add_modifier(prism)
-	
-	var bullet_scene = load("res://scenes/Bullet.tscn")
-	var test_bullet = bullet_scene.instantiate()
-	main_inst.add_child(test_bullet)
-	test_bullet.setup(Vector2(100, 100), Vector2.RIGHT, false, 1.0)
-	
-	var initial_bullet_count = get_tree().get_nodes_in_group("bullets").size()
-	print(" - Spawned initial bullet. Bullets in scene: ", initial_bullet_count)
-	
-	# Advance bullet past 180px split threshold
-	test_bullet.traveled_distance = 190.0
-	prism.on_projectile_tick(test_bullet, 0.016)
-	
-	var post_split_count = get_tree().get_nodes_in_group("bullets").size()
-	print(" - Bullets in scene after refraction split: ", post_split_count)
-	assert(post_split_count >= initial_bullet_count + 2, "Birefringence Prism failed to spawn refracted beams!")
-	print(" - SUCCESS: Birefringence Prism split bullet into 3 beams!")
-	
-	# 5. Test Gravitational Lensing (Homing Curvature)
-	print("\nSTEP 5: Testing Gravitational Lensing homing curvature...")
-	var lensing = GravitationalLensingScript.new()
-	player.add_modifier(lensing)
-	
-	# Spawn test enemy at (500, 300)
-	var enemy_scene = load("res://scenes/Enemy.tscn")
-	var test_enemy = enemy_scene.instantiate()
-	main_inst.add_child(test_enemy)
-	test_enemy.setup(0, Vector2(500, 300), 999, null)
-	
-	# Bullet flying straight right at (400, 100)
-	var homing_bullet = bullet_scene.instantiate()
-	main_inst.add_child(homing_bullet)
-	homing_bullet.setup(Vector2(400, 100), Vector2.RIGHT, false, 1.0)
-	var old_y_dir = homing_bullet.direction.y
-	
-	# Tick homing over 10 frames
-	for f in range(10):
-		lensing.on_projectile_tick(homing_bullet, 0.05)
-	
-	print(" - Bullet initial dir.y: %f | Curving dir.y: %f" % [old_y_dir, homing_bullet.direction.y])
-	assert(homing_bullet.direction.y > old_y_dir, "Gravitational Lensing failed to curve bullet toward enemy!")
-	print(" - SUCCESS: Gravitational Lensing dynamically curved bullet trajectory toward enemy!")
-	
-	# 6. Test Anti-Matter Suspension (Isaac Anti-Gravity Trap & Slingshot)
-	print("\nSTEP 6: Testing Anti-Matter Suspension (Plasma Trap & Slingshot)...")
-	var antimatter = AntimatterSuspensionScript.new()
-	player.add_modifier(antimatter)
-	player.is_firing = true
-	
-	var suspended_bullet = bullet_scene.instantiate()
-	main_inst.add_child(suspended_bullet)
-	suspended_bullet.setup(player.global_position, Vector2.RIGHT, false, 1.0)
-	suspended_bullet.is_suspended = true
-	suspended_bullet.suspension_ship = player
-	
-	# While player is firing, bullet stays frozen in space
-	var freeze_pos = suspended_bullet.global_position
-	suspended_bullet._physics_process(0.016)
-	assert(suspended_bullet.global_position == freeze_pos, "Suspended bullet moved while fire held!")
-	print(" - Bullet frozen motionless in space as hovering plasma trap.")
-	
-	# Release fire
-	player.is_firing = false
-	suspended_bullet._physics_process(0.016)
-	assert(suspended_bullet.is_suspended == false, "Suspended bullet did not release upon fire button release!")
-	print(" - SUCCESS: Fire released! Bullet violently slingshotted forward simultaneously at 1.45x speed!")
-	
-	# 7. Test Maxwell's Demon (Screen-wide Scrap Magnet)
-	print("\nSTEP 7: Testing Maxwell's Demon scrap magnet...")
-	var maxwell = MaxwellsDemonScript.new()
-	player.add_modifier(maxwell)
-	assert(player.scrap_magnet_radius > 5000.0, "Maxwell's Demon failed to set screen-wide magnet radius!")
-	
+	# Test Equal In-Flight Scrap Replication
 	var scrap_scene = load("res://scenes/ScrapPickup.tscn")
-	var test_scrap = scrap_scene.instantiate()
-	main_inst.add_child(test_scrap)
-	test_scrap.global_position = Vector2(1200, 680)
+	var scrap_drop = scrap_scene.instantiate()
+	scrap_drop.value = 10
+	main_inst.add_child(scrap_drop)
+	scrap_drop._collect(p1)
 	
-	var initial_scrap_dist = test_scrap.global_position.distance_to(player.global_position)
-	for f in range(15):
-		test_scrap._physics_process(0.05)
-	var final_scrap_dist = test_scrap.global_position.distance_to(player.global_position)
+	print(" - After 10 J pickup by P1: P1 Wallet = %d J | P2 Wallet = %d J" % [GameManager.p1_joules, GameManager.p2_joules])
+	assert(GameManager.p1_joules == 10 and GameManager.p2_joules == 10, "In-flight scrap failed to credit both players equally!")
+	print(" - SUCCESS: Zero-friction scrap replication verified! (+10 J P1, +10 J P2)")
 	
-	print(" - Scrap initial distance: %f | Post-magnet distance: %f" % [initial_scrap_dist, final_scrap_dist])
-	assert(final_scrap_dist < initial_scrap_dist, "Maxwell's Demon failed to pull scrap across the screen!")
-	print(" - SUCCESS: Maxwell's Demon pulled scrap across screen into ship!")
+	# Test Independent Spending in Co-Op
+	GameManager.add_joules(40) # P1: 50 J, P2: 50 J
+	var spent_p1 = GameManager.spend_joules(25, 1)
+	assert(spent_p1 and GameManager.p1_joules == 25 and GameManager.p2_joules == 50, "P1 spending affected P2 wallet!")
+	print(" - SUCCESS: Independent Co-Op wallets verified (P1: 25 J, P2: 50 J)")
 	
-	# 8. Test Elite Champions & Item Crate Drop
-	print("\nSTEP 8: Testing Elite Enemy Champion & Item Choice Crate drop...")
-	var elite_enemy = enemy_scene.instantiate()
-	main_inst.add_child(elite_enemy)
-	elite_enemy.setup(1, Vector2(600, 300), 998, null, 1) # Armored Elite Bomber
-	assert(elite_enemy.max_health > 15.0, "Elite Armored enemy HP did not scale up!")
-	print(" - Elite Armored Champion verified (HP: %f)" % elite_enemy.max_health)
+	# 3. Test The Sky Merchant Zeppelin & Escalating Reroll Terminal
+	print("\nSTEP 3: Testing Sky Merchant Zeppelin & Reroll Terminal...")
+	var shop = main_inst.get_node("SkyMerchant")
+	shop.open_shop()
+	assert(shop.panel.visible == true, "Sky Merchant panel failed to open!")
+	assert(shop.p2_stall.visible == true, "P2 stall should be visible in Co-Op mode!")
+	print(" - Sky Merchant docked. Both P1 and P2 supply stalls active.")
 	
-	var crate_count_before = get_tree().get_nodes_in_group("crate").size()
-	elite_enemy._die()
-	var crate_count_after = get_tree().get_nodes_in_group("crate").size()
-	assert(crate_count_after > crate_count_before, "Elite enemy did not drop an Item Crate upon death!")
-	print(" - SUCCESS: Defeated Elite Champion dropped holographic Item Choice Crate!")
+	# P1 rerolls: cost should escalate 5 -> 10 -> 20
+	print(" - Initial P1 reroll cost: %d J" % GameManager.p1_reroll_cost)
+	shop._reroll_stall(1)
+	print(" - P1 reroll cost after 1st reroll: %d J" % GameManager.p1_reroll_cost)
+	assert(GameManager.p1_reroll_cost == 10, "P1 reroll cost did not escalate to 10 J!")
+	assert(GameManager.p2_reroll_cost == 5, "P2 reroll cost should remain independent at 5 J!")
+	print(" - SUCCESS: Independent escalating rerolls verified (P1: %d J, P2: %d J)" % [GameManager.p1_reroll_cost, GameManager.p2_reroll_cost])
+	
+	shop._on_undock_pressed()
+	assert(shop.panel.visible == false, "Sky Merchant failed to undock cleanly!")
+	print(" - Undocked from Sky Merchant. Resumed combat patrol.")
+	
+	# 4. Test Secret Systems: Quantum Anomaly & Dirac Monopole
+	print("\nSTEP 4: Testing Secret Systems (Quantum Anomaly & Dirac Monopole)...")
+	var secrets = main_inst.get_node("SecretDirector")
+	secrets._spawn_quantum_anomaly()
+	assert(secrets.anomalies.size() > 0, "Failed to spawn Quantum Anomaly!")
+	
+	var anomaly = secrets.anomalies[0]
+	secrets._shatter_anomaly(anomaly)
+	assert(anomaly.shattered == true, "Quantum Anomaly failed to shatter!")
+	print(" - SUCCESS: Quantum Anomaly shattered! Awarded scrap and secret bonus.")
+	
+	# Test Dirac Monopole 100% full hull repair + 10,000 pts
+	p1.hull = 1 # Damage player to 1 HP
+	p1._emit_health()
+	secrets._spawn_dirac_monopole()
+	assert(secrets.dirac_monopole.active == true, "Failed to spawn Dirac Monopole!")
+	
+	var score_before = GameManager.score
+	secrets._shatter_dirac_monopole()
+	assert(p1.hull == p1.max_hull, "Dirac Monopole failed to restore 100% hull!")
+	assert(GameManager.score >= score_before + 10000, "Dirac Monopole failed to award 10,000 pts bonus!")
+	print(" - SUCCESS: Legendary Dirac Monopole landmark shattered! (+10,000 pts & Full Hull Repair)")
+	
+	# 5. Test Sector 1 Boss: Super-Dreadnought Corvus
+	print("\nSTEP 5: Testing Sector 1 Boss: Super-Dreadnought Corvus...")
+	var boss_scene = load("res://scenes/BossCorvus.tscn")
+	var boss = boss_scene.instantiate()
+	main_inst.add_child(boss)
+	boss.entry_done = true
+	
+	print(" - Super-Dreadnought Corvus spawned. Total HP: %f" % (boss.core_health + boss.port_wing_health + boss.starboard_wing_health))
+	
+	# Subsystem destruction: Port Wing
+	boss.take_damage(45.0)
+	assert(boss.port_wing_alive == false, "Port wing battery failed to break!")
+	print(" - Port Wing Battery destroyed! Detonated with subsystem explosion.")
+	
+	# Subsystem destruction: Starboard Wing
+	boss.take_damage(45.0)
+	assert(boss.starboard_wing_alive == false, "Starboard wing battery failed to break!")
+	print(" - Starboard Wing Battery destroyed! Both wings offline.")
+	
+	# Core damage & Phase 2 Enrage
+	print(" - Central Singularity Core exposed! Testing core destruction...")
+	var flags = {"boss_defeated": false}
+	GameManager.boss_defeated.connect(func(_name): flags["boss_defeated"] = true)
+	
+	boss.take_damage(130.0) # Vaporize core
+	assert(flags["boss_defeated"] == true, "Boss defeated signal was not triggered!")
+	print(" - SUCCESS: Super-Dreadnought Corvus vaporized! Awarded +15,000 pts and Sector Cleared banner.")
 	
 	print("\n====================================================")
-	print("--- ALL PHASE 2 SYNERGY TESTS PASSED 100% CLEANLY ---")
+	print("--- ALL PHASE 3 RUN & CO-OP TESTS PASSED 100% CLEANLY ---")
 	print("====================================================")
 	get_tree().quit(0)

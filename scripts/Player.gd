@@ -1,10 +1,12 @@
 extends CharacterBody2D
 
-## Player.gd - Responsive arcade flight model with 1942 Barrel Roll and Modular Synergy Pipeline.
+## Player.gd - Dual-Platform Arcade Flight Model with Co-Op Player 1 / Player 2 Support.
 
 signal health_changed(hull: int, shields: int, max_hull: int, max_shields: int)
 signal roll_charges_changed(charges: int, max_charges: int, cooldown_ratio: float)
 signal modifiers_updated(modifiers: Array[ItemModifier])
+
+@export var player_id: int = 1 # 1 = P1 (Cyan), 2 = P2 (Amber/Gold)
 
 @export var max_hull: int = 4
 var hull: int = 4
@@ -29,7 +31,7 @@ var roll_elapsed: float = 0.0
 var is_invulnerable: bool = false
 
 # Synchrotron Cannon
-var fire_rate: float = 9.0 # shots per second
+var fire_rate: float = 9.0
 var fire_timer: float = 0.0
 var is_firing: bool = false
 var auto_fire: bool = false
@@ -43,18 +45,36 @@ var bank_angle: float = 0.0
 var hit_flash_timer: float = 0.0
 var meissner_fx_timer: float = 0.0
 
+# Colors based on player_id
+var primary_color: Color = Color(0.1, 0.9, 1.0, 1.0)
+var accent_color: Color = Color(0.4, 1.0, 0.9, 1.0)
+var thruster_color: Color = Color(0.0, 0.7, 1.0, 0.9)
+
 # Preloaded scenes
 var bullet_scene: PackedScene = preload("res://scenes/Bullet.tscn")
 var explosion_scene: PackedScene = preload("res://scenes/Explosion.tscn")
 
 func _ready() -> void:
 	add_to_group("player")
+	_setup_player_identity()
 	hull = max_hull
 	shields = max_shields
 	rolls = max_rolls
 	_emit_health()
 	_emit_rolls()
 	GameAxis.axis_changed.connect(_on_axis_changed)
+
+func _setup_player_identity() -> void:
+	if player_id == 2:
+		# Player 2 is high-visibility Amber / Solar Gold
+		primary_color = Color(1.0, 0.75, 0.15, 1.0)
+		accent_color = Color(1.0, 0.9, 0.4, 1.0)
+		thruster_color = Color(1.0, 0.45, 0.1, 0.9)
+	else:
+		# Player 1 is Electric Cyan / Cherenkov Blue
+		primary_color = Color(0.1, 0.9, 1.0, 1.0)
+		accent_color = Color(0.4, 1.0, 0.9, 1.0)
+		thruster_color = Color(0.0, 0.7, 1.0, 0.9)
 
 func add_modifier(mod: ItemModifier) -> void:
 	if not mod:
@@ -87,7 +107,7 @@ func _on_axis_changed(_is_vertical: bool) -> void:
 
 func _emit_health() -> void:
 	health_changed.emit(hull, shields, max_hull, max_shields)
-	GameManager.player_health_changed.emit(hull, shields, max_hull, max_shields)
+	GameManager.player_health_changed.emit(hull, shields, max_hull, max_shields, player_id)
 
 func _emit_rolls() -> void:
 	var ratio = 0.0
@@ -96,12 +116,13 @@ func _emit_rolls() -> void:
 	roll_charges_changed.emit(rolls, max_rolls, ratio)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventScreenDrag:
-		global_position += event.relative
-		global_position = GameAxis.clamp_position(global_position, 32.0)
-	elif event is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and OS.has_feature("mobile"):
-		global_position += event.relative
-		global_position = GameAxis.clamp_position(global_position, 32.0)
+	if player_id == 1:
+		if event is InputEventScreenDrag:
+			global_position += event.relative
+			global_position = GameAxis.clamp_position(global_position, 32.0)
+		elif event is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and OS.has_feature("mobile"):
+			global_position += event.relative
+			global_position = GameAxis.clamp_position(global_position, 32.0)
 
 func _physics_process(delta: float) -> void:
 	if GameManager.is_game_over:
@@ -140,8 +161,12 @@ func _handle_timers(delta: float) -> void:
 
 func _handle_movement(delta: float) -> void:
 	var input_vec = Vector2.ZERO
-	input_vec.x = Input.get_axis("move_left", "move_right")
-	input_vec.y = Input.get_axis("move_up", "move_down")
+	if player_id == 2:
+		input_vec.x = Input.get_axis("p2_move_left", "p2_move_right")
+		input_vec.y = Input.get_axis("p2_move_up", "p2_move_down")
+	else:
+		input_vec.x = Input.get_axis("move_left", "move_right")
+		input_vec.y = Input.get_axis("move_up", "move_down")
 	
 	if input_vec.length_squared() > 1.0:
 		input_vec = input_vec.normalized()
@@ -156,7 +181,8 @@ func _handle_movement(delta: float) -> void:
 
 func _handle_shooting(delta: float) -> void:
 	fire_timer -= delta
-	is_firing = Input.is_action_pressed("fire") or auto_fire
+	var fire_action = "p2_fire" if player_id == 2 else "fire"
+	is_firing = Input.is_action_pressed(fire_action) or auto_fire
 	
 	if is_firing and fire_timer <= 0.0 and not is_rolling:
 		fire_timer = 1.0 / fire_rate
@@ -173,7 +199,6 @@ func _fire_synchrotron() -> void:
 	
 	var spawn_list: Array[Dictionary] = [base_params_1, base_params_2]
 	
-	# Apply on_fire synergy hooks
 	for mod in active_modifiers:
 		var new_list: Array[Dictionary] = []
 		for p in spawn_list:
@@ -181,7 +206,6 @@ func _fire_synchrotron() -> void:
 			new_list.append_array(results)
 		spawn_list = new_list
 	
-	# Spawn all modified projectiles
 	for sp in spawn_list:
 		_spawn_bullet_from_params(sp)
 	
@@ -192,12 +216,17 @@ func _spawn_bullet_from_params(params: Dictionary) -> void:
 	get_parent().add_child(b)
 	b.setup(params.get("pos", global_position), params.get("dir", GameAxis.forward), false, params.get("damage", 1.0))
 	
+	if player_id == 2:
+		# P2 bullets have amber tint
+		b.glow_color = Color(1.0, 0.7, 0.2, 0.9)
+	
 	if params.has("is_suspended") and params["is_suspended"]:
 		b.is_suspended = true
 		b.suspension_ship = self
 
 func _handle_barrel_roll(delta: float) -> void:
-	if Input.is_action_just_pressed("barrel_roll") and not is_rolling and rolls > 0:
+	var roll_action = "p2_barrel_roll" if player_id == 2 else "barrel_roll"
+	if Input.is_action_just_pressed(roll_action) and not is_rolling and rolls > 0:
 		_start_barrel_roll()
 	
 	if is_rolling:
@@ -234,10 +263,9 @@ func take_damage(amount: int = 1) -> void:
 	if is_invulnerable or is_rolling or GameManager.is_game_over:
 		return
 	
-	# Check modifier damage cancel hooks (e.g. Meissner Shield)
 	for mod in active_modifiers:
 		if mod.on_take_damage(self, amount):
-			return # Negated by relic!
+			return
 	
 	hit_flash_timer = 0.12
 	
@@ -263,20 +291,28 @@ func _die() -> void:
 	exp_node.global_position = global_position
 	exp_node.max_radius = 80.0
 	exp_node.duration = 0.6
-	GameManager.trigger_game_over()
+	
+	# Check if companion alive in co-op mode
+	var remaining_players = 0
+	for p in get_tree().get_nodes_in_group("player"):
+		if is_instance_valid(p) and p != self and p.hull > 0:
+			remaining_players += 1
+	
+	if remaining_players == 0:
+		GameManager.trigger_game_over()
 	queue_free()
 
 func _draw() -> void:
-	var main_color = Color(0.1, 0.9, 1.0, 1.0)
-	var accent_color = Color(0.4, 1.0, 0.9, 1.0)
-	var thruster_color = Color(0.0, 0.7, 1.0, 0.9)
+	var draw_col = primary_color
+	var core_col = accent_color
+	var flame_col = thruster_color
 	
 	if hit_flash_timer > 0.0:
-		main_color = Color(1.0, 1.0, 1.0, 1.0)
-		accent_color = Color(1.0, 0.8, 0.8, 1.0)
+		draw_col = Color.WHITE
+		core_col = Color(1.0, 0.8, 0.8, 1.0)
 	elif is_rolling:
-		main_color = Color(0.3, 1.0, 0.6, 1.0)
-		accent_color = Color(0.8, 1.0, 0.9, 1.0)
+		draw_col = Color(0.3, 1.0, 0.6, 1.0)
+		core_col = Color(0.8, 1.0, 0.9, 1.0)
 	
 	var nose = Vector2(26, 0)
 	var wing_left = Vector2(-16, -20)
@@ -292,10 +328,10 @@ func _draw() -> void:
 	])
 	
 	draw_colored_polygon(hull_poly, Color(0.06, 0.12, 0.2, 0.95))
-	draw_polyline(hull_poly + PackedVector2Array([nose]), main_color, 2.4, true)
+	draw_polyline(hull_poly + PackedVector2Array([nose]), draw_col, 2.4, true)
 	
 	var canopy = PackedVector2Array([Vector2(14, 0), Vector2(2, -4), Vector2(-8, 0), Vector2(2, 4)])
-	draw_colored_polygon(canopy, accent_color)
+	draw_colored_polygon(canopy, core_col)
 	draw_polyline(canopy + PackedVector2Array([Vector2(14, 0)]), Color(1, 1, 1, 0.9), 1.5, true)
 	
 	var flame_len = randf_range(12.0, 24.0)
@@ -304,16 +340,15 @@ func _draw() -> void:
 	
 	var engine_l = Vector2(-18, -6)
 	var engine_r = Vector2(-18, 6)
-	draw_line(engine_l, engine_l - Vector2(flame_len, 0), thruster_color, 4.0, true)
+	draw_line(engine_l, engine_l - Vector2(flame_len, 0), flame_col, 4.0, true)
 	draw_line(engine_l, engine_l - Vector2(flame_len * 0.6, 0), Color.WHITE, 2.0, true)
-	draw_line(engine_r, engine_r - Vector2(flame_len, 0), thruster_color, 4.0, true)
+	draw_line(engine_r, engine_r - Vector2(flame_len, 0), flame_col, 4.0, true)
 	draw_line(engine_r, engine_r - Vector2(flame_len * 0.6, 0), Color.WHITE, 2.0, true)
 	
 	if shields > 0:
 		var shield_alpha = 0.25 + (float(shields) / max_shields) * 0.25
-		draw_arc(Vector2.ZERO, 30.0, 0, TAU, 32, Color(0.15, 0.8, 1.0, shield_alpha), 2.0, true)
+		draw_arc(Vector2.ZERO, 30.0, 0, TAU, 32, Color(draw_col.r, draw_col.g, draw_col.b, shield_alpha), 2.0, true)
 	
-	# Meissner Superconducting barrier pulse
 	if meissner_fx_timer > 0.0:
 		var m_alpha = meissner_fx_timer / 0.28
 		draw_arc(Vector2.ZERO, 38.0, 0, TAU, 32, Color(0.2, 1.0, 0.6, m_alpha), 3.5, true)

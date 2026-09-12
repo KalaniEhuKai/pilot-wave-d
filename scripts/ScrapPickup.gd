@@ -27,18 +27,25 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 		return
 	
-	# Find player
+	# Find nearest player
 	var players = get_tree().get_nodes_in_group("player")
-	if not players.is_empty() and is_instance_valid(players[0]):
-		var player = players[0]
-		var dist = global_position.distance_to(player.global_position)
-		var magnet_range = player.get("scrap_magnet_radius")
+	var closest_player: Node2D = null
+	var min_dist: float = INF
+	for p in players:
+		if is_instance_valid(p):
+			var d = global_position.distance_to(p.global_position)
+			if d < min_dist:
+				min_dist = d
+				closest_player = p
+	
+	if closest_player != null:
+		var magnet_range = closest_player.get("scrap_magnet_radius")
 		if magnet_range == null:
 			magnet_range = 130.0
 		
-		if dist <= magnet_range:
-			# Accelerate toward player
-			var dir = (player.global_position - global_position).normalized()
+		if min_dist <= magnet_range:
+			# Accelerate toward nearest player
+			var dir = (closest_player.global_position - global_position).normalized()
 			magnet_speed = move_toward(magnet_speed, 750.0, 1400.0 * delta)
 			velocity = dir * magnet_speed
 		else:
@@ -58,8 +65,8 @@ func _on_area_entered(area: Area2D) -> void:
 
 func _collect(target: Node2D) -> void:
 	if target.is_in_group("player"):
-		GameManager.scrap_joules += value
-		GameManager.add_score(value * 2) # Collecting scrap also adds bonus score
+		GameManager.add_joules(value) # 0 = shared pickup, credits both players in co-op
+		GameManager.add_score(value * 2)
 		SoundEffects.play_sfx("hit", 0.2, 4.0)
 		queue_free()
 

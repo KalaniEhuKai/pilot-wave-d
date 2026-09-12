@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://u1v2w3x4y5z6"]
+[gd_scene load_steps=9 format=3 uid="uid://u1v2w3x4y5z6"]
 
 [ext_resource type="Script" path="res://scripts/HUD.gd" id="1_hud"]
 
@@ -11,6 +11,20 @@ corner_radius_bottom_left = 3
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_shield_fill"]
 bg_color = Color(0.15, 0.85, 1, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_p2_shield_fill"]
+bg_color = Color(1, 0.75, 0.2, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_boss_fill"]
+bg_color = Color(1, 0.15, 0.35, 1)
 corner_radius_top_left = 3
 corner_radius_top_right = 3
 corner_radius_bottom_right = 3
@@ -53,6 +67,7 @@ corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
 
 [node name="HUD" type="CanvasLayer" groups=["hud"]]
+process_mode = 3
 script = ExtResource("1_hud")
 
 [node name="TopLeft" type="Control" parent="."]
@@ -60,8 +75,8 @@ layout_mode = 3
 anchors_preset = 0
 offset_left = 20.0
 offset_top = 18.0
-offset_right = 300.0
-offset_bottom = 180.0
+offset_right = 320.0
+offset_bottom = 240.0
 
 [node name="VBox" type="VBoxContainer" parent="TopLeft"]
 layout_mode = 1
@@ -70,13 +85,13 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 5
+theme_override_constants/separation = 4
 
 [node name="ShieldLabel" type="Label" parent="TopLeft/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.4, 0.9, 1, 1)
 theme_override_font_sizes/font_size = 11
-text = "SHIELDS"
+text = "P1 SHIELDS & HULL"
 
 [node name="ShieldBar" type="ProgressBar" parent="TopLeft/VBox"]
 custom_minimum_size = Vector2(160, 8)
@@ -87,12 +102,6 @@ max_value = 2.0
 step = 1.0
 value = 2.0
 show_percentage = false
-
-[node name="HullLabel" type="Label" parent="TopLeft/VBox"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.2, 1, 0.6, 1)
-theme_override_font_sizes/font_size = 11
-text = "HULL INTEGRITY"
 
 [node name="HullContainer" type="HBoxContainer" parent="TopLeft/VBox"]
 layout_mode = 2
@@ -121,7 +130,7 @@ color = Color(0.1, 1, 0.6, 1)
 [node name="RollLabel" type="Label" parent="TopLeft/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.3, 0.8, 1, 1)
-theme_override_font_sizes/font_size = 11
+theme_override_font_sizes/font_size = 10
 text = "BARREL ROLL CHARGES"
 
 [node name="RollContainer" type="HBoxContainer" parent="TopLeft/VBox"]
@@ -129,28 +138,73 @@ layout_mode = 2
 theme_override_constants/separation = 5
 
 [node name="Pip1" type="ColorRect" parent="TopLeft/VBox/RollContainer"]
-custom_minimum_size = Vector2(16, 10)
+custom_minimum_size = Vector2(16, 9)
 layout_mode = 2
 color = Color(0.2, 0.9, 1, 1)
 
 [node name="Pip2" type="ColorRect" parent="TopLeft/VBox/RollContainer"]
-custom_minimum_size = Vector2(16, 10)
+custom_minimum_size = Vector2(16, 9)
 layout_mode = 2
 color = Color(0.2, 0.9, 1, 1)
 
 [node name="Pip3" type="ColorRect" parent="TopLeft/VBox/RollContainer"]
-custom_minimum_size = Vector2(16, 10)
+custom_minimum_size = Vector2(16, 9)
 layout_mode = 2
 color = Color(0.2, 0.9, 1, 1)
+
+[node name="P2Container" type="VBoxContainer" parent="TopLeft/VBox"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="P2Label" type="Label" parent="TopLeft/VBox/P2Container"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.8, 0.2, 1)
+theme_override_font_sizes/font_size = 11
+text = "P2 SHIELDS & HULL"
+
+[node name="P2ShieldBar" type="ProgressBar" parent="TopLeft/VBox/P2Container"]
+custom_minimum_size = Vector2(160, 8)
+layout_mode = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_shield_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_p2_shield_fill")
+max_value = 2.0
+step = 1.0
+value = 2.0
+show_percentage = false
+
+[node name="P2HullContainer" type="HBoxContainer" parent="TopLeft/VBox/P2Container"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="Pip1" type="ColorRect" parent="TopLeft/VBox/P2Container/P2HullContainer"]
+custom_minimum_size = Vector2(24, 8)
+layout_mode = 2
+color = Color(1, 0.75, 0.2, 1)
+
+[node name="Pip2" type="ColorRect" parent="TopLeft/VBox/P2Container/P2HullContainer"]
+custom_minimum_size = Vector2(24, 8)
+layout_mode = 2
+color = Color(1, 0.75, 0.2, 1)
+
+[node name="Pip3" type="ColorRect" parent="TopLeft/VBox/P2Container/P2HullContainer"]
+custom_minimum_size = Vector2(24, 8)
+layout_mode = 2
+color = Color(1, 0.75, 0.2, 1)
+
+[node name="Pip4" type="ColorRect" parent="TopLeft/VBox/P2Container/P2HullContainer"]
+custom_minimum_size = Vector2(24, 8)
+layout_mode = 2
+color = Color(1, 0.75, 0.2, 1)
 
 [node name="SynergyLabel" type="Label" parent="TopLeft/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.8, 0.95, 1)
-theme_override_font_sizes/font_size = 11
-text = "SYNERGY RIBBON"
+theme_override_font_sizes/font_size = 10
+text = "ACTIVE SYNERGIES"
 
 [node name="SynergyRibbon" type="HBoxContainer" parent="TopLeft/VBox"]
-custom_minimum_size = Vector2(0, 20)
+custom_minimum_size = Vector2(0, 18)
 layout_mode = 2
 theme_override_constants/separation = 8
 
@@ -159,7 +213,7 @@ layout_mode = 3
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -260.0
+offset_left = -280.0
 offset_top = 18.0
 offset_right = -20.0
 offset_bottom = 130.0
@@ -184,7 +238,7 @@ horizontal_alignment = 2
 [node name="JoulesLabel" type="Label" parent="TopRight/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 13
 text = "JOULES: 0 J"
 horizontal_alignment = 2
 
@@ -207,23 +261,65 @@ layout_mode = 3
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -110.0
+offset_left = -170.0
 offset_top = 16.0
-offset_right = 110.0
+offset_right = 170.0
 offset_bottom = 48.0
 grow_horizontal = 2
 
-[node name="AxisButton" type="Button" parent="TopCenter"]
+[node name="HBox" type="HBoxContainer" parent="TopCenter"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/separation = 8
+
+[node name="AxisButton" type="Button" parent="TopCenter/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
 focus_mode = 0
 theme_override_font_sizes/font_size = 11
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
 text = "MODE: HORIZONTAL (16:9)"
+
+[node name="CoopButton" type="Button" parent="TopCenter/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+theme_override_colors/font_color = Color(1, 0.8, 0.2, 1)
+theme_override_font_sizes/font_size = 11
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+text = "MODE: 1-PLAYER"
+
+[node name="BossBarContainer" type="VBoxContainer" parent="."]
+visible = false
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -260.0
+offset_top = 58.0
+offset_right = 260.0
+offset_bottom = 96.0
+grow_horizontal = 2
+theme_override_constants/separation = 4
+
+[node name="BossNameLabel" type="Label" parent="BossBarContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.2, 0.4, 1)
+theme_override_font_sizes/font_size = 13
+text = "SUPER-DREADNOUGHT CORVUS"
+horizontal_alignment = 1
+
+[node name="BossBar" type="ProgressBar" parent="BossBarContainer"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_shield_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_boss_fill")
+max_value = 200.0
+value = 200.0
+show_percentage = false
 
 [node name="CenterContainer" type="CenterContainer" parent="."]
 anchors_preset = 8
@@ -245,7 +341,7 @@ theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
 theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.8)
 theme_override_constants/shadow_offset_x = 2
 theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 22
 text = "100% FORMATION WIPE! +1,000 PTS"
 horizontal_alignment = 1
 

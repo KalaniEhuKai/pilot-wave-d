@@ -259,25 +259,27 @@ graph TD
 
 ---
 
-### Phase 3: Run Structure, Sky Merchant & 2-Player Co-Op
+### Phase 3: Run Structure, Sky Merchant & 2-Player Co-Op [COMPLETED]
 *Goal: Expand from a combat prototype into a complete roguelite run with economy, shopping, co-op, and a multi-part boss.*
 
-1. **Sector Progression Architecture**:
-   - 3 Normal Waves -> 1 Elite/Cache Wave -> Sky Merchant Docking -> 3 Escalated Waves -> Sector Boss.
-2. **2-Player Local Co-Op Architecture**:
-   - Locked 1P/2P mode per run.
-   - Distinct ship hulls & neon color coding (P1 Cyan / P2 Amber-Orange).
-   - Independent player wallets with equal scrap drop replication (+10 for P1, +10 for P2 on drop pickup).
-3. **The Sky Merchant (Zeppelin / Supply Freighter)**:
-   - Mid-sector docking sequence.
-   - In 2-Player mode: **Completely separate shop stalls and independent escalating Reroll Terminals** ($5 J -> 10 J -> 20 J -> 35 J).
-   - Hull repair modules and risk contracts.
-4. **Sector 1 Boss: Super-Dreadnought Corvus**:
-   - Multi-part boss: Independent wing turrets, missile batteries, and exposed plasma core phase.
-5. **Secret Systems & Environmental Rifts (`SecretDirector.gd`)**:
-   - Hidden Quantum Anomalies in background parallax (destructible for scrap/caches).
-   - Sub-Space Wormholes leading to bonus pocket rooms.
-   - Dirac Monopole landmark (the 1942 Yashichi homage: full hull repair + 10,000 pts).
+1. **Sector Progression Architecture** [COMPLETED]:
+   - RunPhase state machine (`COMBAT_WAVES`, `SHOP_DOCKING`, `BOSS_BATTLE`, `SECTOR_VICTORY`).
+   - Wave 4 clear triggers Sky Merchant Docking; Wave 7 triggers Sector 1 Boss.
+2. **2-Player Local Co-Op Architecture** [COMPLETED]:
+   - 1P/2P mode toggle on HUD and project input mappings for P2.
+   - Distinct ship hulls & neon color coding (P1 Cyan / P2 Amber-Gold).
+   - Independent player wallets with zero-friction scrap drop replication (+10 for P1, +10 for P2 on drop pickup).
+3. **The Sky Merchant Zeppelin (`SkyMerchant.gd`)** [COMPLETED]:
+   - Mid-sector in-flight docking sequence.
+   - Completely separate shop stalls and independent escalating Reroll Terminals (5 J -> 10 J -> 20 J -> 35 J).
+   - Hull Repair Nano-Injectors (15 J).
+4. **Sector 1 Boss: Super-Dreadnought Corvus (`BossCorvus.gd`)** [COMPLETED]:
+   - Multi-part boss: Independent breakable Port and Starboard wing batteries (+2,500 pts each).
+   - Central Singularity Core exposed with Phase 2 Enrage 4-spoke rotating spiral bullet vortex.
+   - Victory bounty: +15,000 pts, guaranteed Elite Relic Crate, and Sector Cleared banner.
+5. **Secret Systems & Environmental Rifts (`SecretDirector.gd`)** [COMPLETED]:
+   - Hidden Quantum Anomalies in background parallax (destructible for scrap caches and +500 pts).
+   - Dirac Monopole landmark (the 1942 Yashichi homage: 100% full hull repair + 10,000 pts).
 
 ---
 
