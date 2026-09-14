@@ -33,12 +33,16 @@ func _process(delta: float) -> void:
 
 func _spawn_quantum_anomaly() -> void:
 	var pos = GameAxis.get_spawn_line(randf_range(0.2, 0.8))
-	anomalies.append({
+	var a = {
 		"pos": pos,
 		"radius": 24.0,
 		"elapsed": 0.0,
 		"shattered": false
-	})
+	}
+	anomalies.append(a)
+	var stage = get_tree().get_first_node_in_group("stage_3d")
+	if is_instance_valid(stage) and stage.has_method("register_anomaly"):
+		stage.register_anomaly(a)
 
 func _spawn_dirac_monopole() -> void:
 	var pos = GameAxis.get_spawn_line(0.5)
@@ -49,6 +53,9 @@ func _spawn_dirac_monopole() -> void:
 		"active": true,
 		"elapsed": 0.0
 	}
+	var stage = get_tree().get_first_node_in_group("stage_3d")
+	if is_instance_valid(stage) and stage.has_method("register_monopole"):
+		stage.register_monopole(dirac_monopole)
 
 func _update_anomalies(delta: float) -> void:
 	var remaining: Array[Dictionary] = []
@@ -84,6 +91,10 @@ func _shatter_anomaly(a: Dictionary) -> void:
 	a.shattered = true
 	SoundEffects.play_sfx("bonus", 0.05, 4.0)
 	GameManager.notify_secret("QUANTUM ANOMALY REVEALED", 2500)
+	
+	var stage = get_tree().get_first_node_in_group("stage_3d")
+	if is_instance_valid(stage) and stage.has_method("shatter_anomaly_3d"):
+		stage.shatter_anomaly_3d(a.pos)
 	
 	var exp_node = explosion_scene.instantiate()
 	get_parent().add_child(exp_node)
@@ -121,6 +132,10 @@ func _shatter_dirac_monopole() -> void:
 	dirac_monopole.active = false
 	SoundEffects.play_sfx("bonus", 0.02, 6.0)
 	GameManager.notify_secret("DIRAC MONOPOLE RESTORED (+10,000 PTS & FULL REPAIR)", 10000)
+	
+	var stage = get_tree().get_first_node_in_group("stage_3d")
+	if is_instance_valid(stage) and stage.has_method("shatter_monopole_3d"):
+		stage.shatter_monopole_3d(dirac_monopole.pos)
 	
 	# 100% full hull & shield repair for all players!
 	for p in get_tree().get_nodes_in_group("player"):

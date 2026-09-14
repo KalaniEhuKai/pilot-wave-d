@@ -22,3 +22,4 @@ Run the project using Godot 4:
 ## Documentation
 - [Implementation Plan](IMPLEMENTATION_PLAN.md)
 - [Phase 1 Walkthrough](WALKTHROUGH_PHASE_1.md)
+- [3D Models & VFX Reference Guide](docs/VFX_AND_3D_ASSETS_GUIDE.md)

@@ -6,7 +6,7 @@ func _init() -> void:
 	id = "carnot_heatsink"
 	display_name = "Carnot Heat Sink"
 	description = "Emergency thermal protocol: whenever your shields are fully depleted, primary cannon fire rate is doubled."
-	tier = ItemTier.TIER_2_PARADIGM
+	tier = ItemTier.TIER_1_BALLISTIC
 	icon_color = Color(1.0, 0.45, 0.1, 1.0)
 	icon_symbol = "[^^]"
 

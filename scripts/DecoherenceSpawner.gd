@@ -39,6 +39,8 @@ var current_wave_drop_distribution: Dictionary = {}
 
 func _ready() -> void:
 	add_to_group("spawner")
+	if GameManager.start_wave > 1:
+		current_wave_num = GameManager.start_wave - 1
 
 func is_wave_in_progress() -> bool:
 	return wave_phase != WavePhase.IDLE
@@ -234,6 +236,7 @@ func _execute_encounter_template(template: Dictionary, squad_id: int) -> void:
 		var count = h_data.get("count", 0)
 		for i in range(count):
 			var hz = hazard_scene.instantiate()
+			hz.hazard_type = h_type
 			get_parent().add_child(hz)
 			var lat_step = randf_range(0.14, 0.86)
 			var stagger = oncoming_h * (i * 36.0)
@@ -381,6 +384,7 @@ func _register_squad(squad_id: int, total_count: int) -> void:
 func _queue_quantum_bubble(type: int, pos: Vector2, squad_id: int, delay: float = 0.0, affix: int = 0, profile: int = -1) -> void:
 	get_tree().create_timer(delay).timeout.connect(func():
 		if not GameManager.is_game_over:
+			var dur = randf_range(0.36, 0.42)
 			active_bubbles.append({
 				"type": type,
 				"pos": pos,
@@ -388,12 +392,22 @@ func _queue_quantum_bubble(type: int, pos: Vector2, squad_id: int, delay: float 
 				"affix": affix,
 				"profile": profile,
 				"elapsed": 0.0,
-				"duration": randf_range(0.36, 0.42),
+				"duration": dur,
 				"sfx_played": false
 			})
+			var stage = get_tree().get_first_node_in_group("stage_3d")
+			if is_instance_valid(stage):
+				if stage.has_method("trigger_nexus_surge"):
+					stage.trigger_nexus_surge(0.4)
+				if stage.has_method("spawn_materialization_aperture"):
+					stage.spawn_materialization_aperture(pos, dur)
 	)
 
 func _materialize_enemy(type: int, pos: Vector2, squad_id: int, affix: int = 0, profile: int = -1) -> void:
+	var stage = get_tree().get_first_node_in_group("stage_3d")
+	if is_instance_valid(stage) and stage.has_method("trigger_materialization_flash"):
+		stage.trigger_materialization_flash(pos)
+		
 	var enemy = enemy_scene.instantiate()
 	get_parent().add_child(enemy)
 	var drop_prof = current_wave_drop_distribution.get(type, {})

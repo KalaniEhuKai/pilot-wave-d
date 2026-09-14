@@ -7,6 +7,7 @@ signal boss_defeated()
 
 @export var max_core_health: float = 160.0
 var core_health: float = 160.0
+var use_3d_model: bool = true
 
 @export var max_wing_health: float = 60.0
 var port_wing_health: float = 60.0
@@ -71,6 +72,11 @@ func _ready() -> void:
 	_emit_health()
 	SoundEffects.play_sfx("bonus", 0.05, -2.0)
 	GameManager.request_screen_shake(12.0, 0.5)
+	
+	if use_3d_model:
+		var stage = get_tree().get_root().find_child("Stage3D", true, false)
+		if is_instance_valid(stage) and stage.has_method("register_boss"):
+			stage.register_boss(self, "corvus")
 
 func _emit_health() -> void:
 	var total_hp = core_health + (port_wing_health if port_wing_alive else 0.0) + (starboard_wing_health if starboard_wing_alive else 0.0)
@@ -247,8 +253,11 @@ func _explode_subsystem(pos: Vector2) -> void:
 	exp_node.global_position = pos
 	exp_node.max_radius = 64.0
 	SoundEffects.play_sfx("explosion", 0.05, 3.0)
-	GameManager.request_screen_shake(10.0, 0.3)
+	var dir = (pos - global_position).normalized()
+	GameManager.request_directional_shake(dir if dir != Vector2.ZERO else Vector2.UP, 14.0, 0.3)
+	GameManager.trigger_hit_stop(0.045)
 	GameManager.add_score(2500)
+
 
 func _die() -> void:
 	GameManager.add_score(15000)
@@ -289,6 +298,9 @@ func _on_body_entered(body: Node2D) -> void:
 		take_damage(4.0)
 
 func _draw() -> void:
+	if use_3d_model:
+		return
+		
 	var hull_color = Color(0.12, 0.05, 0.16, 0.95)
 	var outline_color = Color(1.0, 0.2, 0.5, 1.0)
 	

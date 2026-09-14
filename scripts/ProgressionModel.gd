@@ -352,4 +352,158 @@ static func get_expected_total_joules_range(sector: int, wave: int) -> Vector2i:
 		boss_bonus += 30
 	return Vector2i(base_min + boss_bonus, base_max + boss_bonus)
 
+# --- 6. STAT CARD UX & GLOWING BBCODE FORMATTING ---
+
+static func format_stat_value_bbcode(val: float, is_pct: bool = true) -> String:
+	var formatted_str = ("%+d%%" if is_pct else "%+d") % int(round(val * 100.0 if is_pct else val))
+	if val >= 0.48:
+		# Colossal buff (+50%+): Radiant Solar Gold
+		return "[color=#facc15]%s[/color]" % formatted_str
+	elif val >= 0.22:
+		# Substantial buff (+25% to +45%): Electric Magenta
+		return "[color=#f0abfc]%s[/color]" % formatted_str
+	elif val > 0.0:
+		# Moderate buff (+10% to +20%): Crisp Cyan
+		return "[color=#22d3ee]%s[/color]" % formatted_str
+	elif val <= -0.18:
+		# Severe penalty (-20% to -80%): Vivid Crimson
+		return "[color=#ff2a5f]%s[/color]" % formatted_str
+	else:
+		# Minor penalty (-5% to -15%): Warm Orange
+		return "[color=#fb923c]%s[/color]" % formatted_str
+
+static func format_card_bbcode(item: ItemModifier, player: CharacterBody2D = null) -> String:
+	if item == null:
+		return ""
+	
+	var desc = item.description
+	
+	# Regex highlight numbers / percentages in the base description (preserving uniform font size)
+	var regex = RegEx.new()
+	if regex.compile("([+-]\\d+%)") == OK:
+		var matches = regex.search_all(desc)
+		for i in range(matches.size() - 1, -1, -1):
+			var m = matches[i]
+			var raw = m.get_string(1)
+			var val = float(raw.trim_suffix("%")) / 100.0
+			var colored = format_stat_value_bbcode(val, true)
+			desc = desc.substr(0, m.get_start(1)) + colored + desc.substr(m.get_end(1))
+	
+	# If player reference is available, compute and append concrete stat deltas
+	if player != null and item.get("category") != null:
+		var deltas: Array[String] = []
+		
+		# 1. Damage Multiplier
+		var mult_dmg = item.get("mult_damage")
+		if mult_dmg != null and mult_dmg != 1.0:
+			var cur_d = player.damage_mult
+			var bonus_d = player.bonus_damage_pct if "bonus_damage_pct" in player else (cur_d - 1.0)
+			var next_d = maxf(0.1, 1.0 + bonus_d + (mult_dmg - 1.0))
+			var diff = mult_dmg - 1.0
+			deltas.append("[color=#94a3b8]DMG:[/color] %.1fx ──► %.1fx  %s" % [cur_d, next_d, format_stat_value_bbcode(diff, true)])
+		
+		# 2. Cyclic Fire Rate
+		var mult_fr = item.get("mult_fire_rate")
+		if mult_fr != null and mult_fr != 1.0:
+			var cur_fr = player.fire_rate
+			var base_fr = player.base_fire_rate if "base_fire_rate" in player else 3.8
+			var bonus_fr = player.bonus_fire_rate_pct if "bonus_fire_rate_pct" in player else (cur_fr / base_fr - 1.0)
+			var next_fr = base_fr * maxf(0.25, 1.0 + bonus_fr + (mult_fr - 1.0))
+			var diff = mult_fr - 1.0
+			deltas.append("[color=#94a3b8]RATE:[/color] %.1f/s ──► %.1f/s  %s" % [cur_fr, next_fr, format_stat_value_bbcode(diff, true)])
+		
+		# 3. Critical Strike Chance
+		var add_crit = item.get("add_crit_chance")
+		if add_crit != null and add_crit > 0.0:
+			var cur_crit = int(player.crit_chance * 100.0)
+			var next_crit = int(clampf(player.crit_chance + add_crit, 0.0, 1.0) * 100.0)
+			deltas.append("[color=#94a3b8]CRIT:[/color] %d%% ──► %d%%  %s" % [cur_crit, next_crit, format_stat_value_bbcode(add_crit, true)])
+		
+		# 4. Projectile Velocity
+		var mult_bspd = item.get("mult_bullet_speed")
+		if mult_bspd != null and mult_bspd != 1.0:
+			var cur_bs = int(540.0 * (player.bullet_speed_mult if "bullet_speed_mult" in player else 1.0))
+			var next_bs = int(cur_bs * mult_bspd)
+			var diff_bs = mult_bspd - 1.0
+			deltas.append("[color=#94a3b8]BOLT SPEED:[/color] %d ──► %d  %s" % [cur_bs, next_bs, format_stat_value_bbcode(diff_bs, true)])
+		
+		# 5. Barrel Roll Cooldown (Recharge Time)
+		var mult_rcd = item.get("mult_roll_cooldown")
+		if mult_rcd != null and mult_rcd != 1.0:
+			var cur_rcd = player.roll_cooldown if "roll_cooldown" in player else 3.2
+			var next_rcd = cur_rcd * mult_rcd
+			var diff_rcd = 1.0 - mult_rcd
+			deltas.append("[color=#94a3b8]ROLL CD:[/color] %.1fs ──► %.1fs  %s" % [cur_rcd, next_rcd, format_stat_value_bbcode(diff_rcd, true)])
+		
+		# 6. Shield Recharge Delay
+		var mult_sdel = item.get("mult_shield_delay")
+		if mult_sdel != null and mult_sdel != 1.0:
+			var cur_sd = player.shield_recharge_delay if "shield_recharge_delay" in player else 4.0
+			var next_sd = cur_sd * mult_sdel
+			var diff_sd = 1.0 - mult_sdel
+			deltas.append("[color=#94a3b8]SHIELD RECHARGE:[/color] %.1fs ──► %.1fs  %s" % [cur_sd, next_sd, format_stat_value_bbcode(diff_sd, true)])
+		
+		# 7. Flight Speed
+		var mult_spd = item.get("mult_move_speed")
+		if mult_spd != null and mult_spd != 1.0:
+			var cur_spd = int(player.move_speed)
+			var base_spd = player.base_move_speed if "base_move_speed" in player else 420.0
+			var bonus_spd = player.bonus_move_speed_pct if "bonus_move_speed_pct" in player else 0.0
+			var next_spd = int(base_spd * maxf(0.3, 1.0 + bonus_spd + (mult_spd - 1.0)))
+			var diff = mult_spd - 1.0
+			deltas.append("[color=#94a3b8]SPEED:[/color] %d ──► %d  %s" % [cur_spd, next_spd, format_stat_value_bbcode(diff, true)])
+		
+		# 8. Scrap Magnet Reach
+		var add_mag = item.get("add_magnet_radius")
+		if add_mag != null and add_mag > 0.0:
+			var cur_mag = int(player.scrap_magnet_radius if "scrap_magnet_radius" in player else 130.0)
+			var next_mag = int(cur_mag + add_mag)
+			deltas.append("[color=#94a3b8]MAGNET RANGE:[/color] %dpx ──► %dpx  [color=#22d3ee]+%dpx[/color]" % [cur_mag, next_mag, int(add_mag)])
+		
+		# 9. Extra Spread Shot Pairs
+		var add_spr = item.get("add_spread_shots")
+		if add_spr != null and add_spr > 0:
+			var cur_spr = player.extra_spread_shots if "extra_spread_shots" in player else 0
+			var next_spr = cur_spr + add_spr
+			deltas.append("[color=#94a3b8]SPREAD SHOTS:[/color] %d ──► %d  [color=#f0abfc]+%d pair%s[/color]" % [cur_spr, next_spr, add_spr, "s" if add_spr > 1 else ""])
+		
+		# 10. Max Hull / Shields / Rolls
+		var add_h = item.get("add_max_hull")
+		if add_h != null and add_h > 0:
+			deltas.append("[color=#94a3b8]MAX HULL:[/color] %d ──► %d  %s" % [player.max_hull, player.max_hull + add_h, format_stat_value_bbcode(float(add_h), false)])
+		var add_s = item.get("add_max_shields")
+		if add_s != null and add_s > 0:
+			deltas.append("[color=#94a3b8]MAX SHIELDS:[/color] %d ──► %d  %s" % [player.max_shields, player.max_shields + add_s, format_stat_value_bbcode(float(add_s), false)])
+		var add_r = item.get("add_max_rolls")
+		if add_r != null and add_r > 0:
+			deltas.append("[color=#94a3b8]MAX ROLLS:[/color] %d ──► %d  %s" % [player.max_rolls, player.max_rolls + add_r, format_stat_value_bbcode(float(add_r), false)])
+		
+		# 11. Economy Perks (Joule chance, dividends, bounties, singularity recovery)
+		var scrap_chance = item.get("scrap_bonus_chance")
+		if scrap_chance != null and scrap_chance > 0.0:
+			var cur_sc = int((player.scrap_bonus_chance if "scrap_bonus_chance" in player else 0.0) * 100.0)
+			var next_sc = int(clampf((player.scrap_bonus_chance if "scrap_bonus_chance" in player else 0.0) + scrap_chance, 0.0, 1.0) * 100.0)
+			deltas.append("[color=#94a3b8]JOULE SCRAP:[/color] %d%% ──► %d%%  %s" % [cur_sc, next_sc, format_stat_value_bbcode(scrap_chance, true)])
+		
+		var wave_div = item.get("wave_dividend_joules")
+		if wave_div != null and wave_div > 0:
+			var cur_wd = player.wave_dividend_joules if "wave_dividend_joules" in player else 0
+			var next_wd = cur_wd + wave_div
+			deltas.append("[color=#94a3b8]WAVE DIVIDEND:[/color] %d J ──► %d J  [color=#facc15]+%d J[/color]" % [cur_wd, next_wd, wave_div])
+		
+		var elite_bonus = item.get("elite_bounty_bonus")
+		if elite_bonus != null and elite_bonus > 0:
+			var cur_ebb = player.elite_bounty_bonus if "elite_bounty_bonus" in player else 0
+			var next_ebb = cur_ebb + elite_bonus
+			deltas.append("[color=#94a3b8]ELITE BOUNTY:[/color] %d J ──► %d J  [color=#facc15]+%d J[/color]" % [cur_ebb, next_ebb, elite_bonus])
+		
+		var has_sing = item.get("has_singularity_recovery")
+		if has_sing != null and has_sing and ("has_singularity_recovery" in player) and not player.has_singularity_recovery:
+			deltas.append("[color=#94a3b8]VOID RECOVERY:[/color] [color=#22d3ee]100% Scrap Recovery[/color]")
+		
+		if not deltas.is_empty():
+			desc += "\n[color=#475569]────────────────────────[/color]\n" + "\n".join(deltas)
+	
+	return desc
+
 

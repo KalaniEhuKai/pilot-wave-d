@@ -700,6 +700,14 @@ func _mutate_template(template: Dictionary, sector_idx: int, wave_idx: int = 1) 
 	
 	# 1. Procedural Spawn Batch Mutation (Wildcards & Elite Promotions)
 	var spawns = mutated.get("spawns", [])
+	
+	# Track if an elite is already present in the wave template
+	var has_elite = false
+	for batch in spawns:
+		if batch.get("affix", 0) != 0:
+			has_elite = true
+			break
+
 	for batch in spawns:
 		# Never mutate or promote dedicated Cargo Haulers or signature Bomber escorts in supply convoys
 		if batch.get("type", 0) == CARGO_HAULER:
@@ -713,10 +721,11 @@ func _mutate_template(template: Dictionary, sector_idx: int, wave_idx: int = 1) 
 			current_pool.shuffle()
 			batch["type"] = current_pool[0]
 		
-		# Elite Affix Promotion
-		if randf() < elite_chance and batch.get("affix", 0) == 0 and batch["type"] != MICRO_DRONE:
+		# Elite Affix Promotion (Strict max 1 elite per standard wave)
+		if not has_elite and randf() < elite_chance and batch.get("affix", 0) == 0 and batch["type"] != MICRO_DRONE:
 			possible_affixes.shuffle()
 			batch["affix"] = possible_affixes[0]
+			has_elite = true
 		
 		# Timing jitter
 		if batch.has("delay"):

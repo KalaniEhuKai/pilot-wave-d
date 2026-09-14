@@ -93,15 +93,19 @@ theme_override_colors/font_color = Color(0.4, 0.9, 1, 1)
 theme_override_font_sizes/font_size = 11
 text = "P1 SHIELDS & HULL"
 
-[node name="ShieldBar" type="ProgressBar" parent="TopLeft/VBox"]
-custom_minimum_size = Vector2(160, 8)
+[node name="ShieldContainer" type="HBoxContainer" parent="TopLeft/VBox"]
 layout_mode = 2
-theme_override_styles/background = SubResource("StyleBoxFlat_shield_bg")
-theme_override_styles/fill = SubResource("StyleBoxFlat_shield_fill")
-max_value = 2.0
-step = 1.0
-value = 2.0
-show_percentage = false
+theme_override_constants/separation = 5
+
+[node name="Pip1" type="ColorRect" parent="TopLeft/VBox/ShieldContainer"]
+custom_minimum_size = Vector2(24, 8)
+layout_mode = 2
+color = Color(0.15, 0.85, 1, 1)
+
+[node name="Pip2" type="ColorRect" parent="TopLeft/VBox/ShieldContainer"]
+custom_minimum_size = Vector2(24, 8)
+layout_mode = 2
+color = Color(0.15, 0.85, 1, 1)
 
 [node name="HullContainer" type="HBoxContainer" parent="TopLeft/VBox"]
 layout_mode = 2
@@ -163,15 +167,19 @@ theme_override_colors/font_color = Color(1, 0.8, 0.2, 1)
 theme_override_font_sizes/font_size = 11
 text = "P2 SHIELDS & HULL"
 
-[node name="P2ShieldBar" type="ProgressBar" parent="TopLeft/VBox/P2Container"]
-custom_minimum_size = Vector2(160, 8)
+[node name="P2ShieldContainer" type="HBoxContainer" parent="TopLeft/VBox/P2Container"]
 layout_mode = 2
-theme_override_styles/background = SubResource("StyleBoxFlat_shield_bg")
-theme_override_styles/fill = SubResource("StyleBoxFlat_p2_shield_fill")
-max_value = 2.0
-step = 1.0
-value = 2.0
-show_percentage = false
+theme_override_constants/separation = 5
+
+[node name="Pip1" type="ColorRect" parent="TopLeft/VBox/P2Container/P2ShieldContainer"]
+custom_minimum_size = Vector2(24, 8)
+layout_mode = 2
+color = Color(1, 0.75, 0.2, 1)
+
+[node name="Pip2" type="ColorRect" parent="TopLeft/VBox/P2Container/P2ShieldContainer"]
+custom_minimum_size = Vector2(24, 8)
+layout_mode = 2
+color = Color(1, 0.75, 0.2, 1)
 
 [node name="P2HullContainer" type="HBoxContainer" parent="TopLeft/VBox/P2Container"]
 layout_mode = 2
@@ -417,17 +425,16 @@ grow_vertical = 2
 color = Color(0.02, 0.04, 0.07, 0.8)
 
 [node name="Panel" type="Panel" parent="ItemChoiceModal"]
-custom_minimum_size = Vector2(620, 360)
-layout_mode = 1
+custom_minimum_size = Vector2(640, 380)
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -310.0
-offset_top = -180.0
-offset_right = 310.0
-offset_bottom = 180.0
+offset_left = -320.0
+offset_top = -190.0
+offset_right = 320.0
+offset_bottom = 190.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_modal")
@@ -438,156 +445,337 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 24.0
-offset_top = 20.0
+offset_top = 18.0
 offset_right = -24.0
-offset_bottom = -20.0
+offset_bottom = -18.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 12
 
 [node name="Header" type="Label" parent="ItemChoiceModal/Panel/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.2, 0.95, 1, 1)
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 18
 text = "QUANTUM RELIC DISCOVERED - SELECT SYNERGY"
 horizontal_alignment = 1
 
-[node name="HBox" type="HBoxContainer" parent="ItemChoiceModal/Panel/VBox"]
+[node name="HBoxColumns" type="HBoxContainer" parent="ItemChoiceModal/Panel/VBox"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_constants/separation = 20
+theme_override_constants/separation = 18
 
-[node name="CardA" type="Panel" parent="ItemChoiceModal/Panel/VBox/HBox"]
+[node name="P1Column" type="VBoxContainer" parent="ItemChoiceModal/Panel/VBox/HBoxColumns"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="P1Header" type="Label" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P1Column"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "PLAYER 1 // [A / D] SELECT • [SPACE] EQUIP"
+horizontal_alignment = 1
+
+[node name="P1Cards" type="HBoxContainer" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P1Column"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+
+[node name="CardA" type="Panel" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P1Column/P1Cards"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="TitleA" type="Label" parent="ItemChoiceModal/Panel/VBox/HBox/CardA"]
+[node name="TitleA" type="Label" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P1Column/P1Cards/CardA"]
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_left = 12.0
-offset_top = 14.0
-offset_right = -12.0
-offset_bottom = 38.0
+offset_left = 8.0
+offset_top = 10.0
+offset_right = -8.0
+offset_bottom = 32.0
 grow_horizontal = 2
-theme_override_font_sizes/font_size = 15
+theme_override_font_sizes/font_size = 13
 text = "Relic Alpha"
 horizontal_alignment = 1
 
-[node name="TierA" type="Label" parent="ItemChoiceModal/Panel/VBox/HBox/CardA"]
+[node name="TierA" type="Label" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P1Column/P1Cards/CardA"]
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_left = 12.0
-offset_top = 38.0
-offset_right = -12.0
-offset_bottom = 56.0
+offset_left = 8.0
+offset_top = 32.0
+offset_right = -8.0
+offset_bottom = 48.0
 grow_horizontal = 2
 theme_override_font_sizes/font_size = 10
 text = "TIER 1"
 horizontal_alignment = 1
 
-[node name="DescA" type="Label" parent="ItemChoiceModal/Panel/VBox/HBox/CardA"]
+[node name="DescA" type="RichTextLabel" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P1Column/P1Cards/CardA"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 16.0
-offset_top = 66.0
-offset_right = -16.0
-offset_bottom = -58.0
+offset_left = 10.0
+offset_top = 50.0
+offset_right = -10.0
+offset_bottom = -46.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_colors/font_color = Color(0.85, 0.9, 0.95, 1)
-theme_override_font_sizes/font_size = 12
+theme_override_colors/default_color = Color(0.85, 0.9, 0.95, 1)
+theme_override_font_sizes/normal_font_size = 11
+bbcode_enabled = true
 text = "Description here."
 autowrap_mode = 2
 
-[node name="EquipBtnA" type="Button" parent="ItemChoiceModal/Panel/VBox/HBox/CardA"]
-custom_minimum_size = Vector2(0, 36)
+[node name="EquipBtnA" type="Button" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P1Column/P1Cards/CardA"]
+custom_minimum_size = Vector2(0, 32)
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 18.0
-offset_top = -48.0
-offset_right = -18.0
-offset_bottom = -12.0
+offset_left = 12.0
+offset_top = -40.0
+offset_right = -12.0
+offset_bottom = -8.0
 grow_horizontal = 2
 grow_vertical = 0
-focus_mode = 0
 theme_override_colors/font_color = Color(0.2, 1, 0.85, 1)
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 12
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
-text = "EQUIP RELIC"
+text = "[1] EQUIP"
 
-[node name="CardB" type="Panel" parent="ItemChoiceModal/Panel/VBox/HBox"]
+[node name="CardB" type="Panel" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P1Column/P1Cards"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="TitleB" type="Label" parent="ItemChoiceModal/Panel/VBox/HBox/CardB"]
+[node name="TitleB" type="Label" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P1Column/P1Cards/CardB"]
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_left = 12.0
-offset_top = 14.0
-offset_right = -12.0
-offset_bottom = 38.0
+offset_left = 8.0
+offset_top = 10.0
+offset_right = -8.0
+offset_bottom = 32.0
 grow_horizontal = 2
-theme_override_font_sizes/font_size = 15
+theme_override_font_sizes/font_size = 13
 text = "Relic Beta"
 horizontal_alignment = 1
 
-[node name="TierB" type="Label" parent="ItemChoiceModal/Panel/VBox/HBox/CardB"]
+[node name="TierB" type="Label" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P1Column/P1Cards/CardB"]
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_left = 12.0
-offset_top = 38.0
-offset_right = -12.0
-offset_bottom = 56.0
+offset_left = 8.0
+offset_top = 32.0
+offset_right = -8.0
+offset_bottom = 48.0
 grow_horizontal = 2
 theme_override_font_sizes/font_size = 10
 text = "TIER 2"
 horizontal_alignment = 1
 
-[node name="DescB" type="Label" parent="ItemChoiceModal/Panel/VBox/HBox/CardB"]
+[node name="DescB" type="RichTextLabel" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P1Column/P1Cards/CardB"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 16.0
-offset_top = 66.0
-offset_right = -16.0
-offset_bottom = -58.0
+offset_left = 10.0
+offset_top = 50.0
+offset_right = -10.0
+offset_bottom = -46.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_colors/font_color = Color(0.85, 0.9, 0.95, 1)
-theme_override_font_sizes/font_size = 12
+theme_override_colors/default_color = Color(0.85, 0.9, 0.95, 1)
+theme_override_font_sizes/normal_font_size = 11
+bbcode_enabled = true
 text = "Description here."
 autowrap_mode = 2
 
-[node name="EquipBtnB" type="Button" parent="ItemChoiceModal/Panel/VBox/HBox/CardB"]
-custom_minimum_size = Vector2(0, 36)
+[node name="EquipBtnB" type="Button" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P1Column/P1Cards/CardB"]
+custom_minimum_size = Vector2(0, 32)
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 18.0
-offset_top = -48.0
-offset_right = -18.0
-offset_bottom = -12.0
+offset_left = 12.0
+offset_top = -40.0
+offset_right = -12.0
+offset_bottom = -8.0
 grow_horizontal = 2
 grow_vertical = 0
-focus_mode = 0
 theme_override_colors/font_color = Color(0.2, 1, 0.85, 1)
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 12
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
-text = "EQUIP RELIC"
+text = "[2] EQUIP"
+
+[node name="P1Status" type="Label" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P1Column"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.8, 1, 0.9)
+theme_override_font_sizes/font_size = 11
+text = "[●] P1 PENDING SELECTION"
+horizontal_alignment = 1
+
+[node name="P2Column" type="VBoxContainer" parent="ItemChoiceModal/Panel/VBox/HBoxColumns"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="P2Header" type="Label" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P2Column"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 12
+text = "PLAYER 2 // [◄ / ►] SELECT • [ENTER] EQUIP"
+horizontal_alignment = 1
+
+[node name="P2Cards" type="HBoxContainer" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P2Column"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+
+[node name="P2CardA" type="Panel" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P2Column/P2Cards"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="P2TitleA" type="Label" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P2Column/P2Cards/P2CardA"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 8.0
+offset_top = 10.0
+offset_right = -8.0
+offset_bottom = 32.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 13
+text = "Relic Gamma"
+horizontal_alignment = 1
+
+[node name="P2TierA" type="Label" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P2Column/P2Cards/P2CardA"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 8.0
+offset_top = 32.0
+offset_right = -8.0
+offset_bottom = 48.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 10
+text = "TIER 1"
+horizontal_alignment = 1
+
+[node name="P2DescA" type="RichTextLabel" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P2Column/P2Cards/P2CardA"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 50.0
+offset_right = -10.0
+offset_bottom = -46.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/default_color = Color(0.85, 0.9, 0.95, 1)
+theme_override_font_sizes/normal_font_size = 11
+bbcode_enabled = true
+text = "Description here."
+autowrap_mode = 2
+
+[node name="P2EquipBtnA" type="Button" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P2Column/P2Cards/P2CardA"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = -40.0
+offset_right = -12.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+text = "[NUM 1] EQUIP"
+
+[node name="P2CardB" type="Panel" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P2Column/P2Cards"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="P2TitleB" type="Label" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P2Column/P2Cards/P2CardB"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 8.0
+offset_top = 10.0
+offset_right = -8.0
+offset_bottom = 32.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 13
+text = "Relic Delta"
+horizontal_alignment = 1
+
+[node name="P2TierB" type="Label" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P2Column/P2Cards/P2CardB"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 8.0
+offset_top = 32.0
+offset_right = -8.0
+offset_bottom = 48.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 10
+text = "TIER 2"
+horizontal_alignment = 1
+
+[node name="P2DescB" type="RichTextLabel" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P2Column/P2Cards/P2CardB"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 50.0
+offset_right = -10.0
+offset_bottom = -46.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/default_color = Color(0.85, 0.9, 0.95, 1)
+theme_override_font_sizes/normal_font_size = 11
+bbcode_enabled = true
+text = "Description here."
+autowrap_mode = 2
+
+[node name="P2EquipBtnB" type="Button" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P2Column/P2Cards/P2CardB"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = -40.0
+offset_right = -12.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+text = "[NUM 2] EQUIP"
+
+[node name="P2Status" type="Label" parent="ItemChoiceModal/Panel/VBox/HBoxColumns/P2Column"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.8, 0.3, 0.9)
+theme_override_font_sizes/font_size = 11
+text = "[●] P2 PENDING SELECTION"
+horizontal_alignment = 1
 
 [connection signal="button_down" from="MobileControls/FireButton" to="." method="_on_fire_button_down"]
 [connection signal="button_up" from="MobileControls/FireButton" to="." method="_on_fire_button_up"]

@@ -2,14 +2,14 @@ extends "res://scripts/ItemModifier.gd"
 
 ## GravitationalLensing.gd - Homing curvature bending paths toward nearest enemy.
 
-var homing_strength: float = 6.0
-var detection_radius: float = 400.0
+var homing_strength: float = 2.2
+var detection_radius: float = 360.0
 
 func _init() -> void:
 	id = "gravitational_lensing"
 	display_name = "Gravitational Lensing"
-	description = "Spacetime curvature bends projectile paths violently toward the nearest enemy."
-	tier = ItemTier.TIER_1_BALLISTIC
+	description = "Spacetime curvature bends projectile paths toward the nearest enemy."
+	tier = ItemTier.TIER_2_PARADIGM
 	icon_color = Color(0.8, 0.4, 1.0, 1.0)
 	icon_symbol = "[O]"
 

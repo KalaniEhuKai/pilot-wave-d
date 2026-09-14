@@ -1,0 +1,643 @@
+[gd_scene load_steps=3 format=3 uid="uid://m1a2i3n4m5e6"]
+
+[ext_resource type="Script" path="res://scripts/MainMenu.gd" id="1_menu"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.04, 0.06, 0.1, 0.94)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.2, 0.85, 1, 0.85)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_menu")
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TitleView" type="Panel" parent="CenterContainer"]
+custom_minimum_size = Vector2(520, 520)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBox" type="VBoxContainer" parent="CenterContainer/TitleView"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = 28.0
+offset_right = -40.0
+offset_bottom = -28.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="CenterContainer/TitleView/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 32
+text = "< PILOT | WAVE >"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="CenterContainer/TitleView/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 14
+text = "D E C O H E R E N C E"
+horizontal_alignment = 1
+
+[node name="BuildLabel" type="Label" parent="CenterContainer/TitleView/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.6, 0.7, 0.8)
+theme_override_font_sizes/font_size = 11
+text = "v0.5.0-DECOHERENCE // QUANTUM ROGUELITE ARCADE"
+horizontal_alignment = 1
+
+[node name="DebugStatusBadge" type="Label" parent="CenterContainer/TitleView/VBox"]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.35, 0.45, 1)
+theme_override_font_sizes/font_size = 11
+text = "⚠ DEBUG OVERRIDE ACTIVE // HIGH SCORES & TELEMETRY VOIDED ⚠"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="CenterContainer/TitleView/VBox"]
+layout_mode = 2
+
+[node name="MenuButtons" type="VBoxContainer" parent="CenterContainer/TitleView"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -180.0
+offset_top = -300.0
+offset_right = 180.0
+offset_bottom = -30.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/separation = 12
+
+[node name="StartBtn" type="Button" parent="CenterContainer/TitleView/MenuButtons"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "LAUNCH MISSION"
+
+[node name="ScoresBtn" type="Button" parent="CenterContainer/TitleView/MenuButtons"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "FLIGHT ARCHIVE // HIGH SCORES"
+
+[node name="OptionsBtn" type="Button" parent="CenterContainer/TitleView/MenuButtons"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "SHIP SYSTEMS // OPTIONS"
+
+[node name="DebugBtn" type="Button" parent="CenterContainer/TitleView/MenuButtons"]
+visible = false
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "CYBERNETIC DEBUG MAINFRAME"
+
+[node name="QuitBtn" type="Button" parent="CenterContainer/TitleView/MenuButtons"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "TERMINATE LINK // QUIT"
+
+[node name="MissionView" type="Panel" parent="CenterContainer"]
+visible = false
+custom_minimum_size = Vector2(560, 520)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBox" type="VBoxContainer" parent="CenterContainer/MissionView"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 36.0
+offset_top = 30.0
+offset_right = -36.0
+offset_bottom = -30.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="CenterContainer/MissionView/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 20
+text = "MISSION DEPLOYMENT PROTOCOL"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="CenterContainer/MissionView/VBox"]
+layout_mode = 2
+
+[node name="PlayerSelectHeader" type="Label" parent="CenterContainer/MissionView/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 13
+text = "1. SQUAD ARCHITECTURE"
+
+[node name="PlayerSelect" type="HBoxContainer" parent="CenterContainer/MissionView/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Btn1P" type="Button" parent="CenterContainer/MissionView/VBox/PlayerSelect"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "[● 1 PLAYER (SOLO)]"
+
+[node name="Btn2P" type="Button" parent="CenterContainer/MissionView/VBox/PlayerSelect"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "[  2 PLAYERS (CO-OP)]"
+
+[node name="PlayerDescLbl" type="Label" parent="CenterContainer/MissionView/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.8, 0.9, 0.9)
+theme_override_font_sizes/font_size = 11
+text = "SOLO VANGUARD: 1 Pilot. Full scrap vacuum. Keyboard (WASD/Space) or Gamepad."
+autowrap_mode = 2
+
+[node name="ModeSelectHeader" type="Label" parent="CenterContainer/MissionView/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 13
+text = "2. COMBAT ENGAGEMENT MODE"
+
+[node name="ModeSelect" type="VBoxContainer" parent="CenterContainer/MissionView/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnNormal" type="Button" parent="CenterContainer/MissionView/VBox/ModeSelect"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+text = "[● NORMAL CAMPAIGN] (3 Sectors // 36 Waves)"
+
+[node name="BtnEndless" type="Button" parent="CenterContainer/MissionView/VBox/ModeSelect"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+text = "[  ENDLESS SURVIVAL (LOCKED)]"
+
+[node name="BtnAscension" type="Button" parent="CenterContainer/MissionView/VBox/ModeSelect"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+text = "[  ASCENSION OVERCLOCK (LOCKED)]"
+
+[node name="Spacer" type="Control" parent="CenterContainer/MissionView/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ActionRow" type="HBoxContainer" parent="CenterContainer/MissionView/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="LaunchBtn" type="Button" parent="CenterContainer/MissionView/VBox/ActionRow"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "ENGAGE // LAUNCH MISSION"
+
+[node name="BackMissionBtn" type="Button" parent="CenterContainer/MissionView/VBox/ActionRow"]
+custom_minimum_size = Vector2(110, 44)
+layout_mode = 2
+text = "ABORT"
+
+[node name="ScoresView" type="Panel" parent="CenterContainer"]
+visible = false
+custom_minimum_size = Vector2(620, 520)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBox" type="VBoxContainer" parent="CenterContainer/ScoresView"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 32.0
+offset_top = 28.0
+offset_right = -32.0
+offset_bottom = -28.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="CenterContainer/ScoresView/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 20
+text = "LOCAL FLIGHT ARCHIVE // TOP 10 PILOTS"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="CenterContainer/ScoresView/VBox"]
+layout_mode = 2
+
+[node name="ScoresTable" type="Control" parent="CenterContainer/ScoresView/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="HeaderRow" type="HBoxContainer" parent="CenterContainer/ScoresView/VBox/ScoresTable"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 26.0
+grow_horizontal = 2
+theme_override_constants/separation = 12
+
+[node name="H1" type="Label" parent="CenterContainer/ScoresView/VBox/ScoresTable/HeaderRow"]
+custom_minimum_size = Vector2(40, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 11
+text = "RANK"
+
+[node name="H2" type="Label" parent="CenterContainer/ScoresView/VBox/ScoresTable/HeaderRow"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 11
+text = "SCORE"
+
+[node name="H3" type="Label" parent="CenterContainer/ScoresView/VBox/ScoresTable/HeaderRow"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 11
+text = "SECTOR"
+
+[node name="H4" type="Label" parent="CenterContainer/ScoresView/VBox/ScoresTable/HeaderRow"]
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 11
+text = "SQUAD"
+
+[node name="H5" type="Label" parent="CenterContainer/ScoresView/VBox/ScoresTable/HeaderRow"]
+custom_minimum_size = Vector2(70, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 11
+text = "TIME"
+
+[node name="H6" type="Label" parent="CenterContainer/ScoresView/VBox/ScoresTable/HeaderRow"]
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 11
+text = "DATE"
+
+[node name="Scroll" type="ScrollContainer" parent="CenterContainer/ScoresView/VBox/ScoresTable"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 30.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="RowsVBox" type="VBoxContainer" parent="CenterContainer/ScoresView/VBox/ScoresTable/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="BackScoresBtn" type="Button" parent="CenterContainer/ScoresView/VBox"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+text = "RETURN TO MAIN MENU"
+
+[node name="ResetScoresBtn" type="Button" parent="CenterContainer/ScoresView/VBox"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+text = "RESTORE DEFAULT ARCHIVES"
+
+[node name="OptionsView" type="Panel" parent="CenterContainer"]
+visible = false
+custom_minimum_size = Vector2(540, 480)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBox" type="VBoxContainer" parent="CenterContainer/OptionsView"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 36.0
+offset_top = 28.0
+offset_right = -36.0
+offset_bottom = -28.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 16
+
+[node name="Title" type="Label" parent="CenterContainer/OptionsView/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 20
+text = "SHIP SYSTEMS // CONFIGURATION"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="CenterContainer/OptionsView/VBox"]
+layout_mode = 2
+
+[node name="SettingsGrid" type="GridContainer" parent="CenterContainer/OptionsView/VBox"]
+layout_mode = 2
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 14
+columns = 3
+
+[node name="MasterLbl" type="Label" parent="CenterContainer/OptionsView/VBox/SettingsGrid"]
+layout_mode = 2
+text = "MASTER AUDIO:"
+
+[node name="MasterSlider" type="HSlider" parent="CenterContainer/OptionsView/VBox/SettingsGrid"]
+custom_minimum_size = Vector2(220, 24)
+layout_mode = 2
+size_flags_vertical = 4
+value = 85.0
+
+[node name="MasterValLbl" type="Label" parent="CenterContainer/OptionsView/VBox/SettingsGrid"]
+layout_mode = 2
+text = "85%"
+
+[node name="SfxLbl" type="Label" parent="CenterContainer/OptionsView/VBox/SettingsGrid"]
+layout_mode = 2
+text = "SFX VOLUME:"
+
+[node name="SfxSlider" type="HSlider" parent="CenterContainer/OptionsView/VBox/SettingsGrid"]
+custom_minimum_size = Vector2(220, 24)
+layout_mode = 2
+size_flags_vertical = 4
+value = 80.0
+
+[node name="SfxValLbl" type="Label" parent="CenterContainer/OptionsView/VBox/SettingsGrid"]
+layout_mode = 2
+text = "80%"
+
+[node name="OrientationLbl" type="Label" parent="CenterContainer/OptionsView/VBox/SettingsGrid"]
+layout_mode = 2
+text = "DISPLAY AXIS:"
+
+[node name="OrientationBtn" type="Button" parent="CenterContainer/OptionsView/VBox/SettingsGrid"]
+custom_minimum_size = Vector2(220, 34)
+layout_mode = 2
+text = "HORIZONTAL (16:9)"
+
+[node name="OrientDescLbl" type="Label" parent="CenterContainer/OptionsView/VBox/SettingsGrid"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "[TAB] TOGGLE"
+
+[node name="Spacer" type="Control" parent="CenterContainer/OptionsView/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ControlsInfo" type="Label" parent="CenterContainer/OptionsView/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.7, 0.8, 0.8)
+theme_override_font_sizes/font_size = 11
+text = "INPUTS: [WASD/D-PAD] Move | [SPACE/A] Fire | [SHIFT/B] Roll | [ESC/START] Pause"
+horizontal_alignment = 1
+
+[node name="BackOptionsBtn" type="Button" parent="CenterContainer/OptionsView/VBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "SAVE & RETURN"
+
+[node name="DebugView" type="Panel" parent="CenterContainer"]
+visible = false
+custom_minimum_size = Vector2(680, 560)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBox" type="VBoxContainer" parent="CenterContainer/DebugView"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 32.0
+offset_top = 22.0
+offset_right = -32.0
+offset_bottom = -22.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="CenterContainer/DebugView/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.25, 0.45, 1)
+theme_override_font_sizes/font_size = 20
+text = "CYBERNETIC OVERRIDE // SECRET DEBUG MAINFRAME"
+horizontal_alignment = 1
+
+[node name="WarningBanner" type="Label" parent="CenterContainer/DebugView/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.75, 0.2, 1)
+theme_override_font_sizes/font_size = 11
+text = "⚠ RESTRICTED ACCESS: HIGH SCORES & TELEMETRY ARE PERMANENTLY DISABLED ⚠"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="CenterContainer/DebugView/VBox"]
+layout_mode = 2
+
+[node name="ScrollContent" type="ScrollContainer" parent="CenterContainer/DebugView/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ItemsVBox" type="VBoxContainer" parent="CenterContainer/DebugView/VBox/ScrollContent"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="Section1Header" type="Label" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "1. CHEATS & SHIP AUGMENTS"
+
+[node name="CheatsRow1" type="HBoxContainer" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnGodMode" type="Button" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox/CheatsRow1"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "[GOD MODE: OFF]"
+
+[node name="BtnInfiniteRolls" type="Button" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox/CheatsRow1"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "[INFINITE ROLLS: OFF]"
+
+[node name="CheatsRow2" type="HBoxContainer" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnJoules1k" type="Button" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox/CheatsRow2"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "[+1,000 JOULES]"
+
+[node name="BtnJoules10k" type="Button" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox/CheatsRow2"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "[+10,000 JOULES]"
+
+[node name="Section2Header" type="Label" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "2. WEAPON LOADOUT & SYNERGY PICKER"
+
+[node name="PresetRow" type="HBoxContainer" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnGodBuild" type="Button" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox/PresetRow"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "[LOAD GOD-BUILD (CW MAGNETRON + CASIMIR)]"
+
+[node name="BtnClearRelics" type="Button" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox/PresetRow"]
+custom_minimum_size = Vector2(160, 34)
+layout_mode = 2
+text = "[CLEAR RELICS]"
+
+[node name="RelicPickerHeader" type="Label" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 10
+text = "SELECT INDIVIDUAL RELICS TO ARM SHIP:"
+
+[node name="RelicGrid" type="HFlowContainer" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox"]
+layout_mode = 2
+theme_override_constants/h_separation = 6
+theme_override_constants/v_separation = 6
+
+[node name="Section3Header" type="Label" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "3. MISSION & SECTOR WARP JUMP"
+
+[node name="WarpGrid" type="GridContainer" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox"]
+layout_mode = 2
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 6
+columns = 3
+
+[node name="BtnWarpS1" type="Button" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox/WarpGrid"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "SECTOR 1 (W1)"
+
+[node name="BtnWarpS1Miniboss" type="Button" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox/WarpGrid"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "S1 MINIBOSS (W6)"
+
+[node name="BtnWarpS1Boss" type="Button" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox/WarpGrid"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "S1 CORVUS (W12)"
+
+[node name="BtnWarpS2" type="Button" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox/WarpGrid"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "SECTOR 2 (W13)"
+
+[node name="BtnWarpS2Boss" type="Button" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox/WarpGrid"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "S2 OUROBOROS (W24)"
+
+[node name="BtnWarpS3" type="Button" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox/WarpGrid"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "S3 GOLIATH (W25)"
+
+[node name="Section4Header" type="Label" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "4. SYSTEM OVERRIDES & ARCHIVES"
+
+[node name="SystemRow" type="HBoxContainer" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnUnlockModes" type="Button" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox/SystemRow"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "[UNLOCK ALL GAME MODES]"
+
+[node name="BtnResetScores" type="Button" parent="CenterContainer/DebugView/VBox/ScrollContent/ItemsVBox/SystemRow"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "[RESET HIGH SCORES]"
+
+[node name="HSeparator2" type="HSeparator" parent="CenterContainer/DebugView/VBox"]
+layout_mode = 2
+
+[node name="ActionRow" type="HBoxContainer" parent="CenterContainer/DebugView/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="BtnLaunchDebug" type="Button" parent="CenterContainer/DebugView/VBox/ActionRow"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "LAUNCH TEST MISSION // WARP ENGAGED"
+
+[node name="BtnBackDebug" type="Button" parent="CenterContainer/DebugView/VBox/ActionRow"]
+custom_minimum_size = Vector2(160, 40)
+layout_mode = 2
+text = "RETURN TO TITLE"
+
+[node name="FooterHints" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -32.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.4, 0.55, 0.7, 0.8)
+theme_override_font_sizes/font_size = 12
+text = "[MOUSE] Click  |  [ARROWS / D-PAD] Navigate  |  [ENTER / BUTTON A] Confirm  |  [ESC / BUTTON B] Back"
+horizontal_alignment = 1

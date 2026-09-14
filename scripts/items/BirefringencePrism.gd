@@ -6,7 +6,7 @@ func _init() -> void:
 	id = "birefringence_prism"
 	display_name = "Birefringence Prism"
 	description = "Projectiles split into 3 refracted beams after traveling 180px."
-	tier = ItemTier.TIER_1_BALLISTIC
+	tier = ItemTier.TIER_2_PARADIGM
 	icon_color = Color(0.3, 0.9, 1.0, 1.0)
 	icon_symbol = "[/]"
 

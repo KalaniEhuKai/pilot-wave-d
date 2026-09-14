@@ -8,6 +8,7 @@ enum HazardType { ASTEROID, PLASMA_BARREL, STORM_CELL }
 @export var hazard_type: HazardType = HazardType.ASTEROID
 @export var max_health: float = 15.0
 var health: float = 15.0
+var use_3d_model: bool = true
 
 var velocity: Vector2 = Vector2.ZERO
 var rotation_speed: float = 0.5
@@ -29,6 +30,15 @@ func _ready() -> void:
 	body_entered.connect(_on_body_entered)
 	
 	_setup_hazard()
+	_register_with_stage_3d()
+
+func _register_with_stage_3d() -> void:
+	if use_3d_model and is_inside_tree():
+		var stage = get_tree().get_first_node_in_group("stage_3d")
+		if not is_instance_valid(stage):
+			stage = get_tree().get_root().find_child("Stage3D", true, false)
+		if is_instance_valid(stage) and stage.has_method("register_hazard"):
+			stage.register_hazard(self)
 
 func _setup_hazard() -> void:
 	var scroll = GameAxis.scroll_dir
@@ -71,6 +81,7 @@ func setup(p_type: HazardType, p_pos: Vector2, p_drop_profile: Dictionary = {}) 
 		drop_guaranteed = 0
 		drop_chance = 0.0
 	_setup_hazard()
+	_register_with_stage_3d()
 	queue_redraw()
 
 func _physics_process(delta: float) -> void:
@@ -180,6 +191,9 @@ func _on_body_entered(body: Node2D) -> void:
 			take_damage(10.0)
 
 func _draw() -> void:
+	if use_3d_model:
+		return
+		
 	match hazard_type:
 		HazardType.ASTEROID:
 			var pts: PackedVector2Array = []

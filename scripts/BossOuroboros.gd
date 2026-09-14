@@ -7,6 +7,7 @@ signal boss_defeated(boss_name: String)
 
 @export var max_health: float = 600.0
 var health: float = 600.0
+var use_3d_model: bool = true
 
 var shield_gate_hp: float = 250.0
 var shield_gate_alive: bool = true
@@ -47,6 +48,11 @@ func _ready() -> void:
 		target_pos = Vector2(vp.x - 160, vp.y * 0.5)
 	
 	GameManager.boss_health_updated.emit(health, max_health, boss_name)
+	
+	if use_3d_model:
+		var stage = get_tree().get_root().find_child("Stage3D", true, false)
+		if is_instance_valid(stage) and stage.has_method("register_boss"):
+			stage.register_boss(self, "ouroboros")
 
 func _physics_process(delta: float) -> void:
 	if hit_flash_timer > 0.0:
@@ -166,7 +172,9 @@ func _transition_to_phase_2() -> void:
 	ex.scale = Vector2(3.0, 3.0)
 	
 	SoundEffects.play_sfx("explosion", 0.4, -4.0)
-	GameManager.request_screen_shake(18.0, 0.6)
+	GameManager.request_directional_shake(Vector2(0, 1), 22.0, 0.6)
+	GameManager.trigger_hit_stop(0.06)
+
 
 func take_damage(amount: float) -> void:
 	if not entry_done:
@@ -250,6 +258,9 @@ func _draw() -> void:
 		var start_a = shield_angle - PI * 0.4
 		var end_a = shield_angle + PI * 0.4
 		draw_arc(Vector2.ZERO, 68.0, start_a, end_a, 24, Color(0.2, 0.9, 1.0, 0.95), 5.0)
+	
+	if use_3d_model:
+		return
 	
 	# Massive Ouroboros Titan Dreadnought Hull
 	var pts = PackedVector2Array([

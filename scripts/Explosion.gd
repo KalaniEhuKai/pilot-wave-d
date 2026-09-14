@@ -15,6 +15,10 @@ func _ready() -> void:
 	SoundEffects.play_sfx("explosion", 0.12, -2.0)
 	GameManager.request_screen_shake(5.0, 0.18)
 	
+	var stage = get_tree().get_first_node_in_group("stage_3d")
+	if stage and stage.has_method("spawn_explosion_3d"):
+		stage.spawn_explosion_3d(global_position, blast_color, max_radius, max_radius >= 60.0)
+	
 	# Create burst particles
 	var particle_count = 16
 	for i in range(particle_count):

@@ -6,6 +6,7 @@ extends Area2D
 signal subsystem_destroyed(subsystem_name: String)
 
 @export var is_miniboss: bool = false
+var use_3d_model: bool = true
 @export var max_core_health: float = 280.0
 var core_health: float = 280.0
 
@@ -83,6 +84,11 @@ func _ready() -> void:
 		global_position = Vector2(vp.x + 150.0, vp.y * 0.5)
 	
 	_emit_health()
+	
+	if use_3d_model:
+		var stage = get_tree().get_root().find_child("Stage3D", true, false)
+		if is_instance_valid(stage) and stage.has_method("register_boss"):
+			stage.register_boss(self, "goliath")
 
 func _emit_health() -> void:
 	var total = maxf(0.0, core_health) + maxf(0.0, port_railgun_health) + maxf(0.0, star_railgun_health) + maxf(0.0, bow_armor_health)
@@ -284,9 +290,12 @@ func _explode_subsystem(pos: Vector2, s_name: String) -> void:
 	exp_node.global_position = pos
 	exp_node.max_radius = 65.0
 	SoundEffects.play_sfx("explosion", 0.05, 3.0)
-	GameManager.request_screen_shake(10.0, 0.3)
+	var dir = (pos - global_position).normalized()
+	GameManager.request_directional_shake(dir if dir != Vector2.ZERO else (GameAxis.forward if GameAxis != null else Vector2.RIGHT), 15.0, 0.35)
+	GameManager.trigger_hit_stop(0.05)
 	GameManager.add_score(2500)
 	subsystem_destroyed.emit(s_name)
+
 
 func _die() -> void:
 	GameManager.add_score(15000)
@@ -331,6 +340,9 @@ func _draw() -> void:
 			draw_line(-lat * 48.0, -lat * 48.0 + local_aim * 850.0, laser_col, laser_w)
 		if star_railgun_alive:
 			draw_line(lat * 48.0, lat * 48.0 + local_aim * 850.0, laser_col, laser_w)
+	
+	if use_3d_model:
+		return
 	
 	# Draw Goliath Fortress Hull
 	var hull_col = Color(0.12, 0.14, 0.22, 1.0)

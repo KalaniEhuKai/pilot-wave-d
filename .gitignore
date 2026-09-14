@@ -1,6 +1,10 @@
 # Godot 4 specific ignores
 .godot/
 
+# Temporary and scratch files
+temp/
+scratch/
+
 # Editor and OS files
 *.tmp
 Thumbs.db

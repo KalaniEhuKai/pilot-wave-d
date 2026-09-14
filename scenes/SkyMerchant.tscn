@@ -91,8 +91,8 @@ theme_override_constants/separation = 10
 [node name="Title" type="Label" parent="Panel/VBox/HBoxStalls/P1Stall"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.2, 0.95, 1, 1)
-theme_override_font_sizes/font_size = 14
-text = "PLAYER 1 SUPPLY STALL"
+theme_override_font_sizes/font_size = 13
+text = "PLAYER 1 SUPPLY STALL // [WASD] • [SPACE] BUY"
 horizontal_alignment = 1
 
 [node name="P1Wallet" type="Label" parent="Panel/VBox/HBoxStalls/P1Stall"]
@@ -110,7 +110,6 @@ columns = 3
 [node name="P1RepairBtn" type="Button" parent="Panel/VBox/HBoxStalls/P1Stall"]
 custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
-focus_mode = 0
 theme_override_colors/font_color = Color(0.2, 1, 0.7, 1)
 theme_override_font_sizes/font_size = 12
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
@@ -119,7 +118,6 @@ text = "NANO REPAIR (+2 HULL) - 15 J"
 [node name="P1RerollBtn" type="Button" parent="Panel/VBox/HBoxStalls/P1Stall"]
 custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
-focus_mode = 0
 theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
 theme_override_font_sizes/font_size = 12
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
@@ -134,8 +132,8 @@ theme_override_constants/separation = 10
 [node name="Title" type="Label" parent="Panel/VBox/HBoxStalls/P2Stall"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.75, 0.2, 1)
-theme_override_font_sizes/font_size = 14
-text = "PLAYER 2 SUPPLY STALL"
+theme_override_font_sizes/font_size = 13
+text = "PLAYER 2 SUPPLY STALL // [ARROWS] • [ENTER] BUY"
 horizontal_alignment = 1
 
 [node name="P2Wallet" type="Label" parent="Panel/VBox/HBoxStalls/P2Stall"]
@@ -153,7 +151,6 @@ columns = 3
 [node name="P2RepairBtn" type="Button" parent="Panel/VBox/HBoxStalls/P2Stall"]
 custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
-focus_mode = 0
 theme_override_colors/font_color = Color(0.2, 1, 0.7, 1)
 theme_override_font_sizes/font_size = 12
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
@@ -162,7 +159,6 @@ text = "NANO REPAIR (+2 HULL) - 15 J"
 [node name="P2RerollBtn" type="Button" parent="Panel/VBox/HBoxStalls/P2Stall"]
 custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
-focus_mode = 0
 theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
 theme_override_font_sizes/font_size = 12
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
@@ -171,8 +167,7 @@ text = "REROLL WARES - 5 J"
 [node name="UndockBtn" type="Button" parent="Panel/VBox"]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
-focus_mode = 0
 theme_override_colors/font_color = Color(0.2, 1, 0.85, 1)
 theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
-text = "UNDOCK & ENGAGE NEXT PATROL SECTOR"
+text = "UNDOCK & ENGAGE NEXT PATROL SECTOR [SHIFT / R-CTRL / ESC]"

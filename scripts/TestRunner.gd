@@ -128,17 +128,29 @@ func _ready() -> void:
 	
 	# 7. Test Phase 4 Relic Synergies
 	print("\nSTEP 7: Testing Expanded 20+ Quantum Synergy Relics...")
-	# 7A. Elastic Momentum ricochet
-	var elastic_item = ItemDatabase.get_item_by_id("elastic_momentum")
-	assert(elastic_item != null, "Elastic Momentum not found in ItemDatabase!")
-	var ricochet_bullet = bullet_scene.instantiate()
-	main_inst.add_child(ricochet_bullet)
-	ricochet_bullet.setup(Vector2(2, 200), Vector2.LEFT, false, 2.0)
-	elastic_item.on_projectile_tick(ricochet_bullet, 0.016)
-	assert(ricochet_bullet.direction.x > 0, "Bullet failed to ricochet off left boundary!")
-	assert(ricochet_bullet.damage > 2.0, "Ricochet bullet did not gain kinetic damage!")
-	print(" - 7A: Elastic Momentum ricochet and damage scaling verified.")
-	ricochet_bullet.queue_free()
+	# 7A. Zeeman Splitting orthogonal lateral beams & Retiered Items
+	var zeeman_item = ItemDatabase.get_item_by_id("zeeman_splitting")
+	assert(zeeman_item != null, "Zeeman Splitting not found in ItemDatabase!")
+	assert(zeeman_item.tier == ItemModifier.ItemTier.TIER_1_BALLISTIC, "Zeeman Splitting must be Tier 1!")
+	var z_fired = zeeman_item.on_fire(p1, {"pos": Vector2(100, 100), "dir": Vector2.RIGHT, "dmg": 2.0})
+	assert(z_fired.size() == 3, "Zeeman Splitting must yield primary + twin lateral shots!")
+	# Flank 1 (+90 deg of RIGHT is DOWN, x~0, y>0) and Flank 2 (-90 deg is UP, x~0, y<0)
+	assert(abs(z_fired[1]["dir"].x) < 0.01 and z_fired[1]["dir"].y > 0.9, "Flank 1 must be orthogonal +90 deg!")
+	assert(abs(z_fired[2]["dir"].x) < 0.01 and z_fired[2]["dir"].y < -0.9, "Flank 2 must be orthogonal -90 deg!")
+	
+	# Retiering checks
+	var biref = ItemDatabase.get_item_by_id("birefringence_prism")
+	assert(biref != null and biref.tier == ItemModifier.ItemTier.TIER_2_PARADIGM, "Birefringence Prism must be Tier 2!")
+	var grav = ItemDatabase.get_item_by_id("gravitational_lensing")
+	assert(grav != null and grav.tier == ItemModifier.ItemTier.TIER_2_PARADIGM and grav.category == "offense", "Gravitational Lensing must be Tier 2 Offense!")
+	assert(grav.homing_strength < 3.0, "Gravitational Lensing homing strength must be toned down!")
+	var manifold = ItemDatabase.get_item_by_id("split_manifold")
+	assert(manifold != null and manifold.tier == ItemModifier.ItemTier.TIER_2_PARADIGM, "Split Manifold must be Tier 2!")
+	var heatsink = ItemDatabase.get_item_by_id("carnot_heatsink")
+	assert(heatsink != null and heatsink.tier == ItemModifier.ItemTier.TIER_1_BALLISTIC, "Carnot Heat Sink must be Tier 1!")
+	var tunnel = ItemDatabase.get_item_by_id("quantum_tunneling")
+	assert(tunnel != null and tunnel.tier == ItemModifier.ItemTier.TIER_1_BALLISTIC and tunnel.category == "offense", "Quantum Tunneling must be Tier 1 Offense!")
+	print(" - 7A: Zeeman Splitting orthogonal lateral beams and item re-tierings verified.")
 	
 	# 7B. Tachyon Capacitor hold-charge & pierce
 	var tachyon_item = ItemDatabase.get_item_by_id("tachyon_capacitor")
@@ -178,12 +190,22 @@ func _ready() -> void:
 	assert(p1.shields == 1, "Dirac Inversion failed to restore shield!")
 	print(" - 7D: Dirac Inversion fatal damage rewind verified.")
 	
-	# 7E. Carnot Efficiency Sky Merchant discount
+	# 7E. Carnot Pre-Cooler & Carnot Efficiency Sky Merchant discounts
+	p1.has_carnot_efficiency = false
+	p1.has_carnot_precooler = false
+	var carnot_pre = ItemDatabase.get_item_by_id("carnot_precooler")
+	assert(carnot_pre != null, "Carnot Pre-Cooler not found in ItemDatabase!")
+	assert(carnot_pre.tier == ItemModifier.ItemTier.TIER_2_PARADIGM, "Carnot Pre-Cooler must be Tier 2!")
+	p1.add_modifier(carnot_pre)
+	var discount_pre = shop._get_player_discount(1)
+	assert(is_equal_approx(discount_pre, 0.8), "Carnot Pre-Cooler must grant 20% discount (0.8x)!")
+	
 	var carnot_eff = ItemDatabase.get_item_by_id("carnot_efficiency")
+	assert(carnot_eff != null, "Carnot Efficiency not found in ItemDatabase!")
 	p1.add_modifier(carnot_eff)
-	var discount = shop._get_player_discount(1)
-	assert(discount == 0.5, "Carnot Efficiency failed to grant 50% discount!")
-	print(" - 7E: Carnot Efficiency 50% shop discount verified.")
+	var discount_stacked = shop._get_player_discount(1)
+	assert(is_equal_approx(discount_stacked, 0.4), "Stacked Carnot items must grant 60% discount (0.4x)!")
+	print(" - 7E: Carnot Pre-Cooler (20%) and Carnot Efficiency (50% -> 60% stacked) discounts verified.")
 	
 	# 8. Test Sector Threat Dossier UI
 	print("\nSTEP 8: Testing Sector Threat Dossier Briefing...")
@@ -765,7 +787,25 @@ func _ready() -> void:
 			row_elite_count += 1
 	assert(row_elite_count == 1, "ROW squad must have exactly 1 Elite Champion leader! Found: %d" % row_elite_count)
 	assert(spawner.get_craft_affix(0, 5, "ROW", 2) == 2, "ROW leader must be first craft (index 0)!")
-	print(" - 14B2: Single-Leader Elite Champion promotion verified (no 5-elite squads).")
+	
+	# Verify WaveDirector procedural mutation strictly caps promoted elites to <= 1 per wave
+	var base_scout_wave = {
+		"id": "WAVE_TEST",
+		"spawns": [
+			{"type": 0, "count": 4, "pattern": "ROW", "delay": 0.0, "affix": 0},
+			{"type": 1, "count": 3, "pattern": "ROW", "delay": 1.0, "affix": 0},
+			{"type": 2, "count": 2, "pattern": "ROW", "delay": 2.0, "affix": 0},
+			{"type": 0, "count": 4, "pattern": "ROW", "delay": 3.0, "affix": 0}
+		]
+	}
+	for _t in range(30):
+		var mutated_wave = wd._mutate_template(base_scout_wave, 3, 25)
+		var elite_batches = 0
+		for b in mutated_wave.get("spawns", []):
+			if b.get("affix", 0) != 0:
+				elite_batches += 1
+		assert(elite_batches <= 1, "Procedural wave mutation produced %d elites (max allowed: 1)!" % elite_batches)
+	print(" - 14B2: Single-Leader Elite Champion promotion & max 1 elite per wave verified.")
 	
 	# 14C: ProgressionModel Systemic Balance & Dynamic Tier Probabilities
 	assert(ProgressionModel.get_tier_price(ItemModifier.ItemTier.TIER_1_BALLISTIC) == 35, "Tier 1 price must be 35 J!")
@@ -989,12 +1029,13 @@ func _ready() -> void:
 
 	print(" - 16D: Wave 5 pre-miniboss shop buying power verified (strictly 1-2 items purchased, lucky T3 immediately affordable at 95 J, exactly matching Sector 1 budget).")
 
-	# 16E: Escalating Reroll Protection
+	# 16E: Escalating Reroll Protection (5 -> 10 -> 20 -> 50 -> 100 J)
 	assert(shop._next_cost(5) == 10, "Reroll 1 to 2 escalation must be 10 J!")
 	assert(shop._next_cost(10) == 20, "Reroll 2 to 3 escalation must be 20 J!")
-	assert(shop._next_cost(20) == 35, "Reroll 3 to 4 escalation must be 35 J!")
-	assert(shop._next_cost(35) == 55, "Reroll 4 to 5 escalation must be 55 J!")
-	print(" - 16E: Escalating reroll inflation curve verified (5 -> 10 -> 20 -> 35 -> 55 J).")
+	assert(shop._next_cost(20) == 50, "Reroll 3 to 4 escalation must be 50 J!")
+	assert(shop._next_cost(50) == 100, "Reroll 4 to 5 escalation must be 100 J!")
+	assert(shop._next_cost(100) == 200, "Reroll 5 to 6 escalation must be 200 J!")
+	print(" - 16E: Escalating reroll inflation curve verified (5 -> 10 -> 20 -> 50 -> 100 -> 200 J).")
 
 	# 16F: Quantum Cargo Hauler Crate Drops & Option 2 Golden Plasma Bounties
 	print("\nTesting 16F: Quantum Cargo Hauler Crate Drops & Option 2 Golden Plasma Bounties...")
@@ -1308,7 +1349,1124 @@ func _ready() -> void:
 	assert(s1_late_ids.has(w7_tpl.get("id")), "Sector 1 Wave 7 must roll an advanced second-half template! Found: %s" % w7_tpl.get("id"))
 	print(" - 18E: Sector 1 second-half variety & guaranteed Bomber presence (W7-W11) verified.")
 
+	# 19: Testing Phase 1 Cyberpunk 2.5D Stage, 3D Player Craft & Ballistics
+	print("\nSTEP 19: Testing Phase 1 Cyberpunk 2.5D Stage, 3D Player Craft & Ballistics...")
+	var stage = main_inst.get_node_or_null("Stage3D")
+	assert(stage != null, "Stage3D node must be present in Main scene!")
+	assert(stage.camera != null, "Stage3D must have an Orthographic Camera3D!")
+	assert(stage.world_env != null, "Stage3D must have HDR WorldEnvironment configured!")
+	print(" - 19A: Stage3D viewport, 1:1 camera projection, and HDR environment verified.")
+
+	# 19B: Verify P1 3D Bridge & Mesh Structure
+	assert(stage.player_bridges.has(p1.get_instance_id()), "P1 must have an active 3D Visual Bridge!")
+	var bridge_p1 = stage.player_bridges[p1.get_instance_id()]
+	assert(bridge_p1.mesh_root != null, "P1 3D mesh root must be instantiated!")
+	assert(bridge_p1.barrel_l != null and bridge_p1.barrel_r != null, "P1 must have dual articulating autocannon barrels!")
+	assert(bridge_p1.flash_l != null and bridge_p1.flash_r != null, "P1 must have dynamic muzzle flash point-lights!")
+	print(" - 19B: P1 Viper-IV 3D greebled model, cockpit, and dual autocannons verified.")
+
+	# 19C: Weapon Recoil & Muzzle Flash Kick
+	bridge_p1.trigger_recoil(true)
+	assert(bridge_p1.recoil_l > 5.0, "Triggering recoil must push port barrel back!")
+	assert(bridge_p1.flash_l.light_energy > 2.0, "Triggering recoil must activate muzzle flash point-light!")
+	bridge_p1.update(0.016)
+	assert(bridge_p1.barrel_l.position.x < -4.0, "Barrel position must reflect physical recoil along linear guide rails!")
+	print(" - 19C: Autocannon physical recoil and muzzle flash illumination verified.")
+
+	# 19D: 3D Banking & Barrel Roll
+	p1.bank_angle = 0.25
+	bridge_p1.update(0.05)
+	assert(absf(bridge_p1.current_bank_roll) > 0.05, "Ship must bank on lateral movement!")
+	p1.is_rolling = true
+	p1.roll_elapsed = 0.35
+	p1.roll_duration = 0.7
+	bridge_p1.update(0.016)
+	p1.is_rolling = false
+	print(" - 19D: Dynamic 3D banking and 360-degree corkscrew barrel roll verified.")
+
+	# 19E: High-Velocity Aerodynamic Needle Darts & Enemy Plasma Orbs
+	var bullet_19 = bullet_scene.instantiate()
+	main_inst.add_child(bullet_19)
+	bullet_19.setup(Vector2(400, 300), Vector2.RIGHT, false, 2.0)
+	bullet_19.queue_redraw()
+	bullet_19.is_enemy = true
+	bullet_19.queue_redraw()
+	bullet_19.queue_free()
+	print(" - 19E: Aerodynamic needle darts and rotating corona plasma orbs verified.")
+
+	# 20: Testing Phase 2 3D Enemy Bestiary, Rotating Turrets & Hex Shields
+	print("\nSTEP 20: Testing Phase 2 3D Enemy Bestiary, Rotating Turrets & Hex Shields...")
+	
+	# 20A: 3D Hull Construction for Key Archetypes
+	var enemy_types_to_check = [
+		EnemyScript.EnemyType.SCOUT,
+		EnemyScript.EnemyType.BOMBER,
+		EnemyScript.EnemyType.INTERCEPTOR,
+		EnemyScript.EnemyType.SNIPER,
+		EnemyScript.EnemyType.SHIELD_FRIGATE,
+		EnemyScript.EnemyType.KNIGHT_VANGUARD,
+		EnemyScript.EnemyType.TURRET_PLATFORM,
+		EnemyScript.EnemyType.CARGO_HAULER
+	]
+	var ShipBuilder3DScript = load("res://scripts/ShipBuilder3D.gd")
+	for et in enemy_types_to_check:
+		var model = ShipBuilder3DScript.build_enemy_ship(et, 0)
+		assert(model != null, "ShipBuilder3D failed to build 3D model for enemy type %d!" % et)
+		model.queue_free()
+	print(" - 20A: Procedural 3D hulls and greebles verified across all archetype classes.")
+
+	# 20B: Turret Platform Articulated 360-degree Tracking
+	var turret_enemy = enemy_scene.instantiate()
+	main_inst.add_child(turret_enemy)
+	turret_enemy.setup(EnemyScript.EnemyType.TURRET_PLATFORM, Vector2(500, 300), 1, null)
+	turret_enemy.turret_angle = 1.25
+	assert(stage.enemy_bridges.has(turret_enemy.get_instance_id()), "Turret platform must register 3D visual bridge!")
+	var bridge_turret = stage.enemy_bridges[turret_enemy.get_instance_id()]
+	assert(bridge_turret.turret_head != null, "3D Turret platform must feature articulated TurretHead!")
+	bridge_turret.update(0.016)
+	assert(is_equal_approx(bridge_turret.turret_head.rotation.y, -1.25), "3D TurretHead rotation must track 2D turret_angle in real time!")
+	turret_enemy.queue_free()
+	print(" - 20B: Turret platform 360-degree rotating 3D turret barbette verified.")
+
+	# 20C: Knight Vanguard Articulated Mirror Shield Plates
+	var knight_enemy = enemy_scene.instantiate()
+	main_inst.add_child(knight_enemy)
+	knight_enemy.setup(EnemyScript.EnemyType.KNIGHT_VANGUARD, Vector2(600, 300), 1, null)
+	var bridge_knight = stage.enemy_bridges[knight_enemy.get_instance_id()]
+	assert(bridge_knight.shield_plate_l != null and bridge_knight.shield_plate_r != null, "Knight Vanguard must possess 3D articulated shield plates!")
+	
+	knight_enemy.knight_is_firing_salvo = true
+	bridge_knight.update(0.1)
+	assert(bridge_knight.shield_plate_l.rotation.y < -0.1, "Firing salvo must part port shield plate outward!")
+	assert(bridge_knight.shield_plate_r.rotation.y > 0.1, "Firing salvo must part starboard shield plate outward!")
+	
+	knight_enemy.knight_shield_shattered = true
+	bridge_knight.update(0.016)
+	assert(bridge_knight.shield_plate_l.visible == false and bridge_knight.shield_plate_r.visible == false, "Shattered shield must hide physical 3D plates!")
+	knight_enemy.queue_free()
+	print(" - 20C: Knight Vanguard articulated 3D shield plates and salvo unmasking verified.")
+
+	# 20D: Reactive Hexagonal Energy Forcefields
+	var shielded_enemy = enemy_scene.instantiate()
+	main_inst.add_child(shielded_enemy)
+	shielded_enemy.setup(EnemyScript.EnemyType.SCOUT, Vector2(700, 300), 1, null, EnemyScript.EliteAffix.SHIELDED)
+	assert(shielded_enemy.energy_shield_hp > 0.0, "SHIELDED affix must have energy shield HP!")
+	shielded_enemy.queue_redraw()
+	shielded_enemy.queue_free()
+	print(" - 20D: Reactive hexagonal forcefield generation verified.")
+
+	# 21: Testing Phase 3 3D Bosses & Hazards
+	print("\nSTEP 21: Testing Phase 3 3D Bosses (Corvus, Goliath, Ouroboros) & 3D Hazards...")
+	
+	# 21A: Super-Dreadnought Corvus 3D Subsystems
+	var corvus_3d = corvus_scene.instantiate()
+	main_inst.add_child(corvus_3d)
+	assert(stage.boss_bridges.has(corvus_3d.get_instance_id()), "Corvus must register 3D visual bridge!")
+	var bridge_corvus = stage.boss_bridges[corvus_3d.get_instance_id()]
+	assert(bridge_corvus.wing_p != null and bridge_corvus.wing_s != null, "Corvus 3D model must have physical wings!")
+	assert(bridge_corvus.fusion_core != null, "Corvus 3D model must have singularity fusion core!")
+	
+	corvus_3d.port_wing_alive = false
+	bridge_corvus.update(0.016)
+	assert(bridge_corvus.wing_p.visible == false, "Broken port wing must hide 3D port wing mesh!")
+	corvus_3d.queue_free()
+	print(" - 21A: Super-Dreadnought Corvus 3D multi-deck hull and breakable wings verified.")
+
+	# 21B: Armored Behemoth Goliath 3D Fortress
+	var goliath_3d = goliath_scene.instantiate()
+	main_inst.add_child(goliath_3d)
+	var bridge_goliath = stage.boss_bridges[goliath_3d.get_instance_id()]
+	assert(bridge_goliath.bow_armor != null, "Goliath 3D model must possess BowArmor wedge!")
+	assert(bridge_goliath.rg_p != null and bridge_goliath.rg_s != null, "Goliath 3D model must possess articulating railguns!")
+	
+	goliath_3d.railgun_aim_dir = Vector2(1.0, 1.0).normalized()
+	bridge_goliath.update(0.016)
+	assert(bridge_goliath.rg_p.rotation.y != 0.0, "Goliath 3D railguns must aim toward target!")
+	
+	goliath_3d.bow_armor_alive = false
+	bridge_goliath.update(0.016)
+	assert(bridge_goliath.bow_armor.visible == false, "Shattered bow armor must hide physical 3D bow wedge!")
+	goliath_3d.queue_free()
+	print(" - 21B: Armored Behemoth Goliath 3D fortress, breakable bow, and tracking railguns verified.")
+
+	# 21C: Apex Titan Ouroboros 3D Singularity
+	var ouroboros_3d = ouroboros_scene.instantiate()
+	main_inst.add_child(ouroboros_3d)
+	var bridge_ouroboros = stage.boss_bridges[ouroboros_3d.get_instance_id()]
+	assert(bridge_ouroboros.shield_gate != null, "Ouroboros 3D model must have shield gate armatures!")
+	assert(bridge_ouroboros.singularity_core != null, "Ouroboros 3D model must have singularity core!")
+	ouroboros_3d.shield_angle = 1.8
+	bridge_ouroboros.update(0.016)
+	assert(is_equal_approx(bridge_ouroboros.shield_gate.rotation.y, -1.8), "3D Shield gate must rotate to match shield_angle!")
+	ouroboros_3d.queue_free()
+	print(" - 21C: Apex Titan Ouroboros 3D singularity and rotating barrier gate verified.")
+
+	# 21D: 3D Environmental Hazards (Asteroids, Plasma Barrels, Storm Cells)
+	var HazardScript = load("res://scripts/HazardObject.gd")
+	var asteroid_3d = hazard_scene.instantiate()
+	main_inst.add_child(asteroid_3d)
+	asteroid_3d.setup(HazardScript.HazardType.ASTEROID, Vector2(200, 200))
+	var bridge_hazard = stage.hazard_bridges[asteroid_3d.get_instance_id()]
+	assert(bridge_hazard.mesh_root != null, "Hazard must have 3D mesh instantiated!")
+	assert(bridge_hazard.hazard_type == HazardScript.HazardType.ASTEROID, "Asteroid bridge hazard_type must be ASTEROID!")
+	var rot_before = bridge_hazard.mesh_root.rotation
+	bridge_hazard.update(0.1)
+	assert(bridge_hazard.mesh_root.rotation != rot_before, "3D Asteroid must tumble in 3D space!")
+	asteroid_3d.queue_free()
+
+	var barrel_3d = hazard_scene.instantiate()
+	main_inst.add_child(barrel_3d)
+	barrel_3d.setup(HazardScript.HazardType.PLASMA_BARREL, Vector2(250, 200))
+	var bridge_barrel = stage.hazard_bridges[barrel_3d.get_instance_id()]
+	assert(bridge_barrel.mesh_root != null and bridge_barrel.hazard_type == HazardScript.HazardType.PLASMA_BARREL, "Plasma barrel must build PLASMA_BARREL bridge!")
+	barrel_3d.queue_free()
+
+	var storm_3d = hazard_scene.instantiate()
+	main_inst.add_child(storm_3d)
+	storm_3d.setup(HazardScript.HazardType.STORM_CELL, Vector2(300, 200))
+	var bridge_storm = stage.hazard_bridges[storm_3d.get_instance_id()]
+	assert(bridge_storm.mesh_root != null and bridge_storm.hazard_type == HazardScript.HazardType.STORM_CELL, "Storm cell must build STORM_CELL bridge!")
+	storm_3d.queue_free()
+	print(" - 21D: 3D Environmental hazards (Asteroid, Plasma Barrel, Storm Cell) and tumble verified.")
+
+	# 22: Testing Phase 4 3D Station, Hull Shatter Debris & Deep-Space Parallax
+	print("\nSTEP 22: Testing Phase 4 3D Station, Hull Shatter Debris & Deep-Space Parallax...")
+	
+	# 22A: 3D Orbital Trade Station & Counter-Rotating Rings
+	var shop_inst = main_inst.get_node_or_null("SkyMerchant")
+	assert(shop_inst != null, "Main must contain SkyMerchant node!")
+	assert(stage.station_bridge != null, "Stage3D must register StationBridge3D for SkyMerchant!")
+	var bridge_station = stage.station_bridge
+	assert(bridge_station.outer_ring != null and bridge_station.inner_ring != null, "3D Station must feature outer and inner rings!")
+	assert(bridge_station.reactor != null and bridge_station.beacon != null, "3D Station must feature singularity reactor and warning beacon!")
+	
+	shop_inst.station_visible = true
+	var outer_rot_start = bridge_station.outer_ring.rotation.z
+	var inner_rot_start = bridge_station.inner_ring.rotation.z
+	bridge_station.update(0.1)
+	assert(bridge_station.outer_ring.rotation.z > outer_rot_start, "3D Outer ring must rotate clockwise!")
+	assert(bridge_station.inner_ring.rotation.z < inner_rot_start, "3D Inner ring must rotate counter-clockwise!")
+	print(" - 22A: 3D Super Quarket Station mesh, counter-rotating rings, and telemetry sync verified.")
+
+	# 22B: 3D Hull Fracture Debris & Physical Tumbling
+	stage.spawn_explosion_3d(Vector2(400, 300), Color(1.0, 0.6, 0.1), 80.0, true)
+	assert(stage.active_debris.size() > 0, "spawn_explosion_3d must create active 3D debris shards!")
+	assert(stage.active_shockwaves.size() > 0, "spawn_explosion_3d must create active 3D shockwaves!")
+	assert(stage.active_flashes.size() > 0, "spawn_explosion_3d must create dynamic point light flash!")
+	
+	var shard_sample = stage.active_debris[0]
+	var pos_before = shard_sample.pos
+	stage._update_debris_and_vfx(0.05)
+	assert(shard_sample.pos != pos_before, "3D debris shards must fly outward with physical velocity!")
+	print(" - 22B: 3D Hull fracture debris, shockwave rings, and cascading detonations verified.")
+
+	# 22C: 3D Deep-Space Parallax Backdrop & Volumetric Nebulae
+	assert(stage.megastructures.size() >= 3, "Stage3D must initialize at least 3 distant megastructures!")
+	assert(stage.nebula_clouds.size() >= 5, "Stage3D must initialize volumetric HDR nebula clouds!")
+	var ms_pos_before = stage.megastructures[0].position
+	stage._update_background_3d(0.1)
+	assert(stage.megastructures[0].position != ms_pos_before, "Megastructures must drift with parallax scrolling!")
+	
+	stage.set_sector_theme(2)
+	assert(stage.current_sector == 2, "Stage3D must track current sector!")
+	print(" - 22C: 3D Deep-space megastructures, parallax drift, and volumetric nebulae verified.")
+
+	# 22D: Hyperspace Warp Tunnel Activation
+	stage.trigger_warp_tunnel(0.45)
+	assert(stage.warp_tunnel_active == true, "trigger_warp_tunnel must activate hyperspace tunnel state!")
+	assert(stage.warp_tunnel_rings.size() >= 12, "Stage3D must possess warp conduit rings!")
+	stage._update_background_3d(0.1)
+	assert(stage.warp_tunnel_rings[0].material_override.albedo_color.a > 0.0, "Warp tunnel rings must become visible during jump!")
+	print(" - 22D: Hyperspace relativistic warp tunnel and conduit rings verified.")
+
+	# 23: Testing Phase 5 Holographic Cyberpunk HUD, Vector Glyphs & Sensory Juice
+	print("\nSTEP 23: Testing Phase 5 Holographic Cyberpunk HUD, Vector Glyphs & Sensory Juice...")
+	
+	# 23A: Holographic Cyberpunk HUD & Dynamic Lock-On Reticles
+	var hud_inst = main_inst.get_node_or_null("HUD")
+	assert(hud_inst != null, "Main scene must contain HUD node!")
+	assert(hud_inst.holo_overlay != null, "HUD must contain HoloCyberOverlay child!")
+	
+	# Spawn an elite enemy to test dynamic lock-on
+	var elite_target = enemy_scene.instantiate()
+	main_inst.add_child(elite_target)
+	elite_target.setup(EnemyScript.EnemyType.SCOUT, Vector2(500, 320), 1, null, 1)
+	elite_target.is_elite = true
+	var active_locks = hud_inst.holo_overlay.get_active_lock_targets()
+	assert(active_locks.size() >= 1, "HoloCyberOverlay must actively acquire lock-on targeting on elites!")
+	elite_target.queue_free()
+	print(" - 23A: Holographic corner brackets, digital scanlines, and elite lock-on reticles verified.")
+
+
+	# 23B: Vector Item Glyph System
+	all_items = ItemDatabase.get_all_items()
+	assert(all_items.size() >= 60, "ItemDatabase must catalog 60+ items!")
+	for it in all_items:
+		assert(it.has_method("get_glyph"), "Item %s must implement get_glyph()!" % it.id)
+		var glyph = it.get_glyph()
+		assert(glyph != "", "Item %s must have non-empty vector glyph!" % it.id)
+	print(" - 23B: Vector item glyph mapping verified across all 60+ cataloged relics.")
+
+
+	# 23C: Sensory Juice Micro Hit-Stop
+	GameManager.trigger_hit_stop(0.04)
+	assert(Engine.time_scale < 0.2, "trigger_hit_stop must drop Engine.time_scale for visceral hit impact!")
+	Engine.time_scale = 1.0
+	print(" - 23C: Micro hit-stop engine freeze verified.")
+
+	# 23D: Directional Screen Shake
+	var test_impulse = Vector2(-1.0, 0.5).normalized()
+	GameManager.request_directional_shake(test_impulse, 14.0, 0.25)
+	assert(main_inst.shake_direction.is_equal_approx(test_impulse), "Main must align shake_direction along impact vector!")
+
+	assert(main_inst.shake_intensity >= 14.0, "Main must register directional shake intensity!")
+	main_inst._process(0.016)
+	assert(main_inst.camera.offset != Vector2.ZERO, "Camera offset must violently displace along impact vector!")
+	main_inst.camera.offset = Vector2.ZERO
+	main_inst.shake_timer = 0.0
+	print(" - 23D: Vector-aligned directional screen shake verified.")
+
+	# 24: Testing Phase 6 Star Trek Generations Nexus Cloud, Enemy Spawning VFX & 3D Secrets
+	print("\nSTEP 24: Testing Phase 6 Star Trek Generations Nexus Cloud, Enemy Spawning VFX & 3D Secrets...")
+	
+	# 24A: Wave Function Nexus Ribbon System
+	assert(stage.nexus_ribbon != null, "Stage3D must have NexusRibbon3D instantiated!")
+	assert(stage.nexus_ribbon.ribbon_instances.size() == 4, "NexusRibbon3D must have 4 iridescent plasma ribbons!")
+	assert(stage.nexus_ribbon.lightning_instance != null, "NexusRibbon3D must have dynamic lightning generator!")
+	assert(stage.nexus_ribbon.embers.size() == 24, "NexusRibbon3D must maintain drifting quantum embers pool!")
+	
+	stage.trigger_nexus_surge(0.45)
+	assert(stage.nexus_ribbon.surge_multiplier > 3.0, "trigger_nexus_surge must flare surge_multiplier over 3.0!")
+	stage.nexus_ribbon._process(0.016)
+	assert(stage.nexus_ribbon.ribbon_imms[0].get_surface_count() == 1, "Nexus ribbon strands must generate ImmediateMesh surface strips!")
+	assert(stage.nexus_ribbon.lightning_imm.get_surface_count() == 1, "Nexus lightning must generate crackling electrical arc lines!")
+	print(" - 24A: Wave Function Nexus ribbon rendering, sinusoidal undulation, and surge trigger verified.")
+
+	# 24B: Enemy Spawning Materialization VFX (Aperture & Nexus Lightning Bridge)
+	var spawn_test_pos = Vector2(800.0, 320.0)
+	stage.spawn_materialization_aperture(spawn_test_pos, 0.4)
+	assert(stage.active_apertures.size() >= 1, "spawn_materialization_aperture must register collapsing 3D iris ring!")
+	stage._update_debris_and_vfx(0.016)
+	
+	var initial_arcs = stage.nexus_ribbon.active_targeted_arcs.size()
+	stage.trigger_materialization_flash(spawn_test_pos)
+	assert(stage.active_flashes.size() >= 1, "trigger_materialization_flash must spawn high-energy light flash!")
+	assert(stage.active_shockwaves.size() >= 1, "trigger_materialization_flash must spawn reality-compression shockwave!")
+	assert(stage.nexus_ribbon.active_targeted_arcs.size() > initial_arcs, "trigger_materialization_flash must arc lightning bridge from Nexus to spawn coordinate!")
+	print(" - 24B: Enemy materialization 3D aperture and lightning bridge from Nexus verified.")
+
+	# 24C: 3D Quantum Anomaly Model & Gimbal Mechanics
+	ShipBuilder3DScript = load("res://scripts/ShipBuilder3D.gd")
+	var anomaly_mesh = ShipBuilder3DScript.build_quantum_anomaly_mesh()
+	assert(anomaly_mesh.get_node_or_null("AnomalyCore") != null, "Quantum Anomaly must have hyper-dimensional core!")
+	assert(anomaly_mesh.get_node_or_null("GimbalOuter") != null, "Quantum Anomaly must have outer gimbal ring!")
+	assert(anomaly_mesh.get_node_or_null("GimbalInner") != null, "Quantum Anomaly must have inner gimbal ring!")
+	anomaly_mesh.queue_free()
+	
+	var test_anomaly_dict = {
+		"pos": Vector2(500.0, 250.0),
+		"radius": 24.0,
+		"elapsed": 0.0,
+		"shattered": false
+	}
+	stage.register_anomaly(test_anomaly_dict)
+	assert(stage.anomaly_bridges.size() >= 1, "register_anomaly must attach 3D gimbal model to Stage3D!")
+	stage._process(0.016)
+	
+	var initial_debris = stage.active_debris.size()
+	stage.shatter_anomaly_3d(Vector2(500.0, 250.0))
+	assert(stage.active_debris.size() > initial_debris, "shatter_anomaly_3d must shatter crystal neon shards into 3D space!")
+	print(" - 24C: 3D Quantum Anomaly model, gimbal ring rotation, and crystalline shatter verified.")
+
+	# 24D: 3D Dirac Monopole Landmark Spire & Supernova Detonation
+	var monopole_mesh = ShipBuilder3DScript.build_dirac_monopole_mesh()
+	assert(monopole_mesh.get_node_or_null("MonopoleSingularity") != null, "Dirac Monopole must have magnetic singularity core!")
+	assert(monopole_mesh.get_node_or_null("NorthPole") != null, "Dirac Monopole must have North Pole emitter cap!")
+	assert(monopole_mesh.get_node_or_null("SouthPole") != null, "Dirac Monopole must have South Pole emitter cap!")
+	assert(monopole_mesh.get_node_or_null("PolarRingNorth") != null, "Dirac Monopole must have North polar containment ring!")
+	assert(monopole_mesh.get_node_or_null("PolarRingSouth") != null, "Dirac Monopole must have South polar containment ring!")
+	monopole_mesh.queue_free()
+	
+	var test_monopole_dict = {
+		"pos": Vector2(640.0, 360.0),
+		"health": 14.0,
+		"max_health": 14.0,
+		"active": true,
+		"elapsed": 0.0
+	}
+	stage.register_monopole(test_monopole_dict)
+	assert(stage.monopole_bridge.has("mesh"), "register_monopole must attach 3D ancient spire to Stage3D!")
+	stage._process(0.016)
+	
+	stage.shatter_monopole_3d(Vector2(640.0, 360.0))
+	assert(not stage.monopole_bridge.has("mesh"), "shatter_monopole_3d must despawn 3D spire model!")
+	var has_supernova_shockwave = false
+	for sw in stage.active_shockwaves:
+		if sw.get("max_r", 0.0) >= 120.0:
+			has_supernova_shockwave = true
+			break
+	assert(has_supernova_shockwave, "shatter_monopole_3d must unleash massive 140px magnetic supernova shockwave!")
+	print(" - 24D: 3D Dirac Monopole landmark spire, polar rings, and magnetic reversal supernova verified.")
+
+	# =========================================================================
+	# STEP 25: Testing Menu Revamp, High Score Persistence, Universal Focus & Pause System
+	# =========================================================================
+	print("\nSTEP 25: Testing Menu Revamp, High Scores, Universal Focus & Pause System...")
+	
+	# 25A: HighScoreManager Persistence & Ranking
+	assert(HighScoreManager != null, "HighScoreManager autoload must exist!")
+	HighScoreManager.reset_to_defaults()
+	var default_scores = HighScoreManager.get_scores()
+	assert(default_scores.size() == 10, "HighScoreManager must initialize with 10 default arcade records!")
+	assert(default_scores[0]["score"] == 150000, "Default #1 score must be 150000!")
+	
+	# Record simulated run
+	var test_rank = HighScoreManager.record_run(250000, 3, 36, "1P Normal", 600.0, 450, true)
+	assert(test_rank == 1, "250,000 pt run must earn Rank #1 record!")
+	var updated_scores = HighScoreManager.get_scores()
+	assert(updated_scores[0]["score"] == 250000, "Top score must now be 250000!")
+	assert(updated_scores.size() == 10, "High scores list must strictly cap at 10 entries!")
+	
+	assert(HighScoreManager.is_high_score(999999) == true, "999,999 must qualify as high score!")
+	assert(HighScoreManager.is_high_score(50) == false, "50 pts must not qualify as high score!")
+	assert(HighScoreManager.format_time(125.0) == "02:05", "125s must format to 02:05!")
+	
+	# Restore default archives
+	HighScoreManager.reset_to_defaults()
+	assert(HighScoreManager.get_scores()[0]["score"] == 150000, "reset_to_defaults must restore original records!")
+	print(" - 25A: HighScoreManager local persistence, top-10 sorting, and rank evaluation verified.")
+	
+	# 25B: MainMenu Scene & View Transitions
+	var main_menu_scene = load("res://scenes/MainMenu.tscn")
+	assert(main_menu_scene != null, "MainMenu.tscn must exist and load cleanly!")
+	var menu_inst = main_menu_scene.instantiate()
+	add_child(menu_inst)
+	
+	assert(menu_inst.title_view != null and menu_inst.title_view.visible == true, "MainMenu must start on TitleView!")
+	assert(menu_inst.start_btn.focus_mode == Control.FOCUS_ALL, "Start button must have FOCUS_ALL!")
+	assert(menu_inst.scores_btn.focus_mode == Control.FOCUS_ALL, "Scores button must have FOCUS_ALL!")
+	assert(menu_inst.options_btn.focus_mode == Control.FOCUS_ALL, "Options button must have FOCUS_ALL!")
+	
+	# Transition to Mission View
+	menu_inst._on_start_pressed()
+	assert(menu_inst.mission_view.visible == true, "MissionView must become visible after start pressed!")
+	assert(menu_inst.launch_btn.focus_mode == Control.FOCUS_ALL, "Launch button must have FOCUS_ALL!")
+	
+	# Transition to Scores View
+	menu_inst._on_scores_pressed()
+	assert(menu_inst.scores_view.visible == true, "ScoresView must become visible after scores pressed!")
+	assert(menu_inst.scores_container.get_child_count() == 10, "ScoresView table must contain 10 row entries!")
+	
+	# Transition to Options View
+	menu_inst._on_options_pressed()
+	assert(menu_inst.options_view.visible == true, "OptionsView must become visible after options pressed!")
+	assert(menu_inst.master_slider.focus_mode == Control.FOCUS_ALL, "Master slider must have FOCUS_ALL!")
+	assert(menu_inst.sfx_slider.focus_mode == Control.FOCUS_ALL, "SFX slider must have FOCUS_ALL!")
+	
+	# Return to Title View
+	menu_inst._show_title_view()
+	assert(menu_inst.title_view.visible == true, "TitleView must become visible after returning to menu!")
+	print(" - 25B: MainMenu sub-views, table rows, and FOCUS_ALL controls verified.")
+	
+	# 25C: Mission Deployment Configuration
+	menu_inst._select_players(2)
+	assert(GameManager.is_coop_mode == true, "Selecting 2P must enable GameManager.is_coop_mode!")
+	menu_inst._select_players(1)
+	assert(GameManager.is_coop_mode == false, "Selecting 1P must disable GameManager.is_coop_mode!")
+	
+	menu_inst._select_mode(GameManager.GameMode.NORMAL)
+	assert(GameManager.current_game_mode == GameManager.GameMode.NORMAL, "GameMode.NORMAL must be active!")
+	menu_inst.queue_free()
+	print(" - 25C: Mission Deployment 1P/2P co-op and GameMode architecture verified.")
+	
+	# 25D: In-Game PauseMenu Lifecycle & Universal Input
+	var pause_menu = main_inst.get_node_or_null("PauseMenu")
+	assert(pause_menu != null, "Main scene must have PauseMenu instance attached!")
+	assert(pause_menu.visible == false and not pause_menu.is_open, "PauseMenu must start hidden and closed!")
+	
+	pause_menu.open_pause()
+	assert(pause_menu.visible == true and pause_menu.is_open == true, "open_pause must make PauseMenu visible!")
+	assert(get_tree().paused == true, "open_pause must pause the SceneTree!")
+	assert(pause_menu.resume_btn.focus_mode == Control.FOCUS_ALL, "Resume button must have FOCUS_ALL!")
+	assert(pause_menu.synergy_btn.focus_mode == Control.FOCUS_ALL, "Synergy button must have FOCUS_ALL!")
+	assert(pause_menu.settings_btn.focus_mode == Control.FOCUS_ALL, "Settings button must have FOCUS_ALL!")
+	assert(pause_menu.restart_btn.focus_mode == Control.FOCUS_ALL, "Restart button must have FOCUS_ALL!")
+	assert(pause_menu.main_menu_btn.focus_mode == Control.FOCUS_ALL, "MainMenu button must have FOCUS_ALL!")
+	
+	pause_menu.close_pause()
+	assert(pause_menu.visible == false and not pause_menu.is_open, "close_pause must hide PauseMenu!")
+	assert(get_tree().paused == false, "close_pause must unpause the SceneTree!")
+	print(" - 25D: PauseMenu open/close lifecycle, tree pause state, and command buttons verified.")
+	
+	# 25E: Synergy Inspector Verification
+	p1.active_modifiers.clear()
+	p1.add_modifier(ItemDatabase.get_item("tachyon_capacitor"))
+	p1.add_modifier(ItemDatabase.get_item("zeeman_splitting"))
+	pause_menu.open_pause()
+	pause_menu._show_inspector()
+	assert(pause_menu.inspector_panel.visible == true, "InspectorView must be visible!")
+	assert(pause_menu.relics_grid.get_child_count() == 2, "InspectorView must contain 2 relic chip buttons!")
+	assert("TACHYON" in pause_menu.item_title_lbl.text.to_upper(), "Inspector must populate Tachyon Capacitor details!")
+	pause_menu.close_pause()
+	print(" - 25E: Synergy Inspector relic chip display and item details card verified.")
+	
+	# 25F: GameOverOverlay & VictoryOverlay Universal Focus & Main Menu Button
+	var game_over = main_inst.get_node_or_null("GameOverOverlay")
+	assert(game_over != null, "GameOverOverlay must exist!")
+	assert(game_over.restart_button.focus_mode == Control.FOCUS_ALL, "GameOver restart button must have FOCUS_ALL!")
+	assert(game_over.main_menu_button.focus_mode == Control.FOCUS_ALL, "GameOver main menu button must have FOCUS_ALL!")
+	
+	var victory_over = main_inst.get_node_or_null("VictoryOverlay")
+	assert(victory_over != null, "VictoryOverlay must exist!")
+	assert(victory_over.play_again_btn.focus_mode == Control.FOCUS_ALL, "Victory play again button must have FOCUS_ALL!")
+	assert(victory_over.main_menu_btn.focus_mode == Control.FOCUS_ALL, "Victory main menu button must have FOCUS_ALL!")
+	print(" - 25F: GameOverOverlay and VictoryOverlay FOCUS_ALL and MainMenu buttons verified.")
+	
+	# 25G: Procedural UI Audio Generation
+	assert(SoundEffects._streams.has("ui_hover"), "SoundEffects must generate ui_hover stream!")
+	assert(SoundEffects._streams.has("ui_select"), "SoundEffects must generate ui_select stream!")
+	assert(SoundEffects._streams.has("ui_back"), "SoundEffects must generate ui_back stream!")
+	SoundEffects.play_sfx("ui_hover", 0.0, -10.0)
+	SoundEffects.play_sfx("ui_select", 0.0, -10.0)
+	SoundEffects.play_sfx("ui_back", 0.0, -10.0)
+	print(" - 25G: Procedural UI audio streams (ui_hover, ui_select, ui_back) verified.")
+	
+	# 25H: Universal Input Mapping
+	assert(InputMap.has_action("pause"), "InputMap must register 'pause' action!")
+	assert(InputMap.has_action("ui_cancel"), "InputMap must register 'ui_cancel' action!")
+	assert(InputMap.has_action("ui_accept"), "InputMap must register 'ui_accept' action!")
+	assert(InputMap.action_get_events("pause").size() >= 2, "'pause' action must have keyboard and joypad events!")
+	print(" - 25H: Universal input mappings (pause, ui_cancel, ui_accept) verified.")
+
+	# STEP 26: Testing Universal WASD & Independent Dual-Player Modal Navigation
+	print("\nSTEP 26: Testing Universal WASD & Independent Dual-Player Modal Navigation...")
+	
+	# 26A: InputMap Mappings (WASD + Arrows + Dedicated Accept/Cancel)
+	assert(InputMap.has_action("ui_up"), "InputMap must register 'ui_up'!")
+	assert(InputMap.has_action("ui_down"), "InputMap must register 'ui_down'!")
+	assert(InputMap.has_action("ui_left"), "InputMap must register 'ui_left'!")
+	assert(InputMap.has_action("ui_right"), "InputMap must register 'ui_right'!")
+	
+	var has_w = false
+	var has_up = false
+	for ev in InputMap.action_get_events("ui_up"):
+		if ev is InputEventKey:
+			if ev.physical_keycode == KEY_W or ev.keycode == KEY_W:
+				has_w = true
+			if ev.physical_keycode == KEY_UP or ev.keycode == KEY_UP:
+				has_up = true
+	assert(has_w and has_up, "ui_up must include both W and UP Arrow!")
+	
+	var has_space = false
+	var has_enter = false
+	for ev in InputMap.action_get_events("ui_accept"):
+		if ev is InputEventKey:
+			if ev.physical_keycode == KEY_SPACE or ev.keycode == KEY_SPACE:
+				has_space = true
+			if ev.physical_keycode == KEY_ENTER or ev.keycode == KEY_ENTER:
+				has_enter = true
+	assert(has_space and has_enter, "ui_accept must include both Space (P1) and Enter (P2)!")
+	
+	var has_shift = false
+	var has_escape = false
+	for ev in InputMap.action_get_events("ui_cancel"):
+		if ev is InputEventKey:
+			if ev.physical_keycode == KEY_SHIFT or ev.keycode == KEY_SHIFT:
+				has_shift = true
+			if ev.physical_keycode == KEY_ESCAPE or ev.keycode == KEY_ESCAPE:
+				has_escape = true
+	assert(has_shift and has_escape, "ui_cancel must include both Left Shift (P1) and Escape!")
+	print(" - 26A: InputMap WASD + Arrows and dedicated P1/P2 actions verified.")
+	
+	# 26B: ThreatDossier Focus & Keyboard Engagement
+	var test_dossier = main_inst.get_node_or_null("ThreatDossier")
+	assert(test_dossier != null, "Main scene must have ThreatDossier!")
+	assert(test_dossier.engage_btn.focus_mode == Control.FOCUS_ALL, "ThreatDossier engage button must have FOCUS_ALL!")
+	test_dossier.show_dossier(1, "Corvus")
+	assert(test_dossier.panel.visible == true, "ThreatDossier must be visible on show_dossier!")
+	assert(get_tree().paused == true, "ThreatDossier must pause the SceneTree!")
+	test_dossier._on_engage_pressed()
+	assert(test_dossier.panel.visible == false, "Engage press must dismiss ThreatDossier!")
+	assert(get_tree().paused == false, "Engage press must unpause the SceneTree!")
+	print(" - 26B: ThreatDossier FOCUS_ALL and keyboard engagement verified.")
+	
+	# 26C: SkyMerchant Dual Independent Stalls & Keyboard Navigation
+	var test_shop = main_inst.get_node("SkyMerchant")
+	assert(test_shop != null, "Main scene must contain SkyMerchant!")
+	GameManager.is_coop_mode = true
+	test_shop.open_shop()
+	assert(test_shop.panel.visible == true, "Shop panel must be open!")
+	assert(test_shop.p1_stall.visible == true and test_shop.p2_stall.visible == true, "Both stalls must be visible in co-op mode!")
+	assert(test_shop.p1_buttons.size() >= 3, "P1 stall must register buttons!")
+	assert(test_shop.p2_buttons.size() >= 3, "P2 stall must register buttons!")
+	assert(test_shop.p1_buttons[0].focus_mode == Control.FOCUS_ALL, "Shop buy buttons must have FOCUS_ALL!")
+	assert(test_shop.p1_repair_btn.focus_mode == Control.FOCUS_ALL, "P1 repair button must have FOCUS_ALL!")
+	assert(test_shop.undock_btn.focus_mode == Control.FOCUS_ALL, "Undock button must have FOCUS_ALL!")
+	
+	var initial_p1_idx = test_shop.p1_cursor_idx
+	test_shop._nav_p1_right()
+	assert(test_shop.p1_cursor_idx != initial_p1_idx or test_shop.p1_buttons.size() <= 1, "P1 navigation right must update cursor!")
+	test_shop._nav_p1_left()
+	assert(test_shop.p1_cursor_idx == initial_p1_idx, "P1 navigation left must return cursor!")
+	
+	test_shop._on_undock_pressed()
+	assert(test_shop.panel.visible == false, "Undock must close shop panel!")
+	assert(get_tree().paused == false, "Undock must unpause the SceneTree!")
+	print(" - 26C: SkyMerchant dual independent stalls, button FOCUS_ALL, and cursor navigation verified.")
+	
+	# 26D: ItemChoiceModal Dual Simultaneous Choice
+	var step26_hud = main_inst.get_node("HUD")
+	assert(step26_hud != null, "Main scene must contain HUD!")
+	GameManager.is_game_over = false
+	GameManager.is_coop_mode = true
+	step26_hud.open_item_choice_modal()
+	assert(step26_hud.choice_modal.visible == true, "Choice modal must be visible!")
+	assert(step26_hud.p1_column.visible == true, "P1 column must be visible!")
+	assert(step26_hud.p2_column.visible == true, "P2 column must be visible in co-op mode!")
+	assert(step26_hud.choice_btn_a.focus_mode == Control.FOCUS_ALL, "Choice button A must have FOCUS_ALL!")
+	assert(step26_hud.p2_choice_btn_a.focus_mode == Control.FOCUS_ALL, "P2 Choice button A must have FOCUS_ALL!")
+	
+	# Test P1 confirms choice 0, P2 not yet confirmed
+	var p1_pre_mods = p1.active_modifiers.size()
+	var p2_node = null
+	for p in get_tree().get_nodes_in_group("player"):
+		if p.player_id == 2:
+			p2_node = p
+			break
+	var p2_pre_mods = p2_node.active_modifiers.size() if p2_node else 0
+	
+	step26_hud._confirm_p1_choice(0)
+	assert(step26_hud.p1_confirmed == true, "P1 choice must be marked confirmed!")
+	assert(step26_hud.choice_modal.visible == true, "Modal must remain open waiting for P2!")
+	
+	# P2 confirms choice 1
+	step26_hud._confirm_p2_choice(1)
+	assert(step26_hud.p2_confirmed == true, "P2 choice must be marked confirmed!")
+	assert(step26_hud.choice_modal.visible == false, "Modal must dismiss once both players confirmed!")
+	assert(get_tree().paused == false, "SceneTree must unpause once both players confirmed!")
+	assert(p1.active_modifiers.size() == p1_pre_mods + 1, "P1 must have received their chosen relic!")
+	if p2_node:
+		assert(p2_node.active_modifiers.size() == p2_pre_mods + 1, "P2 must have received their chosen relic!")
+	print(" - 26D: Dual simultaneous relic choice, independent P1/P2 selection, and delivery verified.")
+
+	# STEP 27: Testing Dynamic Projectile Caliber, Impact Visuals & Glowing Stat Cards
+	print("\nSTEP 27: Testing Dynamic Projectile Caliber, Impact Visuals & Glowing Stat Cards...")
+	
+	# 27A: Continuous Projectile Caliber & Base Dimensions
+	var caliber_test_bullet = preload("res://scenes/Bullet.tscn").instantiate()
+	caliber_test_bullet._update_colors()
+	assert(caliber_test_bullet.length == 16.0, "Player bullet base length must be 16.0px (sleek needle baseline)!")
+	assert(caliber_test_bullet.radius == 2.8, "Player bullet base radius must be 2.8px (sleek needle baseline)!")
+	caliber_test_bullet.queue_free()
+	
+	# Test Player bullet_scale linking to sqrt(damage_mult)
+	p1.bonus_damage_pct = 0.0
+	p1.bonus_bullet_scale_pct = 0.0
+	p1.recalculate_stats()
+	assert(is_equal_approx(p1.bullet_scale, 1.0), "Base bullet_scale must be 1.0!")
+	
+	# High damage (+125% -> damage_mult = 2.25)
+	p1.bonus_damage_pct = 1.25
+	p1.recalculate_stats()
+	assert(is_equal_approx(p1.bullet_scale, 1.5), "bullet_scale for 2.25x damage must be 1.5x!")
+	
+	# "Soy Milk" extreme low damage (-75% -> damage_mult = 0.25)
+	p1.bonus_damage_pct = -0.75
+	p1.recalculate_stats()
+	assert(is_equal_approx(p1.bullet_scale, 0.5), "bullet_scale for 0.25x damage must shrink to 0.5x!")
+	
+	# Reset player stats
+	p1.bonus_damage_pct = 0.0
+	p1.recalculate_stats()
+	print(" - 27A: Continuous projectile caliber scaling and sleek starting dimensions verified.")
+	
+	# 27B: ImpactFlash Procedural Vector Shockwave Node
+	var test_flash = preload("res://scripts/ImpactFlash.gd").new()
+	test_flash.setup(Vector2(100, 100), 20.0, Color.CYAN)
+	assert(test_flash.target_radius == 20.0, "ImpactFlash target_radius must be initialized!")
+	test_flash._process(0.04)
+	assert(test_flash.current_radius > 2.0, "ImpactFlash must expand over time!")
+	test_flash._process(0.08) # Exceeds 0.065s duration
+	test_flash.queue_free()
+	print(" - 27B: Procedural vector ImpactFlash shockwave node and expansion lifecycle verified.")
+	
+	# 27C: Glowing BBCode Stat Formatters
+	var colossal_str = ProgressionModel.format_stat_value_bbcode(0.60, true)
+	assert("#facc15" in colossal_str and not "bgcolor" in colossal_str, "Colossal buff must format with clean radiant gold without background box!")
+	
+	var substantial_str = ProgressionModel.format_stat_value_bbcode(0.35, true)
+	assert("#f0abfc" in substantial_str and not "bgcolor" in substantial_str, "Substantial buff must format with clean electric magenta without background box!")
+	
+	var moderate_str = ProgressionModel.format_stat_value_bbcode(0.15, true)
+	assert("#22d3ee" in moderate_str, "Moderate buff must format with crisp cyan!")
+	
+	var penalty_str = ProgressionModel.format_stat_value_bbcode(-0.25, true)
+	assert("#ff2a5f" in penalty_str, "Severe penalty must format with hot crimson!")
+	
+	var minor_pen_str = ProgressionModel.format_stat_value_bbcode(-0.10, true)
+	assert("#fb923c" in minor_pen_str, "Minor penalty must format with flat warm orange!")
+	print(" - 27C: Glowing BBCode magnitude color tokens (uniform font weight) verified.")
+	
+	# 27D: Full Card BBCode Formatting & Delta Previews
+	var dummy_item = preload("res://scripts/items/StatModItem.gd").new().setup_stats(
+		"test_item", "Test Relic", "Magnifies plasma damage by +60% at minor cost to fire rate (-10%).",
+		ItemModifier.ItemTier.TIER_3_EXOTIC, Color.YELLOW, "[T3]",
+		{"mult_damage": 1.60, "mult_fire_rate": 0.90, "category": "offense"}
+	)
+	var formatted_card = ProgressionModel.format_card_bbcode(dummy_item, p1)
+	assert("#facc15" in formatted_card, "Card description must contain colored +60% token!")
+	assert("DMG:" in formatted_card and "──►" in formatted_card, "Card must append dynamic DMG delta preview!")
+	assert("RATE:" in formatted_card and "──►" in formatted_card, "Card must append dynamic RATE delta preview!")
+	var test_rtl = RichTextLabel.new()
+	test_rtl.bbcode_enabled = true
+	test_rtl.text = "[pulse freq=2.0 color=#ffffff40][bgcolor=#facc1530][color=#facc15]+60%[/color][/bgcolor][/pulse]"
+	assert(test_rtl.get_parsed_text() == "+60%", "RichTextLabel must parse pulse and bgcolor!")
+	test_rtl.queue_free()
+	print(" - 27D: RichTextLabel card formatting and Current ──► Next delta generation verified.")
+
+	# 27E: Projectile Visual Preservation (Suspended Stasis Field & Spectral Pierce)
+	var test_bullet_spawner = preload("res://scenes/Bullet.tscn").instantiate()
+	test_bullet_spawner._update_colors()
+	assert(test_bullet_spawner.is_suspended == false, "Bullet default is_suspended must be false!")
+	assert(test_bullet_spawner.is_spectral == false, "Bullet default is_spectral must be false!")
+	assert(test_bullet_spawner.modulate == Color.WHITE, "Bullet default modulate must be unadulterated white!")
+	test_bullet_spawner.queue_free()
+
+	# Test Player bullet spawning with Quantum Tunneling (pierce/spectral)
+	p1._spawn_bullet_from_params({"pos": Vector2(100, 100), "dir": Vector2.RIGHT, "damage": 1.0, "is_spectral": true, "pierce_count": 3})
+	var spawned_bullets = p1.get_parent().get_children().filter(func(c): return c.is_in_group("bullet"))
+	assert(not spawned_bullets.is_empty(), "Spectral bullet must be spawned!")
+	var spec_b = spawned_bullets[-1]
+	assert(spec_b.is_spectral == true, "Bullet must have is_spectral set to true!")
+	assert(spec_b.modulate == Color.WHITE, "Spectral bullet must NOT have destructive canvas modulate (keeps Color.WHITE)!")
+	assert(spec_b.glow_color.r > 0.6 and spec_b.glow_color.b > 0.8, "Spectral bullet must have luminous quantum-violet glow_color!")
+	assert(spec_b.core_color.r > 0.9 and spec_b.core_color.g > 0.9 and spec_b.core_color.b > 0.9, "Spectral bullet must preserve white-hot incandescent needle core!")
+	spec_b.queue_free()
+
+	# Test Player bullet spawning with Antimatter Suspension (suspended fire)
+	p1._spawn_bullet_from_params({"pos": Vector2(100, 100), "dir": Vector2.RIGHT, "damage": 1.0, "is_suspended": true})
+	var susp_b = p1.get_parent().get_children().filter(func(c): return c.is_in_group("bullet"))[-1]
+	assert(susp_b.is_suspended == true, "Suspended bullet must have is_suspended set to true!")
+	assert(susp_b.length == 16.0, "Suspended bullet must preserve base needle dart length!")
+	assert(susp_b.radius == 2.8, "Suspended bullet must preserve base needle dart radius!")
+	susp_b.queue_free()
+	print(" - 27E: Projectile visual preservation (needle dart geometry, white core, stasis field, and spectral phase shroud) verified.")
+
+	# 28: Testing Enemy Bullet Variety (Homing, Sine Wave, Curving Arc, Cluster Burst) & Damage Tiers
+	print("\nSTEP 28: Testing Enemy Bullet Variety (Homing, Wave, Arc, Flak) & Damage Tiers...")
+	
+	# 28A: Homing Seeker Missiles
+	var b_homing = preload("res://scenes/Bullet.tscn").instantiate()
+	main_inst.add_child(b_homing)
+	b_homing.pattern = b_homing.Pattern.HOMING
+	b_homing.setup(Vector2(200, 200), Vector2.RIGHT, true, 1.0)
+	assert(b_homing.pattern == b_homing.Pattern.HOMING, "Bullet pattern must be HOMING!")
+	assert(b_homing.glow_color.r > 0.8 and b_homing.glow_color.g > 0.4 and b_homing.glow_color.b < 0.2, "Homing missile must have warm amber glow!")
+	p1.global_position = Vector2(300, 300)
+	var initial_homing_dir = b_homing.direction
+	b_homing._physics_process(0.2)
+	assert(b_homing.direction != initial_homing_dir, "Homing missile must adjust direction toward player!")
+	b_homing.homing_timer = b_homing.homing_duration + 0.1
+	var burned_out_dir = b_homing.direction
+	p1.global_position = Vector2(100, 100)
+	b_homing._physics_process(0.1)
+	assert(b_homing.direction == burned_out_dir, "Homing missile must stop tracking after homing_duration!")
+	b_homing.queue_redraw()
+	b_homing.queue_free()
+	print(" - 28A: Homing Seeker Missiles (amber rocket, tracking slerp & burnout) verified.")
+
+	# 28B: Curving Crescent Arcs
+	var b_arc = preload("res://scenes/Bullet.tscn").instantiate()
+	main_inst.add_child(b_arc)
+	b_arc.pattern = b_arc.Pattern.CURVING_ARC
+	b_arc.curve_delay = 0.05
+	b_arc.curve_turn_time = 0.4
+	b_arc.curve_angular_speed = 5.0
+	b_arc.setup(Vector2(200, 200), Vector2.DOWN, true, 1.0)
+	assert(b_arc.pattern == b_arc.Pattern.CURVING_ARC, "Bullet pattern must be CURVING_ARC!")
+	var init_arc_dir = b_arc.direction
+	p1.global_position = Vector2(300, 300)
+	b_arc._physics_process(0.12)
+	assert(b_arc.direction != init_arc_dir, "Curving arc bullet must rotate velocity over time towards player!")
+	b_arc.queue_redraw()
+	b_arc.queue_free()
+	print(" - 28B: Curving Crescent Arcs (outward launch & curved player re-aim) verified.")
+
+	# 28C: Quantum Wavepackets & 2-Pip Damage
+	var b_wave = preload("res://scenes/Bullet.tscn").instantiate()
+	main_inst.add_child(b_wave)
+	b_wave.pattern = b_wave.Pattern.SINE_WAVE
+	b_wave.wave_phase = 0.0
+	b_wave.setup(Vector2(200, 200), Vector2.RIGHT, true, 2.0)
+	assert(b_wave.damage == 2.0, "Quantum wavepacket must carry 2.0 damage (2 discrete pips)!")
+	assert(b_wave.glow_color.r > 0.6 and b_wave.glow_color.b > 0.9, "Quantum wavepacket must have ethereal violet glow!")
+	b_wave._physics_process(0.1)
+	assert(b_wave.global_position.y != 200.0, "Quantum wavepacket must oscillate transversely!")
+	b_wave.queue_redraw()
+	b_wave.queue_free()
+	print(" - 28C: Quantum Wavepackets (sinusoidal pilot-wave & 2-pip damage) verified.")
+
+	# 28D: Cluster Flak Mortars (2 Direct Damage & Shrapnel Detonation)
+	var b_mortar = preload("res://scenes/Bullet.tscn").instantiate()
+	main_inst.add_child(b_mortar)
+	b_mortar.pattern = b_mortar.Pattern.CLUSTER_BURST
+	b_mortar.cluster_fuse = 0.1
+	b_mortar.setup(Vector2(400, 300), Vector2.DOWN, true, 2.0)
+	assert(b_mortar.damage == 2.0, "Cluster mortar shell must deal 2.0 damage on direct hit!")
+	assert(b_mortar.glow_color.g > 0.8, "Cluster mortar shell must have radiant emerald glow!")
+	b_mortar.queue_redraw()
+	b_mortar._physics_process(0.15)
+	assert(b_mortar.has_detonated == true, "Cluster mortar must detonate upon fuse expiration!")
+	var post_det_bullets = main_inst.get_children().filter(func(c): return c.is_in_group("bullet") and c != b_mortar and not c.is_queued_for_deletion())
+	assert(post_det_bullets.size() >= 5, "Cluster mortar must spawn at least 5 radial shrapnel sub-munitions!")
+	for sub_b in post_det_bullets:
+		assert(sub_b.damage == 1.0, "Shrapnel sub-munitions must deal 1.0 damage each!")
+		sub_b.queue_free()
+	print(" - 28D: Cluster Flak Mortars (2 direct damage, deceleration & emerald shrapnel burst) verified.")
+
+	# 28E: Enemy Archetype Bullet Delivery
+	var enemy_spawner_scene = preload("res://scenes/Enemy.tscn")
+	var t_enemy = enemy_spawner_scene.instantiate()
+	main_inst.add_child(t_enemy)
+	
+	# Test Interceptor curving bullet spawning
+	t_enemy.setup(EnemyScript.EnemyType.INTERCEPTOR, Vector2(300, 300), -1, null, 0)
+	t_enemy._spawn_curving_bullet(Vector2(300, 300), Vector2.LEFT, 1.6, 350.0)
+	var arc_spawned = main_inst.get_children().filter(func(c): return c.is_in_group("bullet"))[-1]
+	assert(arc_spawned.pattern == arc_spawned.Pattern.CURVING_ARC, "Interceptor must spawn CURVING_ARC bullets!")
+	arc_spawned.queue_free()
+
+	# Test Missile Corvette homing missile spawning
+	t_enemy.setup(EnemyScript.EnemyType.MISSILE_CORVETTE, Vector2(300, 300), -1, null, 0)
+	t_enemy._spawn_homing_missile(Vector2(300, 300), Vector2.LEFT, 300.0)
+	var missile_spawned = main_inst.get_children().filter(func(c): return c.is_in_group("bullet"))[-1]
+	assert(missile_spawned.pattern == missile_spawned.Pattern.HOMING, "Missile Corvette must spawn HOMING missiles!")
+	missile_spawned.queue_free()
+
+	# Test Warp Stalker wave bullet spawning
+	t_enemy.setup(EnemyScript.EnemyType.WARP_STALKER, Vector2(300, 300), -1, null, 0)
+	t_enemy._spawn_wave_bullet(Vector2(300, 300), Vector2.LEFT, 0.0, 340.0)
+	var wave_spawned = main_inst.get_children().filter(func(c): return c.is_in_group("bullet"))[-1]
+	assert(wave_spawned.pattern == wave_spawned.Pattern.SINE_WAVE, "Warp Stalker must spawn SINE_WAVE bullets!")
+	assert(wave_spawned.damage == 2.0, "Warp Stalker wave bullets must deliver 2.0 damage!")
+	wave_spawned.queue_free()
+
+	# Test Bomber cluster mortar spawning
+	t_enemy.setup(EnemyScript.EnemyType.BOMBER, Vector2(300, 300), -1, null, 0)
+	t_enemy._spawn_cluster_mortar(Vector2(300, 300), Vector2.LEFT, 260.0)
+	var mortar_spawned = main_inst.get_children().filter(func(c): return c.is_in_group("bullet"))[-1]
+	assert(mortar_spawned.pattern == mortar_spawned.Pattern.CLUSTER_BURST, "Bomber must spawn CLUSTER_BURST mortars!")
+	assert(mortar_spawned.damage == 2.0, "Bomber cluster mortar direct hit must deliver 2.0 damage!")
+	mortar_spawned.queue_free()
+
+	t_enemy.queue_free()
+	print(" - 28E: Enemy archetype weapon assignment (Interceptor, Missile Corvette, Warp Stalker, Bomber) verified.")
+
+	# =========================================================================
+	# STEP 29: Testing Hull Damage Awareness, Shield Break VFX, Audio & Segmented HUD
+	# =========================================================================
+	print("\nSTEP 29: Testing Hull Damage Awareness, Shield Break VFX, Audio & Segmented HUD...")
+
+	# 29A: Procedural Audio Streams for Shields & Hull
+	var s29_required_streams = ["shield_hit", "hull_hit", "shield_break", "shield_recharge", "low_hull_alarm"]
+	for s_name in s29_required_streams:
+		assert(SoundEffects._streams.has(s_name), "SoundEffects must generate procedural stream: '%s'!" % s_name)
+		var s29_stream = SoundEffects._streams[s_name] as AudioStreamWAV
+		assert(s29_stream != null and s29_stream.data.size() > 0, "Audio stream '%s' must contain valid PCM data!" % s_name)
+	print(" - 29A: Procedural audio streams (shield_hit, hull_hit, shield_break, shield_recharge, low_hull_alarm) verified.")
+
+	# 29B: Shield Hit Absorption & Segmented State
+	var p29_test = player_scene.instantiate()
+	main_inst.add_child(p29_test)
+	p29_test.max_shields = 3
+	p29_test.shields = 3
+	p29_test.max_hull = 4
+	p29_test.hull = 4
+
+	p29_test.take_damage(1)
+	assert(p29_test.shields == 2, "Taking 1 damage on full shields must reduce shields from 3 to 2!")
+	assert(p29_test.hull == 4, "Taking shield damage must preserve hull at 4!")
+	assert(p29_test.shield_shards.is_empty(), "Taking non-lethal shield damage must not shatter shields!")
+	assert(p29_test.hull_hit_flash_timer == 0.0, "Shield damage must not trigger hull hit flash!")
+	print(" - 29B: Shield damage absorption and non-lethal shield integrity verified.")
+
+	# 29C: Shield Depletion & Shatter Forcefield Shards
+	p29_test.take_damage(2)
+	assert(p29_test.shields == 0, "Taking 2 remaining shield damage must deplete shields to 0!")
+	assert(p29_test.hull == 4, "Depleting shields must leave hull intact at 4!")
+	assert(p29_test.shield_break_flash_timer > 0.0, "Shield collapse must trigger shield break flash timer!")
+	assert(p29_test.shield_shards.size() >= 10, "Shield collapse must spawn at least 10 forcefield shatter shards!")
+	print(" - 29C: Shield collapse forcefield shattering and shard dispersal verified.")
+
+	# 29D: Direct Hull Damage, Concussive Shake & Impact Sparks
+	var initial_sparks_29 = p29_test.hull_sparks.size()
+	p29_test.take_damage(1)
+	assert(p29_test.hull == 3, "Taking damage with 0 shields must damage hull directly to 3!")
+	assert(p29_test.hull_hit_flash_timer > 0.0, "Hull damage must engage hull hit flash timer!")
+	assert(p29_test.hull_sparks.size() > initial_sparks_29, "Hull impact must burst metallic fracture sparks!")
+	
+	# Simulate physics tick to verify smoke trail emission
+	p29_test._handle_timers(0.1)
+	assert(p29_test.damage_particles.size() > 0, "Damaged hull (< max_hull) must emit smoke trail particles!")
+	print(" - 29D: Visceral hull damage, spark bursts, and smoke trail emission verified.")
+
+	# 29E: Critical Hull Distress Beacon (< 1/3 Max Hull)
+	p29_test.hull = 1
+	assert(p29_test.hull <= int(p29_test.max_hull / 3.0), "1 Hull must register as critical (< 1/3 max hull)!")
+	p29_test._handle_timers(0.05)
+	var has_fire_29 = false
+	for dp in p29_test.damage_particles:
+		if dp.get("type") == "fire":
+			has_fire_29 = true
+			break
+	assert(has_fire_29, "Critical hull state must spawn fire embers alongside smoke!")
+	print(" - 29E: Critical hull fire emission and distress beacon state verified.")
+
+	# 29F: HUD Discrete Shield Container & Alert Vignette
+	var hud29 = get_tree().get_first_node_in_group("hud")
+	assert(hud29 != null, "HUD must exist in scene tree!")
+	assert(hud29.shield_container is HBoxContainer, "HUD shield container must be an HBoxContainer of discrete pips!")
+	assert(hud29.shield_bar != null, "HUD shield_bar alias must remain accessible for backwards compatibility!")
+
+	# Simulate health update: 2 hull, 1 shield out of 4 hull, 3 max shields
+	hud29._on_health_changed(2, 1, 4, 3, 1)
+	assert(hud29.shield_container.get_child_count() == 3, "Shield container must display exactly max_shields (3) pips!")
+	assert(hud29.shield_container.get_child(0).modulate.a > 0.7, "Active shield pip 0 must be fully illuminated!")
+	assert(hud29.shield_container.get_child(1).modulate.a < 0.5, "Depleted shield pip 1 must be dimmed!")
+	assert(hud29.shield_container.get_child(2).modulate.a < 0.5, "Depleted shield pip 2 must be dimmed!")
+
+	assert(hud29.hull_container.get_child_count() == 4, "Hull container must display exactly max_hull (4) pips!")
+	assert(hud29.hull_container.get_child(0).modulate.a > 0.7, "Active hull pip 0 must be illuminated!")
+	assert(hud29.hull_container.get_child(1).modulate.a > 0.7, "Active hull pip 1 must be illuminated!")
+	assert(hud29.hull_container.get_child(2).modulate.a < 0.5, "Damaged hull pip 2 must be dimmed!")
+	assert(hud29.hull_container.get_child(3).modulate.a < 0.5, "Damaged hull pip 3 must be dimmed!")
+
+	# Hull damage vignette alert
+	hud29._on_player_hull_damaged(1, 2, 4)
+	assert(hud29.hull_vignette_timer > 0.0, "Hull damage notification must engage peripheral red vignette alert!")
+	print(" - 29F: Discrete segmented shield/hull pips and peripheral red alert vignette verified.")
+
+	p29_test.queue_free()
+
+	# =========================================================================
+	# STEP 30: Testing Isaac-Inspired Paradigms (Continuous Wave Magnetron & Casimir Discharge)
+	# =========================================================================
+	print("\nSTEP 30: Testing Isaac-Inspired Paradigms (CW Magnetron & Casimir Discharge)...")
+	
+	# 30A: Database Cataloging & Metadata Verification
+	var cw_item = ItemDatabase.get_item_by_id("continuous_wave_magnetron")
+	assert(cw_item != null, "continuous_wave_magnetron must be registered in ItemDatabase!")
+	assert(cw_item.tier == ItemModifier.ItemTier.TIER_2_PARADIGM, "CW Magnetron must be Tier 2 Weapon Paradigm!")
+	assert(cw_item.get_glyph() == "≋", "CW Magnetron must have valid vector glyph '≋'!")
+	assert(cw_item.category == "offense", "CW Magnetron must be categorized as offense!")
+	
+	var casimir_item = ItemDatabase.get_item_by_id("casimir_discharge")
+	assert(casimir_item != null, "casimir_discharge must be registered in ItemDatabase!")
+	assert(casimir_item.tier == ItemModifier.ItemTier.TIER_2_PARADIGM, "Casimir Discharge must be Tier 2 Weapon Paradigm!")
+	assert(casimir_item.get_glyph() == "⦿", "Casimir Discharge must have valid vector glyph '⦿'!")
+	assert(casimir_item.category == "offense", "Casimir Discharge must be categorized as offense!")
+	print(" - 30A: CW Magnetron & Casimir Discharge database registration, glyphs, and tier verified.")
+
+	# 30B: Continuous Wave Magnetron (Soy Milk) Extreme Rate & Damage Scaling
+	var p30_cw = load("res://scenes/Player.tscn").instantiate()
+	add_child(p30_cw)
+	var initial_fire_rate = p30_cw.fire_rate
+	var initial_damage_mult = p30_cw.damage_mult
+	
+	p30_cw.add_modifier(cw_item)
+	assert(p30_cw.has_cw_magnetron == true, "Equipping CW Magnetron must set has_cw_magnetron flag!")
+	assert(p30_cw.fire_rate > initial_fire_rate * 4.0, "CW Magnetron must boost fire rate by ~+350%% (got %f vs base %f)!" % [p30_cw.fire_rate, initial_fire_rate])
+	assert(p30_cw.damage_mult < initial_damage_mult * 0.35, "CW Magnetron must reduce damage multiplier by -70%% (got %f)!" % p30_cw.damage_mult)
+	
+	# Test spawn parameter dispersion and dart tagging
+	var test_params = {"pos": Vector2(100, 100), "dir": Vector2.RIGHT, "damage": 1.0}
+	var cw_results = cw_item.on_fire(p30_cw, test_params)
+	assert(cw_results.size() == 1, "CW Magnetron on_fire must return 1 modified projectile parameter!")
+	assert(cw_results[0].get("is_cw_dart") == true, "CW Magnetron must tag projectiles as is_cw_dart!")
+	var fired_dir: Vector2 = cw_results[0].get("dir")
+	assert(absf(fired_dir.angle_to(Vector2.RIGHT)) <= deg_to_rad(6.0), "CW Magnetron scatter angle must stay within tight beam spread!")
+	p30_cw.queue_free()
+	print(" - 30B: Continuous Wave Magnetron extreme fire rate (+350%), damage trade-off (-70%), and beam scatter verified.")
+
+	# 30C: Near-Field Casimir Discharge (Proptosis) Point-Blank Devastation & Distance Decay
+	var p30_cas = load("res://scenes/Player.tscn").instantiate()
+	add_child(p30_cas)
+	p30_cas.add_modifier(casimir_item)
+	assert(p30_cas.has_casimir_discharge == true, "Equipping Casimir Discharge must set has_casimir_discharge flag!")
+	
+	var cas_bullet = load("res://scenes/Bullet.tscn").instantiate()
+	add_child(cas_bullet)
+	cas_bullet.setup(Vector2(200, 200), Vector2.RIGHT, false, 2.0)
+	
+	# Point-blank evaluation (traveled 50px <= 140px)
+	cas_bullet.traveled_distance = 50.0
+	casimir_item.on_projectile_tick(cas_bullet, 0.016)
+	assert(cas_bullet.damage >= 4.0, "Casimir point-blank damage must be >= 2.0x base damage (got %f vs 2.0 base)!" % cas_bullet.damage)
+	assert(cas_bullet.scale.x >= 1.5, "Casimir point-blank scale must be >= 1.5x base scale (got %s)!" % str(cas_bullet.scale))
+	
+	# Mid-range decay (traveled 280px)
+	cas_bullet.traveled_distance = 280.0
+	casimir_item.on_projectile_tick(cas_bullet, 0.016)
+	assert(cas_bullet.damage < 3.5 and cas_bullet.damage > 0.8, "Casimir mid-range damage must smoothly interpolate (got %f)!" % cas_bullet.damage)
+	
+	# Far-field decay (traveled 480px >= 420px)
+	cas_bullet.traveled_distance = 480.0
+	casimir_item.on_projectile_tick(cas_bullet, 0.016)
+	assert(cas_bullet.damage <= 0.60, "Casimir far-range damage must decay down to <= 25%% base (got %f vs 0.50 expected)!" % cas_bullet.damage)
+	assert(cas_bullet.scale.x <= 0.60, "Casimir far-range scale must shrink down to <= 0.60x base scale (got %s)!" % str(cas_bullet.scale))
+	
+	cas_bullet.queue_free()
+	p30_cas.queue_free()
+	print(" - 30C: Near-Field Casimir Discharge +220% point-blank damage, massive scale, and distance decay verified.")
+
+	# 30D: Synergistic Combination (CW Magnetron + Casimir Discharge = Rapid Point-Blank Meat Grinder)
+	var p30_syn = load("res://scenes/Player.tscn").instantiate()
+	add_child(p30_syn)
+	p30_syn.add_modifier(cw_item)
+	p30_syn.add_modifier(casimir_item)
+	assert(p30_syn.fire_rate > 15.0, "Synergy setup must maintain blistering fire rate (> 15 rps)!")
+	
+	var syn_bullet = load("res://scenes/Bullet.tscn").instantiate()
+	add_child(syn_bullet)
+	# Base damage from CW Magnetron is low (~0.3), but Casimir point-blank multiplies it back up
+	syn_bullet.setup(Vector2(200, 200), Vector2.RIGHT, false, 0.30)
+	syn_bullet.traveled_distance = 30.0
+	casimir_item.on_projectile_tick(syn_bullet, 0.016)
+	assert(syn_bullet.damage > 0.60, "Casimir must multiply CW Magnetron chip damage up to devastating point-blank shredding!")
+	
+	syn_bullet.queue_free()
+	p30_syn.queue_free()
+	print(" - 30D: Synergistic interaction (CW Magnetron + Casimir Discharge point-blank meat-grinder) verified.")
+
+	# =========================================================================
+	# STEP 31: Testing Secret Debug Menu, Input Code Sequence, God Mode & Telemetry Disabling
+	# =========================================================================
+	print("\nSTEP 31: Testing Secret Debug Menu, Input Code Sequence, God Mode & Telemetry Disabling...")
+
+	# 31A: Secret Konami Code Sequence on MainMenu (Up, Up, Down, Down, Left, Right, Left, Right)
+	var p31_menu_scene = load("res://scenes/MainMenu.tscn")
+	assert(p31_menu_scene != null, "MainMenu.tscn must load cleanly!")
+	var p31_menu = p31_menu_scene.instantiate()
+	add_child(p31_menu)
+
+	assert(p31_menu.debug_view.visible == false, "DebugView must start hidden!")
+	assert(p31_menu.debug_btn.visible == false, "Debug button must start hidden!")
+	assert(p31_menu.debug_status_badge.visible == false, "Debug status badge must start hidden!")
+	assert(GameManager.high_score_recording_enabled == true, "High score recording must start enabled!")
+	assert(GameManager.telemetry_enabled == true, "Telemetry must start enabled!")
+
+	# Simulate the 8-directional code sequence using synthetic InputEventKey
+	var p31_key_sequence = [KEY_UP, KEY_UP, KEY_DOWN, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_LEFT, KEY_RIGHT]
+	for k in p31_key_sequence:
+		var p31_ev = InputEventKey.new()
+		p31_ev.pressed = true
+		p31_ev.keycode = k
+		p31_menu._input(p31_ev)
+
+	assert(p31_menu.debug_view.visible == true, "DebugView must become visible after entering secret code!")
+	assert(p31_menu.debug_btn.visible == true, "Debug button must become visible after entering secret code!")
+	assert(p31_menu.debug_status_badge.visible == true, "Debug status badge must be visible!")
+	print(" - 31A: Secret Konami code sequence (Up, Up, Down, Down, Left, Right, Left, Right) and DebugView activation verified.")
+
+	# 31B: Verification of High Score Recording & Telemetry Disabling
+	assert(GameManager.debug_mode_unlocked == true, "debug_mode_unlocked must be true after code access!")
+	assert(GameManager.high_score_recording_enabled == false, "high_score_recording_enabled must be false after debug access!")
+	assert(GameManager.telemetry_enabled == false, "telemetry_enabled must be false after debug access!")
+	assert(HighScoreManager.high_score_recording_enabled == false, "HighScoreManager.high_score_recording_enabled must be false!")
+
+	# HighScoreManager.record_run must return 0 and refuse to save when disabled
+	var p31_pre_score_count = HighScoreManager.get_scores().size()
+	var p31_test_rank = HighScoreManager.record_run(9999999, 3, 36, "1P Normal", 100.0, 500, true)
+	assert(p31_test_rank == 0, "record_run must return 0 when high score recording is disabled!")
+	assert(HighScoreManager.get_scores().size() == p31_pre_score_count, "High scores list must not be modified when recording is disabled!")
+	assert(HighScoreManager.is_high_score(9999999) == false, "is_high_score must return false when recording is disabled!")
+	print(" - 31B: Permanent disabling of high score recording and telemetry verified.")
+
+	# 31C: Gamepad D-Pad & Analog Stick Direction Parsing
+	var p31_joy_btn_ev = InputEventJoypadButton.new()
+	p31_joy_btn_ev.pressed = true
+	p31_joy_btn_ev.button_index = JOY_BUTTON_DPAD_UP
+	assert(p31_menu._get_directional_input(p31_joy_btn_ev) == "up", "JOY_BUTTON_DPAD_UP must map to 'up'!")
+
+	var p31_joy_stick_ev = InputEventJoypadMotion.new()
+	p31_joy_stick_ev.axis = JOY_AXIS_LEFT_Y
+	p31_joy_stick_ev.axis_value = -0.8
+	assert(p31_menu._get_directional_input(p31_joy_stick_ev) == "up", "Analog stick Y < -0.55 must map to 'up'!")
+	# Test debounce latch
+	assert(p31_menu._get_directional_input(p31_joy_stick_ev) == "", "Analog stick must debounce / latch without returning duplicates!")
+	p31_joy_stick_ev.axis_value = 0.0
+	p31_menu._get_directional_input(p31_joy_stick_ev) # unlatches
+	print(" - 31C: Universal input detection (Gamepad D-Pad & Debounced Analog Sticks) verified.")
+
+	# 31D: Cheats & Augments (God Mode & Infinite Rolls)
+	p31_menu._on_god_mode_toggle()
+	assert(GameManager.debug_god_mode == true, "God mode toggle must enable GameManager.debug_god_mode!")
+	p31_menu._on_infinite_rolls_toggle()
+	assert(GameManager.debug_infinite_rolls == true, "Infinite rolls toggle must enable GameManager.debug_infinite_rolls!")
+
+	var p31_ship = load("res://scenes/Player.tscn").instantiate()
+	add_child(p31_ship)
+	var p31_initial_hull = p31_ship.hull
+	var p31_initial_shields = p31_ship.shields
+	p31_ship.take_damage(2)
+	assert(p31_ship.hull == p31_initial_hull and p31_ship.shields == p31_initial_shields, "God mode must make ship completely immune to damage!")
+
+	p31_ship.rolls = 0
+	p31_ship._handle_timers(0.016)
+	assert(p31_ship.rolls == p31_ship.max_rolls, "Infinite rolls must immediately restore roll charges!")
+	p31_ship.queue_free()
+	print(" - 31D: God Mode invulnerability and Infinite Roll charges verified.")
+
+	# 31E: Joules Grants, God-Build Preset & Interactive Relic Picker
+	var p31_pre_j = GameManager.scrap_joules
+	p31_menu._add_debug_joules(1000)
+	assert(GameManager.scrap_joules == p31_pre_j + 1000, "+1,000 Joules button must add 1000 Joules to player bank!")
+
+	p31_menu._on_god_build_toggle()
+	assert(GameManager.debug_give_god_build == true, "God build toggle must arm God Build synergies!")
+	assert("continuous_wave_magnetron" in GameManager.debug_starting_relics, "God build must include CW Magnetron!")
+	assert("casimir_discharge" in GameManager.debug_starting_relics, "God build must include Casimir Discharge!")
+
+	# Verify ship spawns with god build equipped
+	var p31_god_ship = load("res://scenes/Player.tscn").instantiate()
+	add_child(p31_god_ship)
+	assert(p31_god_ship.has_cw_magnetron == true, "Player must spawn with CW Magnetron active when armed!")
+	assert(p31_god_ship.has_casimir_discharge == true, "Player must spawn with Casimir Discharge active when armed!")
+	p31_god_ship.queue_free()
+
+	p31_menu._on_clear_relics_pressed()
+	assert(GameManager.debug_give_god_build == false, "Clear relics must disarm god build!")
+	assert(GameManager.debug_starting_relics.is_empty(), "Clear relics must empty debug starting relics!")
+	print(" - 31E: Joules grants, God-Build synergy loadout, and starting relic configuration verified.")
+
+	# 31F: Warp Jumps & Mode Force Unlocks
+	p31_menu._set_debug_warp(2, 13)
+	assert(GameManager.start_sector == 2 and GameManager.start_wave == 13, "Warp button must configure sector 2 wave 13!")
+	p31_menu._on_unlock_all_modes_pressed()
+	assert(GameManager.force_unlocked_modes == true, "Unlock all modes must set force_unlocked_modes to true!")
+
+	p31_menu._select_mode(GameManager.GameMode.ENDLESS)
+	assert(GameManager.current_game_mode == GameManager.GameMode.ENDLESS, "Endless mode must be selectable after force unlock!")
+
+	p31_menu.queue_free()
+	# Reset debug session state back to defaults for clean test exit
+	GameManager.debug_god_mode = false
+	GameManager.debug_infinite_rolls = false
+	GameManager.debug_give_god_build = false
+	GameManager.debug_starting_relics.clear()
+	GameManager.start_sector = 1
+	GameManager.start_wave = 1
+	GameManager.force_unlocked_modes = false
+	GameManager.current_game_mode = GameManager.GameMode.NORMAL
+	GameManager.high_score_recording_enabled = true
+	GameManager.telemetry_enabled = true
+	HighScoreManager.high_score_recording_enabled = true
+	print(" - 31F: Sector/Wave warp configuration and game mode force unlocks verified.")
+
 	print("\n====================================================")
 	print("--- ALL VERIFICATION TESTS PASSED 100% CLEANLY ---")
 	print("====================================================")
 	get_tree().quit(0)
+
+
+

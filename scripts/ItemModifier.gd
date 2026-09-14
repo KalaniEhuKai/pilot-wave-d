@@ -12,8 +12,43 @@ enum ItemTier { TIER_1_BALLISTIC, TIER_2_PARADIGM, TIER_3_EXOTIC }
 @export var tier: ItemTier = ItemTier.TIER_1_BALLISTIC
 @export var icon_color: Color = Color(0.2, 0.9, 1.0, 1.0)
 @export var icon_symbol: String = "[*]"
+@export var vector_glyph: String = ""
 @export var max_stacks: int = 1
 @export var category: String = "general"
+
+func get_glyph() -> String:
+	if vector_glyph != "":
+		return vector_glyph
+	match id:
+		"birefringence_prism": return "⯌"
+		"gravitational_lensing": return "◎"
+		"feynman_propagator": return "∿"
+		"zeeman_splitting": return "⫘"
+		"cherenkov_radiator": return "✺"
+		"heisenberg_lens": return "◈"
+		"antimatter_suspension": return "⬡"
+		"tachyon_capacitor": return "⚡"
+		"carnot_heatsink": return "▲"
+		"quantum_tunneling": return "⇶"
+		"carnot_precooler": return "◇"
+		"meissner_shield": return "⛨"
+		"maxwells_demon": return "⯎"
+		"lagrange_satellites": return "⛯"
+		"carnot_efficiency": return "◈"
+		"dirac_inversion": return "⟲"
+		"bell_entanglement": return "⯈⯇"
+		"continuous_wave_magnetron": return "≋"
+		"casimir_discharge": return "⦿"
+		_:
+			if "damage" in id: return "✦"
+			elif "rate" in id or "fire" in id: return "⮞"
+			elif "speed" in id: return "➤"
+			elif "shield" in id: return "⬢"
+			elif "hull" in id: return "✚"
+			elif "crit" in id: return "✸"
+			elif "joule" in id or "scrap" in id: return "⯏"
+			return "◈"
+
 
 # --- Synergy Hook Pipeline ---
 

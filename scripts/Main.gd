@@ -9,6 +9,9 @@ extends Node2D
 @onready var shop: CanvasLayer = $SkyMerchant
 @onready var secrets: Node2D = $SecretDirector
 @onready var dossier: CanvasLayer = $ThreatDossier
+@onready var pause_menu = get_node_or_null("PauseMenu")
+const Stage3DScript = preload("res://scripts/Stage3D.gd")
+@onready var stage_3d = get_node_or_null("Stage3D")
 
 var player_scene: PackedScene = preload("res://scenes/Player.tscn")
 var boss_corvus_scene: PackedScene = preload("res://scenes/BossCorvus.tscn")
@@ -46,9 +49,15 @@ var miniboss_w30_done: bool = false
 var boss_w36_done: bool = false
 
 var current_boss_name: String = "Super-Dreadnought Corvus"
+var shake_direction: Vector2 = Vector2.ZERO
+var shake_frequency: float = 45.0
 
 func _ready() -> void:
 	GameManager.screen_shake_requested.connect(_on_screen_shake_requested)
+	if GameManager.has_signal("directional_shake_requested"):
+		GameManager.directional_shake_requested.connect(_on_directional_shake_requested)
+	if GameManager.has_signal("custom_shake_requested"):
+		GameManager.custom_shake_requested.connect(_on_custom_shake_requested)
 	GameAxis.axis_changed.connect(_on_axis_changed)
 	get_viewport().size_changed.connect(_on_viewport_resized)
 	
@@ -63,12 +72,16 @@ func _ready() -> void:
 			if is_instance_valid(spawner):
 				spawner.wave_timer = 2.5
 		)
+		if is_instance_valid(stage_3d) and stage_3d.has_method("register_station"):
+			stage_3d.register_station(shop)
 	
 	if is_instance_valid(spawner) and spawner.has_signal("quantum_warp_started"):
 		spawner.quantum_warp_started.connect(func(dur):
 			GameManager.request_screen_shake(6.0, dur)
 			if is_instance_valid(background) and background.has_method("trigger_warp_streak"):
 				background.trigger_warp_streak(dur)
+			if is_instance_valid(stage_3d) and stage_3d.has_method("trigger_warp_tunnel"):
+				stage_3d.trigger_warp_tunnel(dur)
 			var hud = get_tree().get_first_node_in_group("hud")
 			if hud and hud.has_method("on_quantum_warp_started"):
 				hud.on_quantum_warp_started()
@@ -82,6 +95,42 @@ func _ready() -> void:
 	
 	# Multi-Boss Progression Pipeline
 	GameManager.boss_defeated.connect(_on_boss_defeated_progression)
+	
+	# Skip pre-requisite checkpoints if debug starting at later waves
+	if GameManager.start_wave > 5:
+		shop_w5_done = true
+	if GameManager.start_wave > 6:
+		miniboss_w6_done = true
+	if GameManager.start_wave > 12:
+		boss_w12_done = true
+	if GameManager.start_wave > 17:
+		shop_w17_done = true
+	if GameManager.start_wave > 18:
+		miniboss_w18_done = true
+	if GameManager.start_wave > 24:
+		boss_w24_done = true
+	if GameManager.start_wave > 29:
+		shop_w29_done = true
+	if GameManager.start_wave > 30:
+		miniboss_w30_done = true
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("pause"):
+		if is_instance_valid(pause_menu) and pause_menu.has_method("open_pause"):
+			var modal_open = false
+			var hud = get_tree().get_first_node_in_group("hud")
+			if hud and "choice_modal" in hud and is_instance_valid(hud.choice_modal) and hud.choice_modal.visible:
+				modal_open = true
+			if is_instance_valid(shop) and "panel" in shop and is_instance_valid(shop.panel) and shop.panel.visible:
+				modal_open = true
+			if is_instance_valid(dossier) and "panel" in dossier and is_instance_valid(dossier.panel) and dossier.panel.visible:
+				modal_open = true
+			if GameManager.is_game_over or GameManager.current_phase == GameManager.RunPhase.SECTOR_VICTORY:
+				modal_open = true
+			
+			if not modal_open and not pause_menu.is_open:
+				pause_menu.open_pause()
+				get_viewport().set_input_as_handled()
 
 func _center_camera() -> void:
 	var vp = get_viewport_rect().size
@@ -95,6 +144,9 @@ func _spawn_p1() -> void:
 	p1_instance.player_id = 1
 	add_child(p1_instance)
 	p1_instance.global_position = initial_pos
+	
+	if is_instance_valid(stage_3d):
+		stage_3d.register_player(p1_instance)
 	
 	var hud = get_tree().get_first_node_in_group("hud")
 	if hud and hud.has_method("_connect_players"):
@@ -110,6 +162,9 @@ func _spawn_p2() -> void:
 	p2_instance.player_id = 2
 	add_child(p2_instance)
 	p2_instance.global_position = initial_pos
+	
+	if is_instance_valid(stage_3d):
+		stage_3d.register_player(p2_instance)
 	
 	# Connect P2 signals to HUD
 	var hud = get_tree().get_first_node_in_group("hud")
@@ -130,13 +185,23 @@ func _process(delta: float) -> void:
 	if shake_timer > 0.0:
 		shake_timer -= delta
 		var damp = clampf(shake_timer / shake_duration, 0.0, 1.0)
-		camera.offset = Vector2(
-			randf_range(-1.0, 1.0) * shake_intensity * damp,
-			randf_range(-1.0, 1.0) * shake_intensity * damp
+		var dir_offset = shake_direction * shake_intensity * damp * sin(shake_timer * shake_frequency)
+		var rand_offset = Vector2(
+			randf_range(-0.4, 0.4) * shake_intensity * damp,
+			randf_range(-0.4, 0.4) * shake_intensity * damp
 		)
+		var total_offset = dir_offset + rand_offset
+		camera.offset = total_offset
+		if is_instance_valid(stage_3d) and stage_3d.camera:
+			var vp_size = get_viewport_rect().size
+			stage_3d.camera.position = Vector3(vp_size.x * 0.5 + total_offset.x, -vp_size.y * 0.5 - total_offset.y, 400.0)
 	else:
 		camera.offset = Vector2.ZERO
 		shake_intensity = 0.0
+		shake_direction = Vector2.ZERO
+		if is_instance_valid(stage_3d) and stage_3d.camera:
+			var vp_size = get_viewport_rect().size
+			stage_3d.camera.position = Vector3(vp_size.x * 0.5, -vp_size.y * 0.5, 400.0)
 	
 	_evaluate_progression_triggers()
 
@@ -270,6 +335,8 @@ func _transition_to_sector(next_sec: int, next_boss_name: String) -> void:
 	# Background palette and speed transition
 	if is_instance_valid(background) and background.has_method("set_sector_theme"):
 		background.set_sector_theme(next_sec)
+	if is_instance_valid(stage_3d) and stage_3d.has_method("set_sector_theme"):
+		stage_3d.set_sector_theme(next_sec)
 	
 	# Display next Sector Threat Dossier briefing card
 	if is_instance_valid(dossier):
@@ -291,3 +358,20 @@ func _on_viewport_resized() -> void:
 func _on_screen_shake_requested(intensity: float, duration: float) -> void:
 	shake_intensity = maxf(shake_intensity, intensity)
 	shake_duration = maxf(shake_duration, duration)
+	shake_timer = shake_duration
+	shake_direction = Vector2.ZERO
+
+func _on_directional_shake_requested(dir: Vector2, intensity: float, duration: float) -> void:
+	shake_direction = dir.normalized()
+	shake_intensity = maxf(shake_intensity, intensity)
+	shake_duration = maxf(shake_duration, duration)
+	shake_frequency = 45.0
+	shake_timer = shake_duration
+
+func _on_custom_shake_requested(dir: Vector2, intensity: float, duration: float, frequency: float) -> void:
+	shake_direction = dir.normalized() if dir != Vector2.ZERO else Vector2.ZERO
+	shake_intensity = maxf(shake_intensity, intensity)
+	shake_duration = maxf(shake_duration, duration)
+	shake_frequency = frequency
+	shake_timer = shake_duration
+

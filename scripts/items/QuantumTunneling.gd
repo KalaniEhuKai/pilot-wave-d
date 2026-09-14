@@ -6,7 +6,8 @@ func _init() -> void:
 	id = "quantum_tunneling"
 	display_name = "Quantum Tunneling"
 	description = "Spectral wavepacket: projectiles phase through enemy shields and armor, piercing through up to 3 targets."
-	tier = ItemTier.TIER_2_PARADIGM
+	tier = ItemTier.TIER_1_BALLISTIC
+	category = "offense"
 	icon_color = Color(0.7, 0.4, 1.0, 1.0)
 	icon_symbol = "[|||]"
 

@@ -1,0 +1,263 @@
+[gd_scene load_steps=4 format=3 uid="uid://p1a2u3s4e5m6"]
+
+[ext_resource type="Script" path="res://scripts/PauseMenu.gd" id="1_pause"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_modal"]
+bg_color = Color(0.03, 0.05, 0.09, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.2, 0.85, 1, 0.85)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_subpanel"]
+bg_color = Color(0.06, 0.09, 0.14, 0.85)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.2, 0.5, 0.7, 0.6)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="PauseMenu" type="CanvasLayer"]
+process_mode = 3
+layer = 25
+script = ExtResource("1_pause")
+
+[node name="DimOverlay" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.01, 0.02, 0.04, 0.75)
+
+[node name="Panel" type="Panel" parent="."]
+custom_minimum_size = Vector2(780, 500)
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -390.0
+offset_top = -250.0
+offset_right = 390.0
+offset_bottom = 250.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_modal")
+
+[node name="VBox" type="VBoxContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 32.0
+offset_top = 24.0
+offset_right = -32.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 12
+
+[node name="HeaderLbl" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 20
+text = "SYSTEM SUSPENDED // COHERENCE STABILIZED"
+horizontal_alignment = 1
+
+[node name="StatsSubLbl" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.8, 0.9, 0.9)
+theme_override_font_sizes/font_size = 12
+text = "SECTOR 01 (WAVE 01)  |  SCORE: 000000  |  TIME: 00:00  |  JOULES: 0 J"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="Panel/VBox"]
+layout_mode = 2
+
+[node name="HBoxBody" type="HBoxContainer" parent="Panel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 20
+
+[node name="CommandsVBox" type="VBoxContainer" parent="Panel/VBox/HBoxBody"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ResumeBtn" type="Button" parent="Panel/VBox/HBoxBody/CommandsVBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "RESUME FLIGHT"
+
+[node name="SynergyBtn" type="Button" parent="Panel/VBox/HBoxBody/CommandsVBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "SYNERGY INSPECTOR"
+
+[node name="SettingsBtn" type="Button" parent="Panel/VBox/HBoxBody/CommandsVBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "AUDIO & DISPLAY"
+
+[node name="RestartBtn" type="Button" parent="Panel/VBox/HBoxBody/CommandsVBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "RESTART MISSION"
+
+[node name="MainMenuBtn" type="Button" parent="Panel/VBox/HBoxBody/CommandsVBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "ABORT TO MENU"
+
+[node name="ContentPanel" type="Panel" parent="Panel/VBox/HBoxBody"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_subpanel")
+
+[node name="InspectorView" type="VBoxContainer" parent="Panel/VBox/HBoxBody/ContentPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 12
+
+[node name="RelicsHeader" type="Label" parent="Panel/VBox/HBoxBody/ContentPanel/InspectorView"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 13
+text = "SYNCHRONIZED RELICS & AUGMENTATIONS"
+
+[node name="Scroll" type="ScrollContainer" parent="Panel/VBox/HBoxBody/ContentPanel/InspectorView"]
+custom_minimum_size = Vector2(0, 100)
+layout_mode = 2
+
+[node name="RelicsGrid" type="GridContainer" parent="Panel/VBox/HBoxBody/ContentPanel/InspectorView/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 10
+columns = 6
+
+[node name="HSeparator2" type="HSeparator" parent="Panel/VBox/HBoxBody/ContentPanel/InspectorView"]
+layout_mode = 2
+
+[node name="ItemDetails" type="VBoxContainer" parent="Panel/VBox/HBoxBody/ContentPanel/InspectorView"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 6
+
+[node name="ItemTitle" type="Label" parent="Panel/VBox/HBoxBody/ContentPanel/InspectorView/ItemDetails"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 15
+text = "NO ITEM SELECTED"
+
+[node name="ItemTier" type="Label" parent="Panel/VBox/HBoxBody/ContentPanel/InspectorView/ItemDetails"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.8, 0.9, 0.8)
+theme_override_font_sizes/font_size = 11
+text = "SELECT OR HOVER TO INSPECT"
+
+[node name="ItemDesc" type="Label" parent="Panel/VBox/HBoxBody/ContentPanel/InspectorView/ItemDetails"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.9, 0.95, 0.9)
+theme_override_font_sizes/font_size = 12
+text = "Hover over or navigate to any relic to inspect its exact mechanics and synergistic interactions."
+autowrap_mode = 2
+
+[node name="PilotStatsLbl" type="Label" parent="Panel/VBox/HBoxBody/ContentPanel/InspectorView"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.7, 0.85, 0.9)
+theme_override_font_sizes/font_size = 10
+text = "HULL: 3/3  |  SHIELDS: 0/2  |  FIRING RATE: 3.8/s  |  ROLL CHARGES: 3"
+
+[node name="SettingsView" type="VBoxContainer" parent="Panel/VBox/HBoxBody/ContentPanel"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 16
+
+[node name="SettingsHeader" type="Label" parent="Panel/VBox/HBoxBody/ContentPanel/SettingsView"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 14
+text = "IN-FLIGHT SYSTEM CONFIGURATION"
+
+[node name="Grid" type="GridContainer" parent="Panel/VBox/HBoxBody/ContentPanel/SettingsView"]
+layout_mode = 2
+theme_override_constants/h_separation = 14
+theme_override_constants/v_separation = 14
+columns = 3
+
+[node name="MasterLbl" type="Label" parent="Panel/VBox/HBoxBody/ContentPanel/SettingsView/Grid"]
+layout_mode = 2
+text = "MASTER VOLUME:"
+
+[node name="MasterSlider" type="HSlider" parent="Panel/VBox/HBoxBody/ContentPanel/SettingsView/Grid"]
+custom_minimum_size = Vector2(180, 24)
+layout_mode = 2
+size_flags_vertical = 4
+value = 85.0
+
+[node name="MasterVal" type="Label" parent="Panel/VBox/HBoxBody/ContentPanel/SettingsView/Grid"]
+layout_mode = 2
+text = "85%"
+
+[node name="SfxLbl" type="Label" parent="Panel/VBox/HBoxBody/ContentPanel/SettingsView/Grid"]
+layout_mode = 2
+text = "SFX VOLUME:"
+
+[node name="SfxSlider" type="HSlider" parent="Panel/VBox/HBoxBody/ContentPanel/SettingsView/Grid"]
+custom_minimum_size = Vector2(180, 24)
+layout_mode = 2
+size_flags_vertical = 4
+value = 80.0
+
+[node name="SfxVal" type="Label" parent="Panel/VBox/HBoxBody/ContentPanel/SettingsView/Grid"]
+layout_mode = 2
+text = "80%"
+
+[node name="OrientLbl" type="Label" parent="Panel/VBox/HBoxBody/ContentPanel/SettingsView/Grid"]
+layout_mode = 2
+text = "ORIENTATION:"
+
+[node name="OrientBtn" type="Button" parent="Panel/VBox/HBoxBody/ContentPanel/SettingsView/Grid"]
+custom_minimum_size = Vector2(180, 32)
+layout_mode = 2
+text = "HORIZONTAL (16:9)"
+
+[node name="OrientDesc" type="Label" parent="Panel/VBox/HBoxBody/ContentPanel/SettingsView/Grid"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "[TAB] TOGGLE"
+
+[node name="FooterHints" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.45, 0.55, 0.7, 0.8)
+theme_override_font_sizes/font_size = 11
+text = "[ENTER / BUTTON A] Select  |  [ESC / BUTTON B] Resume  |  [ARROWS / D-PAD] Navigate"
+horizontal_alignment = 1

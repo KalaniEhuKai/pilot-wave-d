@@ -2,6 +2,8 @@ extends CanvasLayer
 
 ## ThreatDossier.gd - Cyberpunk holographic flight computer briefing card shown at sector launch.
 
+const MenuStyleHelper = preload("res://scripts/MenuStyleHelper.gd")
+
 signal mission_engaged()
 
 @onready var panel: Control = $Panel
@@ -14,12 +16,21 @@ signal mission_engaged()
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	panel.visible = false
-	engage_btn.focus_mode = Control.FOCUS_NONE
+	engage_btn.focus_mode = Control.FOCUS_ALL
+	MenuStyleHelper.style_button(engage_btn, Color(0.1, 0.95, 1.0, 1.0))
 	engage_btn.pressed.connect(_on_engage_pressed)
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not panel.visible:
+		return
+	if event.is_action_pressed("fire") or event.is_action_pressed("p2_fire") or event.is_action_pressed("ui_accept"):
+		_on_engage_pressed()
+		get_viewport().set_input_as_handled()
 
 func show_dossier(sector_num: int, boss_name: String) -> void:
 	panel.visible = true
 	get_tree().paused = true
+	engage_btn.grab_focus()
 	
 	sector_label.text = "SECTOR 0%d: QUANTUM DECOHERENCE BASIN" % sector_num
 	boss_label.text = "FLAGSHIP TARGET: " + boss_name.to_upper()

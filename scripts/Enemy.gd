@@ -44,10 +44,19 @@ const PINCER_CONVERGE = FlightProfile.DIAGONAL_STRAFER
 
 @export var enemy_type: EnemyType = EnemyType.SCOUT
 @export var elite_affix: EliteAffix = EliteAffix.NONE
+var is_elite: bool:
+	get: return elite_affix != EliteAffix.NONE
+	set(v):
+		if v and elite_affix == EliteAffix.NONE:
+			elite_affix = EliteAffix.ARMORED
+		elif not v:
+			elite_affix = EliteAffix.NONE
 @export var flight_profile: FlightProfile = FlightProfile.DIRECT_ADVANCE
 
 @export var max_health: float = 2.0
 var health: float = 2.0
+var use_3d_model: bool = true
+
 
 var speed: float = 260.0
 var score_value: int = 100
@@ -115,6 +124,7 @@ var orbital_direction: float = 1.0
 var orbital_radius: float = 240.0
 var has_aimed_lead: bool = false
 var has_burst_spread: bool = false
+var bomber_volley_count: int = 0
 
 # Visuals & Juice
 var hit_flash_timer: float = 0.0
@@ -160,6 +170,7 @@ func _setup_stats(profile_was_preset: bool = false) -> void:
 			accent_color = Color(0.3, 0.9, 1.0, 1.0)
 			fire_interval = 2.2 / sec_fire_mult
 			fire_timer = 1.0
+			bomber_volley_count = 0
 		EnemyType.INTERCEPTOR:
 			max_health = 3.5 * hp_mult
 			speed = 280.0 * sec_spd_mult
@@ -344,6 +355,11 @@ func _setup_stats(profile_was_preset: bool = false) -> void:
 		has_aimed_lead = true
 
 	health = max_health
+	
+	if use_3d_model and is_inside_tree():
+		var stage = get_tree().get_first_node_in_group("stage_3d")
+		if is_instance_valid(stage) and stage.has_method("register_enemy"):
+			stage.register_enemy(self)
 
 func setup(p_type: EnemyType, p_pos: Vector2, p_squad_id: int, p_spawner: Node, p_affix: EliteAffix = EliteAffix.NONE, p_profile: int = -1, p_drop_profile: Dictionary = {}) -> void:
 	enemy_type = p_type
@@ -367,6 +383,12 @@ func setup(p_type: EnemyType, p_pos: Vector2, p_squad_id: int, p_spawner: Node, 
 	_initialize_inward_direction()
 	if elite_affix != EliteAffix.NONE:
 		scale = Vector2(1.22, 1.22)
+	
+	if use_3d_model and is_inside_tree():
+		var stage = get_tree().get_first_node_in_group("stage_3d")
+		if is_instance_valid(stage) and stage.has_method("register_enemy"):
+			stage.register_enemy(self)
+	
 	queue_redraw()
 
 func _physics_process(delta: float) -> void:
@@ -772,25 +794,37 @@ func _execute_attack() -> void:
 		EnemyType.INTERCEPTOR:
 			var target = _get_closest_player()
 			var int_spd = base_bullet_spd * 1.15
-			var shot_dir = calculate_lead_target_vector(global_position, target, int_spd) if (has_aimed_lead or (wave_num >= 5 and elite_affix != EliteAffix.NONE)) else _get_aim_vector(target, oncoming)
-			var burst_count = 3 if (wave_num >= 4 or sec_num > 1) else 2
-			for i in range(burst_count):
-				get_tree().create_timer(i * 0.09).timeout.connect(func():
+			var shot_dir = _get_aim_vector(target, oncoming)
+			if target != null and (has_aimed_lead or (wave_num >= 5 and elite_affix != EliteAffix.NONE)):
+				shot_dir = calculate_lead_target_vector(global_position, target, int_spd)
+			# Flank flare & curved re-aim:
+			# Shoots out and away from player (±52° / ±0.91 rad) for 0.32s, then banks in a curve towards player
+			_spawn_curving_bullet(global_position - lat * 14.0, shot_dir.rotated(-0.91), 5.5, int_spd, 0.32, 0.55)
+			_spawn_curving_bullet(global_position + lat * 14.0, shot_dir.rotated(0.91), 5.5, int_spd, 0.32, 0.55)
+			if wave_num >= 4 or sec_num > 1:
+				get_tree().create_timer(0.12).timeout.connect(func():
 					if is_instance_valid(self) and not is_queued_for_deletion():
 						var t_cur = _get_closest_player()
-						var d_cur = calculate_lead_target_vector(global_position, t_cur, int_spd) if (has_aimed_lead or (wave_num >= 5 and elite_affix != EliteAffix.NONE)) else _get_aim_vector(t_cur, oncoming)
-						_spawn_enemy_bullet(global_position + d_cur * 16.0, d_cur, 1.0, int_spd)
+						var d_cur = _get_aim_vector(t_cur, oncoming)
+						_spawn_enemy_bullet(global_position + d_cur * 16.0, d_cur, 1.0, int_spd * 1.05)
 				)
 		EnemyType.BOMBER:
+			bomber_volley_count += 1
 			var target = _get_closest_player()
 			var b_spd = base_bullet_spd * 0.95
 			var center_dir = calculate_lead_target_vector(global_position, target, b_spd) if (has_aimed_lead and target != null) else _get_aim_vector(target, oncoming)
-			var angles = [-15.0, 0.0, 15.0]
-			if wave_num >= 5 or sec_num > 1:
-				angles = [-24.0, -12.0, 0.0, 12.0, 24.0]
-			for a in angles:
-				var d = center_dir.rotated(deg_to_rad(a))
-				_spawn_enemy_bullet(global_position + d * 20.0, d, 1.0, b_spd)
+			
+			# Clean alternation: odd volleys fire 3-5 purple fan spread; even volleys fire solo green cluster mortar
+			if bomber_volley_count % 2 == 1:
+				var angles = [-15.0, 0.0, 15.0]
+				if wave_num >= 5 or sec_num > 1:
+					angles = [-24.0, -12.0, 0.0, 12.0, 24.0]
+				for a in angles:
+					var d = center_dir.rotated(deg_to_rad(a))
+					_spawn_enemy_bullet(global_position + d * 20.0, d, 1.0, b_spd)
+			else:
+				# Solo Green Cluster Mortar (airbursts near player or travels deep)
+				_spawn_cluster_mortar(global_position + center_dir * 22.0, center_dir, b_spd * 0.95)
 		EnemyType.HEAVY_CRUISER:
 			var target = _get_closest_player()
 			var c_spd = base_bullet_spd * 1.05
@@ -831,8 +865,19 @@ func _execute_attack() -> void:
 		EnemyType.MISSILE_CORVETTE:
 			var target = _get_closest_player()
 			var aim_base = _get_aim_vector(target, oncoming)
-			_spawn_enemy_bullet(global_position - lat * 14.0, aim_base.rotated(-0.16), 1.0, base_bullet_spd * 0.95)
-			_spawn_enemy_bullet(global_position + lat * 14.0, aim_base.rotated(0.16), 1.0, base_bullet_spd * 0.95)
+			# Twin seeker missiles ejected wide away from ship (±45° / ±0.78 rad) before tracking
+			_spawn_homing_missile(global_position - lat * 14.0, aim_base.rotated(-0.78), base_bullet_spd * 0.9)
+			_spawn_homing_missile(global_position + lat * 14.0, aim_base.rotated(0.78), base_bullet_spd * 0.9)
+		EnemyType.WARP_STALKER:
+			var target = _get_closest_player()
+			var aim = _get_aim_vector(target, oncoming)
+			# Braided double-helix quantum waves dealing 2 damage
+			_spawn_wave_bullet(global_position - lat * 12.0, aim, 0.0, base_bullet_spd * 0.95)
+			_spawn_wave_bullet(global_position + lat * 12.0, aim, PI, base_bullet_spd * 0.95)
+		EnemyType.PHANTOM:
+			var target = _get_closest_player()
+			var aim = _get_aim_vector(target, oncoming)
+			_spawn_wave_bullet(global_position, aim, randf_range(0.0, TAU), base_bullet_spd * 1.05)
 		EnemyType.DRAINER_LEECH:
 			var target = _get_closest_player()
 			var l_dir = _get_aim_vector(target, oncoming)
@@ -876,6 +921,42 @@ func _spawn_enemy_bullet(pos: Vector2, dir: Vector2, dmg: float, b_speed: float)
 	b.setup(pos, dir, true, dmg)
 	b.speed = b_speed
 	SoundEffects.play_sfx("laser", 0.06, -3.0)
+
+func _spawn_homing_missile(pos: Vector2, dir: Vector2, b_speed: float) -> void:
+	var b = bullet_scene.instantiate()
+	get_parent().add_child(b)
+	b.pattern = b.Pattern.HOMING
+	b.setup(pos, dir, true, 1.0)
+	b.speed = b_speed
+	SoundEffects.play_sfx("laser", 0.08, -1.0)
+
+func _spawn_wave_bullet(pos: Vector2, dir: Vector2, phase: float, b_speed: float) -> void:
+	var b = bullet_scene.instantiate()
+	get_parent().add_child(b)
+	b.pattern = b.Pattern.SINE_WAVE
+	b.wave_phase = phase
+	b.setup(pos, dir, true, 2.0) # Deals 2 damage (quantum disruption)!
+	b.speed = b_speed
+	SoundEffects.play_sfx("laser", 0.07, 1.5)
+
+func _spawn_curving_bullet(pos: Vector2, dir: Vector2, angular_speed: float, b_speed: float, delay: float = 0.32, turn_time: float = 0.55) -> void:
+	var b = bullet_scene.instantiate()
+	get_parent().add_child(b)
+	b.pattern = b.Pattern.CURVING_ARC
+	b.curve_angular_speed = angular_speed
+	b.curve_delay = delay
+	b.curve_turn_time = turn_time
+	b.setup(pos, dir, true, 1.0)
+	b.speed = b_speed
+	SoundEffects.play_sfx("laser", 0.06, -2.0)
+
+func _spawn_cluster_mortar(pos: Vector2, dir: Vector2, b_speed: float) -> void:
+	var b = bullet_scene.instantiate()
+	get_parent().add_child(b)
+	b.pattern = b.Pattern.CLUSTER_BURST
+	b.setup(pos, dir, true, 2.0) # Direct hit deals 2 damage!
+	b.speed = b_speed
+	SoundEffects.play_sfx("laser", 0.12, -4.0)
 
 func _get_closest_player() -> Node2D:
 	var players = get_tree().get_nodes_in_group("player")
@@ -1070,7 +1151,7 @@ func _draw() -> void:
 
 	# Draw Energy Shield bubble if SHIELDED affix
 	if energy_shield_hp > 0.0:
-		draw_arc(Vector2.ZERO, 28.0, 0, TAU, 16, Color(0.4, 0.7, 1.0, 0.9), 2.5)
+		_draw_hex_shield(28.0, Color(0.4, 0.7, 1.0, 0.9))
 
 	# Draw Shield Frigate aura perimeter
 	if enemy_type == EnemyType.SHIELD_FRIGATE:
@@ -1086,7 +1167,10 @@ func _draw() -> void:
 			var local_endpoint = to_local(global_position + lead_v * 1200.0)
 			draw_line(Vector2.ZERO, local_endpoint, Color(1.0, 0.15, 0.15, 0.8), 1.5)
 
-	# Vector draw per enemy archetype
+	# Vector draw per enemy archetype (fallback when 3D model not active)
+	if use_3d_model:
+		return
+
 	match enemy_type:
 		EnemyType.SCOUT:
 			var pts = PackedVector2Array([Vector2(16, 0), Vector2(-12, -10), Vector2(-6, 0), Vector2(-12, 10)])
@@ -1180,3 +1264,17 @@ func _draw() -> void:
 			var pts = PackedVector2Array([Vector2(16, 0), Vector2(-10, -10), Vector2(-6, 0), Vector2(-10, 10)])
 			draw_colored_polygon(pts, col)
 			draw_polyline(pts + PackedVector2Array([Vector2(16, 0)]), accent_color, 1.5)
+
+func _draw_hex_shield(s_radius: float, s_color: Color) -> void:
+	var hex_pts = PackedVector2Array()
+	var pulse = 1.0 + sin(Time.get_ticks_msec() * 0.008) * 0.06
+	var rot = Time.get_ticks_msec() * 0.001
+	for i in range(6):
+		var a = rot + (float(i) / 6.0) * TAU
+		hex_pts.append(Vector2(cos(a), sin(a)) * s_radius * pulse)
+	var fill_col = s_color
+	fill_col.a = 0.18
+	draw_colored_polygon(hex_pts, fill_col)
+	draw_polyline(hex_pts + PackedVector2Array([hex_pts[0]]), s_color, 2.0, true)
+	for pt in hex_pts:
+		draw_circle(pt, 2.2, Color.WHITE)

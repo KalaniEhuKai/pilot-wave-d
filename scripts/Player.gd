@@ -5,6 +5,9 @@ extends CharacterBody2D
 signal health_changed(hull: int, shields: int, max_hull: int, max_shields: int)
 signal roll_charges_changed(charges: int, max_charges: int, cooldown_ratio: float)
 signal modifiers_updated(modifiers: Array[ItemModifier])
+signal weapon_fired(is_left: bool)
+
+var use_3d_model: bool = true
 
 @export var player_id: int = 1 # 1 = P1 (Cyan), 2 = P2 (Amber/Gold)
 
@@ -43,7 +46,15 @@ var scrap_magnet_radius: float = 130.0
 # Visuals & Juice
 var bank_angle: float = 0.0
 var hit_flash_timer: float = 0.0
+var hull_hit_flash_timer: float = 0.0
 var meissner_fx_timer: float = 0.0
+var shield_break_flash_timer: float = 0.0
+var shield_reform_timer: float = 0.0
+var critical_alarm_timer: float = 0.0
+var damage_smoke_accumulator: float = 0.0
+var damage_particles: Array[Dictionary] = []
+var shield_shards: Array[Dictionary] = []
+var hull_sparks: Array[Dictionary] = []
 
 # Inter-Wave Quantum Warp & Shard Vacuum Pulse
 var warp_charge_ratio: float = 0.0
@@ -66,12 +77,16 @@ var thruster_color: Color = Color(0.0, 0.7, 1.0, 0.9)
 # Preloaded scenes
 var bullet_scene: PackedScene = preload("res://scenes/Bullet.tscn")
 var explosion_scene: PackedScene = preload("res://scenes/Explosion.tscn")
+const ImpactFlashScript = preload("res://scripts/ImpactFlash.gd")
 
 # Synergy state flags
 var fire_charge_time: float = 0.0
 var has_tachyon_capacitor: bool = false
 var has_carnot_heatsink: bool = false
+var has_carnot_precooler: bool = false
 var has_carnot_efficiency: bool = false
+var has_cw_magnetron: bool = false
+var has_casimir_discharge: bool = false
 
 # Combat stat scaling & Additive Bonus Pools
 var damage_mult: float = 1.0
@@ -126,6 +141,25 @@ func _ready() -> void:
 	_emit_health()
 	_emit_rolls()
 	GameAxis.axis_changed.connect(_on_axis_changed)
+	
+	# Secret Debug Starting Relics / God Build
+	if GameManager.debug_give_god_build or not GameManager.debug_starting_relics.is_empty():
+		_apply_debug_starting_loadout()
+
+func _apply_debug_starting_loadout() -> void:
+	var items = ItemDatabase.get_all_items()
+	var item_map = {}
+	for it in items:
+		item_map[it.id] = it
+	
+	if GameManager.debug_give_god_build:
+		for god_id in ["continuous_wave_magnetron", "casimir_discharge", "feynman_propagator", "target_lock_matrix"]:
+			if item_map.has(god_id) and get_modifier_stack_count(god_id) == 0:
+				add_modifier(item_map[god_id])
+	
+	for mod_id in GameManager.debug_starting_relics:
+		if item_map.has(mod_id) and get_modifier_stack_count(mod_id) == 0:
+			add_modifier(item_map[mod_id])
 
 func recalculate_stats() -> void:
 	max_hull = maxi(1, base_max_hull + bonus_max_hull)
@@ -140,7 +174,7 @@ func recalculate_stats() -> void:
 	damage_mult = maxf(0.1, 1.0 + bonus_damage_pct)
 	move_speed = base_move_speed * maxf(0.3, 1.0 + bonus_move_speed_pct)
 	bullet_speed_mult = maxf(0.2, 1.0 + bonus_bullet_speed_pct)
-	bullet_scale = maxf(0.2, 1.0 + bonus_bullet_scale_pct)
+	bullet_scale = maxf(0.2, (1.0 + bonus_bullet_scale_pct) * sqrt(damage_mult))
 	roll_cooldown = base_roll_cooldown * maxf(0.3, 1.0 - bonus_roll_cdr_pct)
 	shield_recharge_delay = base_shield_delay * maxf(0.3, 1.0 - bonus_shield_delay_reduction_pct)
 	scrap_magnet_radius = base_scrap_magnet_radius + bonus_magnet_radius
@@ -171,8 +205,25 @@ func add_modifier(mod: ItemModifier) -> void:
 	mod.on_ship_init(self)
 	modifiers_updated.emit(active_modifiers)
 	GameManager.player_modifiers_updated.emit(active_modifiers, player_id)
-	SoundEffects.play_sfx("bonus", 0.05, 4.0)
-	GameManager.request_screen_shake(5.0, 0.2)
+	if mod.tier == ItemModifier.ItemTier.TIER_3_EXOTIC:
+		SoundEffects.play_sfx("bonus", 0.04, 5.0, 1.25)
+		GameManager.request_screen_shake(8.0, 0.3)
+		var p = get_parent()
+		if p:
+			var flash = ImpactFlashScript.new()
+			p.add_child(flash)
+			flash.setup(global_position, 55.0, Color(1.0, 0.85, 0.2, 0.95))
+	elif mod.tier == ItemModifier.ItemTier.TIER_2_PARADIGM:
+		SoundEffects.play_sfx("bonus", 0.05, 4.0, 1.1)
+		GameManager.request_screen_shake(5.0, 0.2)
+		var p = get_parent()
+		if p:
+			var flash = ImpactFlashScript.new()
+			p.add_child(flash)
+			flash.setup(global_position, 35.0, Color(1.0, 0.3, 0.7, 0.9))
+	else:
+		SoundEffects.play_sfx("bonus", 0.05, 3.5, 0.95)
+		GameManager.request_screen_shake(4.0, 0.15)
 
 func has_modifier(id: String) -> bool:
 	for m in active_modifiers:
@@ -290,18 +341,105 @@ func _physics_process(delta: float) -> void:
 func _handle_timers(delta: float) -> void:
 	if hit_flash_timer > 0.0:
 		hit_flash_timer -= delta
+	if hull_hit_flash_timer > 0.0:
+		hull_hit_flash_timer -= delta
+	if shield_break_flash_timer > 0.0:
+		shield_break_flash_timer -= delta
+	if shield_reform_timer > 0.0:
+		shield_reform_timer -= delta
 	if meissner_fx_timer > 0.0:
 		meissner_fx_timer -= delta
 	
 	if shields < max_shields:
 		shield_timer -= delta
 		if shield_timer <= 0.0:
+			var was_zero = (shields == 0)
 			shields += 1
 			shield_timer = shield_recharge_delay
 			_emit_health()
-			SoundEffects.play_sfx("bonus", 0.05, -6.0)
+			if was_zero:
+				shield_reform_timer = 0.25
+				SoundEffects.play_sfx("shield_recharge", 0.05, -3.0)
+			else:
+				SoundEffects.play_sfx("bonus", 0.05, -6.0)
 	
-	if rolls < max_rolls:
+	if hull <= int(max_hull / 3.0) and hull > 0 and not GameManager.is_game_over:
+		critical_alarm_timer -= delta
+		if critical_alarm_timer <= 0.0:
+			critical_alarm_timer = 2.4
+			SoundEffects.play_sfx("low_hull_alarm", 0.02, -8.0)
+	
+	# Update shield break shards
+	var alive_shards: Array[Dictionary] = []
+	for s in shield_shards:
+		s.pos += s.vel * delta
+		s.rot += s.rot_vel * delta
+		s.life -= delta
+		if s.life > 0.0:
+			alive_shards.append(s)
+	shield_shards = alive_shards
+
+	# Update hull impact metal sparks
+	var alive_sparks: Array[Dictionary] = []
+	for sp in hull_sparks:
+		sp.pos += sp.vel * delta
+		sp.life -= delta
+		if sp.life > 0.0:
+			alive_sparks.append(sp)
+	hull_sparks = alive_sparks
+
+	# Emit and update damage smoke & fire particles
+	if hull < max_hull and not GameManager.is_game_over:
+		damage_smoke_accumulator += delta
+		var is_critical = (hull <= int(max_hull / 3.0))
+		var is_heavy = (hull <= int(max_hull / 2.0))
+		var spawn_interval = 0.018 if is_critical else (0.038 if is_heavy else 0.075)
+		
+		if damage_smoke_accumulator >= spawn_interval:
+			damage_smoke_accumulator = 0.0
+			var rear_dir = -GameAxis.forward if GameAxis != null else Vector2.LEFT
+			var lat_dir = GameAxis.lateral if GameAxis != null else Vector2.DOWN
+			var offset_pos = rear_dir * 10.0 + lat_dir * randf_range(-10.0, 10.0)
+			var smoke_vel = rear_dir * randf_range(40.0, 100.0) + lat_dir * randf_range(-20.0, 20.0)
+			damage_particles.append({
+				"type": "smoke",
+				"pos": offset_pos,
+				"vel": smoke_vel,
+				"size": randf_range(3.5, 6.5) if not is_critical else randf_range(5.0, 9.0),
+				"max_size": randf_range(12.0, 20.0),
+				"life": randf_range(0.35, 0.55),
+				"max_life": 0.55,
+				"color": Color(0.18, 0.20, 0.24, 0.75) if not is_critical else Color(0.08, 0.09, 0.12, 0.9)
+			})
+			if is_heavy or is_critical:
+				damage_particles.append({
+					"type": "fire",
+					"pos": offset_pos + lat_dir * randf_range(-4.0, 4.0),
+					"vel": rear_dir * randf_range(60.0, 130.0) + lat_dir * randf_range(-30.0, 30.0),
+					"size": randf_range(2.5, 5.0),
+					"max_size": 1.0,
+					"life": randf_range(0.14, 0.24),
+					"max_life": 0.24,
+					"color": Color(1.0, randf_range(0.4, 0.75), 0.1, 0.95)
+				})
+
+	var alive_damage_p: Array[Dictionary] = []
+	for dp in damage_particles:
+		dp.pos += dp.vel * delta
+		dp.life -= delta
+		if dp.type == "smoke":
+			dp.size = lerpf(dp.size, dp.max_size, 1.0 - (dp.life / dp.max_life))
+		if dp.life > 0.0:
+			alive_damage_p.append(dp)
+	damage_particles = alive_damage_p
+
+	
+	if GameManager.debug_infinite_rolls:
+		if rolls < max_rolls:
+			rolls = max_rolls
+			roll_timer = 0.0
+			_emit_rolls()
+	elif rolls < max_rolls:
 		roll_timer += delta
 		if roll_timer >= roll_cooldown:
 			rolls += 1
@@ -419,7 +557,12 @@ func _fire_synchrotron() -> void:
 		sp["damage"] = dmg
 		_spawn_bullet_from_params(sp)
 	
-	SoundEffects.play_sfx("laser", 0.08, -6.0)
+	weapon_fired.emit(true)
+	weapon_fired.emit(false)
+	if has_cw_magnetron:
+		SoundEffects.play_sfx("laser", 0.08, -10.0, 1.45)
+	else:
+		SoundEffects.play_sfx("laser", 0.08, -6.0)
 
 func _spawn_bullet_from_params(params: Dictionary) -> void:
 	var b = bullet_scene.instantiate()
@@ -436,9 +579,25 @@ func _spawn_bullet_from_params(params: Dictionary) -> void:
 		# P2 bullets have amber tint
 		b.glow_color = Color(1.0, 0.7, 0.2, 0.9)
 	
-	if params.has("is_crit") and params["is_crit"]:
+	var is_bullet_crit = params.has("is_crit") and params["is_crit"]
+	if is_bullet_crit:
 		b.glow_color = Color(1.0, 0.95, 0.2, 1.0)
 		b.scale *= 1.25
+		b.set_meta("is_crit", true)
+	
+	if params.has("is_cw_dart") and params["is_cw_dart"]:
+		b.set_meta("is_cw_dart", true)
+		if not is_bullet_crit and player_id != 2:
+			b.glow_color = Color(0.2, 1.0, 0.75, 0.95)
+	
+	if params.has("is_casimir") and params["is_casimir"]:
+		b.set_meta("is_casimir", true)
+		b.damage *= 2.2
+		b.scale *= 1.6
+		b.set_meta("casimir_base_damage", b.damage / 2.2)
+		b.set_meta("casimir_base_scale", b.scale / 1.6)
+		if not is_bullet_crit and player_id != 2:
+			b.glow_color = Color(1.0, 0.5, 0.15, 1.0)
 	
 	if params.has("is_suspended") and params["is_suspended"]:
 		b.is_suspended = true
@@ -452,8 +611,11 @@ func _spawn_bullet_from_params(params: Dictionary) -> void:
 	if params.has("pierce_count"):
 		b.set_meta("pierce_count", params["pierce_count"])
 	
-	if params.has("is_spectral") and params["is_spectral"]:
-		b.modulate = Color(0.7, 0.4, 1.0, 0.75)
+	var is_spectral_shot = (params.has("is_spectral") and params["is_spectral"]) or (params.has("pierce_count") and params["pierce_count"] > 0 and not params.get("is_tachyon_lance", false))
+	if is_spectral_shot:
+		b.is_spectral = true
+		if not is_bullet_crit and not params.get("is_tachyon_lance", false) and player_id != 2:
+			b.glow_color = Color(0.76, 0.34, 1.0, 0.95)
 
 func _handle_barrel_roll(delta: float) -> void:
 	var roll_action = "p2_barrel_roll" if player_id == 2 else "barrel_roll"
@@ -493,7 +655,7 @@ func _end_barrel_roll() -> void:
 	scale = Vector2.ONE
 
 func take_damage(amount: int = 1) -> void:
-	if is_invulnerable or is_rolling or GameManager.is_game_over:
+	if is_invulnerable or is_rolling or GameManager.is_game_over or GameManager.debug_god_mode:
 		return
 	
 	for mod in active_modifiers:
@@ -502,19 +664,78 @@ func take_damage(amount: int = 1) -> void:
 	
 	hit_flash_timer = 0.12
 	
+	var imp_dir = -velocity.normalized() if velocity != Vector2.ZERO else (-GameAxis.forward if GameAxis != null else Vector2.LEFT)
 	if shields > 0:
 		shields = maxi(0, shields - amount)
 		shield_timer = shield_recharge_delay
-		SoundEffects.play_sfx("hit", 0.1, 3.0)
-		GameManager.request_screen_shake(6.0, 0.2)
+		SoundEffects.play_sfx("shield_hit", 0.08, -3.0)
+		if GameManager.has_signal("custom_shake_requested"):
+			GameManager.custom_shake_requested.emit(imp_dir, 7.0, 0.16, 55.0)
+		else:
+			GameManager.request_directional_shake(imp_dir, 7.0, 0.16)
+		GameManager.trigger_hit_stop(0.03)
+		if shields == 0:
+			_trigger_shield_break(imp_dir)
 	else:
 		hull = maxi(0, hull - amount)
-		SoundEffects.play_sfx("hurt", 0.1, 4.0)
-		GameManager.request_screen_shake(12.0, 0.35)
+		SoundEffects.play_sfx("hull_hit", 0.08, -2.0)
+		if GameManager.has_signal("custom_shake_requested"):
+			GameManager.custom_shake_requested.emit(imp_dir, 18.0, 0.38, 28.0)
+		else:
+			GameManager.request_directional_shake(imp_dir, 18.0, 0.38)
+		GameManager.trigger_hit_stop(0.055)
+		hull_hit_flash_timer = 0.22
+		_spawn_hull_damage_sparks(imp_dir)
+		if GameManager.has_signal("player_hull_damaged"):
+			GameManager.player_hull_damaged.emit(player_id, hull, max_hull)
 		
 		if hull <= 0:
 			_die()
 			return
+		elif hull <= int(max_hull / 3.0):
+			SoundEffects.play_sfx("low_hull_alarm", 0.02, -2.0)
+	
+	_emit_health()
+
+func _trigger_shield_break(dir: Vector2) -> void:
+	SoundEffects.play_sfx("shield_break", 0.08, -2.0)
+	if GameManager.has_signal("player_shield_broken"):
+		GameManager.player_shield_broken.emit(player_id)
+	shield_break_flash_timer = 0.35
+	
+	var shard_count = 14
+	for i in range(shard_count):
+		var ang = (float(i) / float(shard_count)) * TAU + randf_range(-0.15, 0.15)
+		var spd = randf_range(110.0, 260.0)
+		var s_dir = Vector2(cos(ang), sin(ang))
+		shield_shards.append({
+			"pos": s_dir * 30.0,
+			"vel": s_dir * spd + dir * 50.0,
+			"rot": randf() * TAU,
+			"rot_vel": randf_range(-14.0, 14.0),
+			"radius": randf_range(26.0, 34.0),
+			"arc_len": randf_range(0.25, 0.5),
+			"life": randf_range(0.32, 0.46),
+			"max_life": 0.46,
+			"color": primary_color.lerp(Color.WHITE, 0.45)
+		})
+
+func _spawn_hull_damage_sparks(dir: Vector2) -> void:
+	var count = 12
+	for i in range(count):
+		var ang = randf() * TAU
+		var spd = randf_range(120.0, 310.0)
+		var s_vel = (dir.normalized() * 0.4 + Vector2(cos(ang), sin(ang)) * 0.6).normalized() * spd
+		hull_sparks.append({
+			"pos": Vector2(randf_range(-8.0, 8.0), randf_range(-8.0, 8.0)),
+			"vel": s_vel,
+			"size": randf_range(2.0, 4.0),
+			"life": randf_range(0.18, 0.32),
+			"max_life": 0.32,
+			"color": Color(1.0, randf_range(0.5, 0.95), 0.15, 1.0)
+		})
+
+
 	
 	_emit_health()
 
@@ -547,40 +768,119 @@ func _draw() -> void:
 		draw_col = Color(0.3, 1.0, 0.6, 1.0)
 		core_col = Color(0.8, 1.0, 0.9, 1.0)
 	
-	var nose = Vector2(26, 0)
-	var wing_left = Vector2(-16, -20)
-	var wing_right = Vector2(-16, 20)
-	var wing_in_l = Vector2(-8, -10)
-	var wing_in_r = Vector2(-8, 10)
-	var tail = Vector2(-22, 0)
+	if not use_3d_model:
+		var nose = Vector2(26, 0)
+		var wing_left = Vector2(-16, -20)
+		var wing_right = Vector2(-16, 20)
+		var wing_in_l = Vector2(-8, -10)
+		var wing_in_r = Vector2(-8, 10)
+		var tail = Vector2(-22, 0)
+		
+		var hull_poly = PackedVector2Array([
+			nose, Vector2(6, -8), wing_left, Vector2(-14, -14),
+			wing_in_l, Vector2(-18, -6), tail, Vector2(-18, 6),
+			wing_in_r, Vector2(-14, 14), wing_right, Vector2(6, 8)
+		])
+		
+		draw_colored_polygon(hull_poly, Color(0.06, 0.12, 0.2, 0.95))
+		draw_polyline(hull_poly + PackedVector2Array([nose]), draw_col, 2.4, true)
+		
+		var canopy = PackedVector2Array([Vector2(14, 0), Vector2(2, -4), Vector2(-8, 0), Vector2(2, 4)])
+		draw_colored_polygon(canopy, core_col)
+		draw_polyline(canopy + PackedVector2Array([Vector2(14, 0)]), Color(1, 1, 1, 0.9), 1.5, true)
+		
+		var flame_len = randf_range(12.0, 24.0)
+		if is_rolling:
+			flame_len *= 1.8
+		
+		var engine_l = Vector2(-18, -6)
+		var engine_r = Vector2(-18, 6)
+		draw_line(engine_l, engine_l - Vector2(flame_len, 0), flame_col, 4.0, true)
+		draw_line(engine_l, engine_l - Vector2(flame_len * 0.6, 0), Color.WHITE, 2.0, true)
+		draw_line(engine_r, engine_r - Vector2(flame_len, 0), flame_col, 4.0, true)
+		draw_line(engine_r, engine_r - Vector2(flame_len * 0.6, 0), Color.WHITE, 2.0, true)
 	
-	var hull_poly = PackedVector2Array([
-		nose, Vector2(6, -8), wing_left, Vector2(-14, -14),
-		wing_in_l, Vector2(-18, -6), tail, Vector2(-18, 6),
-		wing_in_r, Vector2(-14, 14), wing_right, Vector2(6, 8)
-	])
-	
-	draw_colored_polygon(hull_poly, Color(0.06, 0.12, 0.2, 0.95))
-	draw_polyline(hull_poly + PackedVector2Array([nose]), draw_col, 2.4, true)
-	
-	var canopy = PackedVector2Array([Vector2(14, 0), Vector2(2, -4), Vector2(-8, 0), Vector2(2, 4)])
-	draw_colored_polygon(canopy, core_col)
-	draw_polyline(canopy + PackedVector2Array([Vector2(14, 0)]), Color(1, 1, 1, 0.9), 1.5, true)
-	
-	var flame_len = randf_range(12.0, 24.0)
-	if is_rolling:
-		flame_len *= 1.8
-	
-	var engine_l = Vector2(-18, -6)
-	var engine_r = Vector2(-18, 6)
-	draw_line(engine_l, engine_l - Vector2(flame_len, 0), flame_col, 4.0, true)
-	draw_line(engine_l, engine_l - Vector2(flame_len * 0.6, 0), Color.WHITE, 2.0, true)
-	draw_line(engine_r, engine_r - Vector2(flame_len, 0), flame_col, 4.0, true)
-	draw_line(engine_r, engine_r - Vector2(flame_len * 0.6, 0), Color.WHITE, 2.0, true)
-	
+	# 1. Damage Smoke and Fire Particles
+	for dp in damage_particles:
+		var p_t = clampf(dp.life / dp.max_life, 0.0, 1.0)
+		var c = dp.color
+		c.a *= p_t
+		if dp.type == "smoke":
+			draw_circle(dp.pos, dp.size, c)
+		else:
+			draw_circle(dp.pos, dp.size * p_t, c)
+			draw_circle(dp.pos, dp.size * p_t * 0.5, Color.WHITE)
+
+	# 2. Hull Impact Metal Sparks
+	for sp in hull_sparks:
+		var s_t = clampf(sp.life / sp.max_life, 0.0, 1.0)
+		var c = sp.color
+		c.a *= s_t
+		draw_circle(sp.pos, sp.size * s_t, c)
+		draw_line(sp.pos, sp.pos - sp.vel * 0.025, c, 1.8)
+
+	# 3. Bursting Shield Shatter Shards
+	for sh in shield_shards:
+		var sh_t = clampf(sh.life / sh.max_life, 0.0, 1.0)
+		var c = sh.color
+		c.a *= sh_t
+		draw_arc(sh.pos, sh.radius * (1.0 + (1.0 - sh_t) * 0.2), sh.rot, sh.rot + sh.arc_len, 8, c, 2.2 * sh_t, true)
+		draw_circle(sh.pos, 2.0 * sh_t, Color(1.0, 1.0, 1.0, sh_t * 0.8))
+
+	# 4. Inward Shield Reform Wave
+	if shield_reform_timer > 0.0:
+		var rf_prog = 1.0 - (shield_reform_timer / 0.25)
+		var cur_r = lerpf(55.0, 30.0, rf_prog)
+		draw_arc(Vector2.ZERO, cur_r, 0, TAU, 36, Color(primary_color.r, primary_color.g, primary_color.b, (1.0 - rf_prog) * 0.95), 2.8, true)
+		draw_circle(Vector2.ZERO, 3.0, Color.WHITE)
+
+	# 5. Segmented In-Combat Shield Circle
 	if shields > 0:
-		var shield_alpha = 0.25 + (float(shields) / max_shields) * 0.25
-		draw_arc(Vector2.ZERO, 30.0, 0, TAU, 32, Color(draw_col.r, draw_col.g, draw_col.b, shield_alpha), 2.0, true)
+		var shield_base_alpha = 0.35 + (float(shields) / max_shields) * 0.45
+		var s_col = Color(draw_col.r, draw_col.g, draw_col.b, shield_base_alpha)
+		
+		# Full shield extra harmonic overcharge glow
+		if shields == max_shields:
+			var full_pulse = 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.006)
+			var aura_col = Color(accent_color.r, accent_color.g, accent_color.b, 0.22 + full_pulse * 0.28)
+			draw_arc(Vector2.ZERO, 34.5, 0, TAU, 40, aura_col, 2.0, true)
+		
+		if shields == 1:
+			# Solid continuous circle for the final remaining shield layer
+			draw_arc(Vector2.ZERO, 30.0, 0, TAU, 40, s_col, 2.6, true)
+		else:
+			# Sliced into 'shields' distinct arc segments rotating slowly
+			var seg_count = shields
+			var span = TAU / float(seg_count)
+			var gap = 0.16 # ~9.2 degrees gap
+			var rot_offset = fmod(Time.get_ticks_msec() * 0.0006, TAU)
+			for i in range(seg_count):
+				var a_start = i * span + gap * 0.5 + rot_offset
+				var a_end = (i + 1) * span - gap * 0.5 + rot_offset
+				draw_arc(Vector2.ZERO, 30.0, a_start, a_end, 18, s_col, 2.6, true)
+	else:
+		# Shields are 0: faint intermittent electrical sputtering
+		var off_phase = fmod(Time.get_ticks_msec() * 0.001, 1.1)
+		if off_phase < 0.09:
+			var sp_ang = randf() * TAU
+			draw_arc(Vector2.ZERO, 30.0, sp_ang, sp_ang + 0.35, 6, Color(primary_color.r, primary_color.g, primary_color.b, 0.4), 1.6, true)
+
+	# 6. Critical Hull Emergency Distress Beacon Pulse (Under 1/3 health)
+	if hull <= int(max_hull / 3.0) and hull > 0 and not GameManager.is_game_over:
+		var beacon_t = 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.012) # ~1.9 Hz strobe pulse
+		var beacon_inner = 20.0 + beacon_t * 6.0
+		var beacon_col = Color(1.0, 0.15, 0.22, 0.3 + beacon_t * 0.55)
+		draw_arc(Vector2.ZERO, beacon_inner, 0, TAU, 32, beacon_col, 2.8, true)
+		draw_arc(Vector2.ZERO, beacon_inner + 8.0, 0, TAU, 32, Color(1.0, 0.2, 0.1, beacon_t * 0.35), 1.6, true)
+		# Flashing central cockpit distress cross/pip
+		draw_circle(Vector2.ZERO, 3.5 * beacon_t, Color(1.0, 0.8, 0.8, beacon_t * 0.9))
+
+	# 7. Intense Hull Damage Flash
+	if hull_hit_flash_timer > 0.0:
+		var h_t = hull_hit_flash_timer / 0.22
+		var flash_col = Color(1.0, 0.25, 0.1, h_t * 0.6)
+		draw_circle(Vector2.ZERO, 26.0, flash_col)
+
 	
 	if meissner_fx_timer > 0.0:
 		var m_alpha = meissner_fx_timer / 0.28

@@ -1,11 +1,11 @@
 extends "res://scripts/ItemModifier.gd"
 
-## ZeemanSplitting.gd - Emits rear-firing counter-projectiles whenever primary cannon fires.
+## ZeemanSplitting.gd - Discharges orthogonal lateral beams whenever primary cannon fires.
 
 func _init() -> void:
 	id = "zeeman_splitting"
 	display_name = "Zeeman Splitting"
-	description = "Magnetic divergence emits twin rear counter-projectiles whenever firing to protect against flankers."
+	description = "Magnetic divergence discharges twin orthogonal lateral beams (90° flanks) whenever firing to destroy flanking hostiles."
 	tier = ItemTier.TIER_1_BALLISTIC
 	icon_color = Color(0.9, 0.3, 1.0, 1.0)
 	icon_symbol = "[><]"
@@ -16,12 +16,12 @@ func on_fire(_ship: CharacterBody2D, spawn_params: Dictionary) -> Array[Dictiona
 	var base_dir = spawn_params.get("dir", Vector2.RIGHT)
 	var base_dmg = spawn_params.get("damage", spawn_params.get("dmg", 1.0))
 	
-	# Twin rear shots angled at 165 and 195 degrees from forward
-	var rear_1 = base_dir.rotated(PI * 0.9)
-	var rear_2 = base_dir.rotated(-PI * 0.9)
-	var rear_dmg = base_dmg * 0.6
+	# Twin orthogonal lateral beams angled at +90 and -90 degrees from forward
+	var flank_1 = base_dir.rotated(PI * 0.5)
+	var flank_2 = base_dir.rotated(-PI * 0.5)
+	var flank_dmg = base_dmg * 0.75
 	
-	results.append({"pos": base_pos, "dir": rear_1, "damage": rear_dmg, "dmg": rear_dmg})
-	results.append({"pos": base_pos, "dir": rear_2, "damage": rear_dmg, "dmg": rear_dmg})
+	results.append({"pos": base_pos, "dir": flank_1, "damage": flank_dmg, "dmg": flank_dmg})
+	results.append({"pos": base_pos, "dir": flank_2, "damage": flank_dmg, "dmg": flank_dmg})
 	
 	return results

@@ -3,6 +3,7 @@ extends CanvasLayer
 ## SkyMerchant.gd - Super Quarket Station: Orbital centrifuge depot with concentric counter-rotating rings, independent co-op stalls, and escalating reroll terminal.
 
 const ProgressionModel = preload("res://scripts/ProgressionModel.gd")
+const MenuStyleHelper = preload("res://scripts/MenuStyleHelper.gd")
 
 signal undocked()
 
@@ -34,6 +35,13 @@ const ZeppelinCradle = StationCradle
 var p1_shop_items: Array[ItemModifier] = []
 var p2_shop_items: Array[ItemModifier] = []
 
+var p1_buttons: Array[Button] = []
+var p2_buttons: Array[Button] = []
+var p1_cursor_idx: int = 0
+var p2_cursor_idx: int = 0
+var p1_ready: bool = false
+var p2_ready: bool = false
+
 # Super Quarket Station Visuals & Docking Animation
 var cradle: Control = null
 var station_visible: bool = false
@@ -41,6 +49,7 @@ var station_pos: Vector2 = Vector2.ZERO
 var tractor_beam_active: bool = false
 var tractor_beam_alpha: float = 0.0
 var is_docking_anim: bool = false
+var use_3d_model: bool = true
 
 # Backwards-compatible aliases for tests & legacy references
 var zeppelin_visible: bool:
@@ -73,6 +82,10 @@ func _ready() -> void:
 		panel.visible = false
 		station_visible = false
 	)
+	
+	var stage = get_tree().get_first_node_in_group("stage_3d")
+	if stage and stage.has_method("register_station"):
+		stage.register_station(self)
 
 func _process(_delta: float) -> void:
 	if station_visible and is_instance_valid(cradle):
@@ -132,6 +145,11 @@ func open_shop() -> void:
 	panel.modulate.a = 1.0
 	get_tree().paused = true
 	
+	p1_ready = false
+	p2_ready = false
+	p1_cursor_idx = 0
+	p2_cursor_idx = 0
+	
 	# Show/hide P2 stall depending on Co-Op mode
 	p2_stall.visible = GameManager.is_coop_mode
 	
@@ -139,7 +157,16 @@ func open_shop() -> void:
 	if GameManager.is_coop_mode:
 		_generate_stall_items(2)
 	
+	_rebuild_stall_buttons(1)
+	if GameManager.is_coop_mode:
+		_rebuild_stall_buttons(2)
+	
 	_update_wallets(GameManager.p1_joules, GameManager.p2_joules)
+	_update_stall_cursor_visuals()
+	
+	if not p1_buttons.is_empty():
+		p1_buttons[0].grab_focus()
+	
 	SoundEffects.play_sfx("bonus", 0.05, 3.0)
 
 func _generate_stall_items(player_id: int) -> void:
@@ -188,24 +215,34 @@ func _populate_items_grid(grid: GridContainer, items: Array[ItemModifier], playe
 	for c in grid.get_children():
 		c.queue_free()
 	
+	var player: CharacterBody2D = null
+	for p in get_tree().get_nodes_in_group("player"):
+		if is_instance_valid(p) and p.player_id == player_id:
+			player = p
+			break
+	
 	for it in items:
 		var card = PanelContainer.new()
 		var card_vbox = VBoxContainer.new()
 		card_vbox.add_theme_constant_override("separation", 4)
 		card.add_child(card_vbox)
 		
-		# Tier Header Badge
+		# Tier Header Badge & Dynamic Border Color
 		var tier_badge = Label.new()
+		var border_col = Color(0.2, 0.7, 0.9, 0.7)
 		match it.tier:
 			ItemModifier.ItemTier.TIER_1_BALLISTIC:
 				tier_badge.text = "[TIER 1 - STAT]"
 				tier_badge.add_theme_color_override("font_color", Color(0.3, 0.9, 1.0, 0.8))
+				border_col = Color(0.2, 0.7, 0.9, 0.7)
 			ItemModifier.ItemTier.TIER_2_PARADIGM:
 				tier_badge.text = "[TIER 2 - SYNERGY]"
 				tier_badge.add_theme_color_override("font_color", Color(1.0, 0.4, 0.7, 0.85))
+				border_col = Color(0.95, 0.35, 0.85, 0.85)
 			ItemModifier.ItemTier.TIER_3_EXOTIC:
 				tier_badge.text = "[TIER 3 - EXOTIC]"
 				tier_badge.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2, 0.9))
+				border_col = Color(1.0, 0.85, 0.2, 1.0)
 		tier_badge.add_theme_font_size_override("font_size", 9)
 		card_vbox.add_child(tier_badge)
 		
@@ -215,11 +252,14 @@ func _populate_items_grid(grid: GridContainer, items: Array[ItemModifier], playe
 		title.add_theme_font_size_override("font_size", 12)
 		card_vbox.add_child(title)
 		
-		var desc = Label.new()
-		desc.text = it.description
+		var desc = RichTextLabel.new()
+		desc.bbcode_enabled = true
+		desc.fit_content = true
+		desc.scroll_active = false
 		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		desc.add_theme_font_size_override("font_size", 10)
+		desc.add_theme_font_size_override("normal_font_size", 10)
 		desc.custom_minimum_size = Vector2(160, 48)
+		desc.text = ProgressionModel.format_card_bbcode(it, player)
 		card_vbox.add_child(desc)
 		
 		var discount = _get_player_discount(player_id)
@@ -227,18 +267,264 @@ func _populate_items_grid(grid: GridContainer, items: Array[ItemModifier], playe
 		var cost = int(base_price * discount)
 		var buy_btn = Button.new()
 		buy_btn.text = "BUY - %d J" % cost
-		buy_btn.focus_mode = Control.FOCUS_NONE
+		buy_btn.focus_mode = Control.FOCUS_ALL
 		buy_btn.pressed.connect(func(): _buy_item(it, card, player_id, cost))
 		card_vbox.add_child(buy_btn)
 		
+		# Style card panel with tier aura
+		var sb = StyleBoxFlat.new()
+		sb.bg_color = Color(0.04, 0.07, 0.12, 0.92)
+		sb.border_color = border_col
+		sb.border_width_left = 2 if it.tier >= ItemModifier.ItemTier.TIER_2_PARADIGM else 1
+		sb.border_width_top = 2 if it.tier >= ItemModifier.ItemTier.TIER_2_PARADIGM else 1
+		sb.border_width_right = 2 if it.tier >= ItemModifier.ItemTier.TIER_2_PARADIGM else 1
+		sb.border_width_bottom = 2 if it.tier >= ItemModifier.ItemTier.TIER_2_PARADIGM else 1
+		sb.corner_radius_top_left = 6
+		sb.corner_radius_top_right = 6
+		sb.corner_radius_bottom_right = 6
+		sb.corner_radius_bottom_left = 6
+		sb.content_margin_left = 8
+		sb.content_margin_top = 8
+		sb.content_margin_right = 8
+		sb.content_margin_bottom = 8
+		card.add_theme_stylebox_override("panel", sb)
+		
 		grid.add_child(card)
+	
+	_rebuild_stall_buttons(player_id)
+
+func _rebuild_stall_buttons(player_id: int) -> void:
+	if player_id == 1:
+		p1_buttons.clear()
+		for card in p1_items_grid.get_children():
+			if is_instance_valid(card) and not card.is_queued_for_deletion():
+				for child in card.get_children():
+					if child is VBoxContainer:
+						for sub in child.get_children():
+							if sub is Button and not sub.is_queued_for_deletion():
+								p1_buttons.append(sub)
+		p1_buttons.append(p1_repair_btn)
+		p1_buttons.append(p1_reroll_btn)
+		p1_buttons.append(undock_btn)
+		if p1_cursor_idx >= p1_buttons.size():
+			p1_cursor_idx = maxi(0, p1_buttons.size() - 1)
+	else:
+		p2_buttons.clear()
+		for card in p2_items_grid.get_children():
+			if is_instance_valid(card) and not card.is_queued_for_deletion():
+				for child in card.get_children():
+					if child is VBoxContainer:
+						for sub in child.get_children():
+							if sub is Button and not sub.is_queued_for_deletion():
+								p2_buttons.append(sub)
+		p2_buttons.append(p2_repair_btn)
+		p2_buttons.append(p2_reroll_btn)
+		p2_buttons.append(undock_btn)
+		if p2_cursor_idx >= p2_buttons.size():
+			p2_cursor_idx = maxi(0, p2_buttons.size() - 1)
+
+func _update_stall_cursor_visuals() -> void:
+	var cyan = Color(0.1, 0.95, 1.0, 1.0)
+	var gold = Color(1.0, 0.85, 0.2, 1.0)
+	var dim = Color(0.3, 0.45, 0.6, 0.7)
+	
+	# P1 Stall styling
+	for i in range(p1_buttons.size()):
+		var btn = p1_buttons[i]
+		if not is_instance_valid(btn) or btn == undock_btn:
+			continue
+		if i == p1_cursor_idx and not p1_ready:
+			MenuStyleHelper.style_button(btn, cyan)
+		else:
+			MenuStyleHelper.style_button(btn, dim)
+	
+	# P2 Stall styling
+	if GameManager.is_coop_mode:
+		for i in range(p2_buttons.size()):
+			var btn = p2_buttons[i]
+			if not is_instance_valid(btn) or btn == undock_btn:
+				continue
+			if i == p2_cursor_idx and not p2_ready:
+				MenuStyleHelper.style_button(btn, gold)
+			else:
+				MenuStyleHelper.style_button(btn, dim)
+	
+	# Undock button styling
+	var is_p1_on_undock = (p1_cursor_idx == p1_buttons.size() - 1)
+	var is_p2_on_undock = GameManager.is_coop_mode and (p2_cursor_idx == p2_buttons.size() - 1)
+	if p1_ready and (p2_ready or not GameManager.is_coop_mode):
+		MenuStyleHelper.style_button(undock_btn, Color(0.1, 1.0, 0.5, 1.0))
+		undock_btn.text = "► DEPARTING SUPER QUARKET STATION... ◄"
+	elif is_p1_on_undock or is_p2_on_undock:
+		MenuStyleHelper.style_button(undock_btn, cyan if is_p1_on_undock else gold)
+		undock_btn.text = "► UNDOCK & ENGAGE NEXT PATROL SECTOR ◄"
+	else:
+		MenuStyleHelper.style_button(undock_btn, Color(0.2, 0.7, 0.9, 0.8))
+		if GameManager.is_coop_mode:
+			var p1_txt = "P1 READY" if p1_ready else "P1: [SHIFT]"
+			var p2_txt = "P2 READY" if p2_ready else "P2: [R-CTRL]"
+			undock_btn.text = "UNDOCK [%s • %s] OR SELECT UNDOCK" % [p1_txt, p2_txt]
+		else:
+			undock_btn.text = "UNDOCK & ENGAGE NEXT PATROL SECTOR [SHIFT / ESC]"
+
+func _nav_p1_left() -> void:
+	var item_count = maxi(0, p1_buttons.size() - 3)
+	if p1_cursor_idx < item_count:
+		p1_cursor_idx = maxi(0, p1_cursor_idx - 1)
+	elif p1_cursor_idx == item_count + 1:
+		p1_cursor_idx = item_count
+	SoundEffects.play_sfx("ui_hover", 0.05, -4.0)
+	_update_stall_cursor_visuals()
+
+func _nav_p1_right() -> void:
+	var item_count = maxi(0, p1_buttons.size() - 3)
+	if p1_cursor_idx < item_count:
+		p1_cursor_idx = mini(item_count - 1, p1_cursor_idx + 1)
+	elif p1_cursor_idx == item_count:
+		p1_cursor_idx = item_count + 1
+	SoundEffects.play_sfx("ui_hover", 0.05, -4.0)
+	_update_stall_cursor_visuals()
+
+func _nav_p1_up() -> void:
+	var item_count = maxi(0, p1_buttons.size() - 3)
+	if p1_cursor_idx == item_count or p1_cursor_idx == item_count + 1:
+		if item_count > 0:
+			p1_cursor_idx = mini(item_count - 1, 0 if p1_cursor_idx == item_count else 1)
+	elif p1_cursor_idx == item_count + 2:
+		p1_cursor_idx = item_count
+	SoundEffects.play_sfx("ui_hover", 0.05, -4.0)
+	_update_stall_cursor_visuals()
+
+func _nav_p1_down() -> void:
+	var item_count = maxi(0, p1_buttons.size() - 3)
+	if p1_cursor_idx < item_count:
+		p1_cursor_idx = item_count
+	elif p1_cursor_idx == item_count or p1_cursor_idx == item_count + 1:
+		p1_cursor_idx = item_count + 2
+	SoundEffects.play_sfx("ui_hover", 0.05, -4.0)
+	_update_stall_cursor_visuals()
+
+func _nav_p2_left() -> void:
+	var item_count = maxi(0, p2_buttons.size() - 3)
+	if p2_cursor_idx < item_count:
+		p2_cursor_idx = maxi(0, p2_cursor_idx - 1)
+	elif p2_cursor_idx == item_count + 1:
+		p2_cursor_idx = item_count
+	SoundEffects.play_sfx("ui_hover", 0.05, -4.0)
+	_update_stall_cursor_visuals()
+
+func _nav_p2_right() -> void:
+	var item_count = maxi(0, p2_buttons.size() - 3)
+	if p2_cursor_idx < item_count:
+		p2_cursor_idx = mini(item_count - 1, p2_cursor_idx + 1)
+	elif p2_cursor_idx == item_count:
+		p2_cursor_idx = item_count + 1
+	SoundEffects.play_sfx("ui_hover", 0.05, -4.0)
+	_update_stall_cursor_visuals()
+
+func _nav_p2_up() -> void:
+	var item_count = maxi(0, p2_buttons.size() - 3)
+	if p2_cursor_idx == item_count or p2_cursor_idx == item_count + 1:
+		if item_count > 0:
+			p2_cursor_idx = mini(item_count - 1, 0 if p2_cursor_idx == item_count else 1)
+	elif p2_cursor_idx == item_count + 2:
+		p2_cursor_idx = item_count
+	SoundEffects.play_sfx("ui_hover", 0.05, -4.0)
+	_update_stall_cursor_visuals()
+
+func _nav_p2_down() -> void:
+	var item_count = maxi(0, p2_buttons.size() - 3)
+	if p2_cursor_idx < item_count:
+		p2_cursor_idx = item_count
+	elif p2_cursor_idx == item_count or p2_cursor_idx == item_count + 1:
+		p2_cursor_idx = item_count + 2
+	SoundEffects.play_sfx("ui_hover", 0.05, -4.0)
+	_update_stall_cursor_visuals()
+
+func _activate_p1_button() -> void:
+	if p1_cursor_idx >= 0 and p1_cursor_idx < p1_buttons.size():
+		var btn = p1_buttons[p1_cursor_idx]
+		if is_instance_valid(btn) and not btn.disabled:
+			btn.emit_signal("pressed")
+			SoundEffects.play_sfx("ui_select", 0.05, 0.0)
+
+func _activate_p2_button() -> void:
+	if p2_cursor_idx >= 0 and p2_cursor_idx < p2_buttons.size():
+		var btn = p2_buttons[p2_cursor_idx]
+		if is_instance_valid(btn) and not btn.disabled:
+			btn.emit_signal("pressed")
+			SoundEffects.play_sfx("ui_select", 0.05, 0.0)
+
+func _check_undock() -> void:
+	if p1_ready and (p2_ready or not GameManager.is_coop_mode):
+		_on_undock_pressed()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not panel or not panel.visible:
+		return
+	
+	# P1 Inputs
+	if not p1_buttons.is_empty():
+		if event.is_action_pressed("move_left") or (not GameManager.is_coop_mode and event.is_action_pressed("ui_left")):
+			_nav_p1_left()
+			get_viewport().set_input_as_handled()
+		elif event.is_action_pressed("move_right") or (not GameManager.is_coop_mode and event.is_action_pressed("ui_right")):
+			_nav_p1_right()
+			get_viewport().set_input_as_handled()
+		elif event.is_action_pressed("move_up") or (not GameManager.is_coop_mode and event.is_action_pressed("ui_up")):
+			_nav_p1_up()
+			get_viewport().set_input_as_handled()
+		elif event.is_action_pressed("move_down") or (not GameManager.is_coop_mode and event.is_action_pressed("ui_down")):
+			_nav_p1_down()
+			get_viewport().set_input_as_handled()
+		elif event.is_action_pressed("fire") or (not GameManager.is_coop_mode and event.is_action_pressed("ui_accept")):
+			_activate_p1_button()
+			get_viewport().set_input_as_handled()
+		elif event.is_action_pressed("barrel_roll"):
+			p1_ready = not p1_ready
+			SoundEffects.play_sfx("ui_hover", 0.05, 0.0)
+			_update_stall_cursor_visuals()
+			_check_undock()
+			get_viewport().set_input_as_handled()
+	
+	# P2 Inputs
+	if GameManager.is_coop_mode and not p2_buttons.is_empty():
+		if event.is_action_pressed("p2_move_left"):
+			_nav_p2_left()
+			get_viewport().set_input_as_handled()
+		elif event.is_action_pressed("p2_move_right"):
+			_nav_p2_right()
+			get_viewport().set_input_as_handled()
+		elif event.is_action_pressed("p2_move_up"):
+			_nav_p2_up()
+			get_viewport().set_input_as_handled()
+		elif event.is_action_pressed("p2_move_down"):
+			_nav_p2_down()
+			get_viewport().set_input_as_handled()
+		elif event.is_action_pressed("p2_fire"):
+			_activate_p2_button()
+			get_viewport().set_input_as_handled()
+		elif event.is_action_pressed("p2_barrel_roll"):
+			p2_ready = not p2_ready
+			SoundEffects.play_sfx("ui_hover", 0.05, 0.0)
+			_update_stall_cursor_visuals()
+			_check_undock()
+			get_viewport().set_input_as_handled()
+	
+	# Universal Escape or Undock Key
+	if event.is_action_pressed("ui_cancel") or (event is InputEventKey and event.pressed and event.keycode == KEY_U):
+		_on_undock_pressed()
+		get_viewport().set_input_as_handled()
 
 func _get_player_discount(player_id: int) -> float:
+	var discount = 1.0
 	for p in get_tree().get_nodes_in_group("player"):
 		if is_instance_valid(p) and p.player_id == player_id:
+			if p.get("has_carnot_precooler") == true:
+				discount *= 0.8
 			if p.get("has_carnot_efficiency") == true:
-				return 0.5
-	return 1.0
+				discount *= 0.5
+	return discount
 
 func _buy_item(item: ItemModifier, card_node: Node, player_id: int, cost: int = 25) -> void:
 	if GameManager.spend_joules(cost, player_id):
@@ -247,6 +533,10 @@ func _buy_item(item: ItemModifier, card_node: Node, player_id: int, cost: int = 
 			if is_instance_valid(p) and p.player_id == player_id:
 				p.add_modifier(item)
 		card_node.queue_free()
+		get_tree().create_timer(0.01).timeout.connect(func():
+			_rebuild_stall_buttons(player_id)
+			_update_stall_cursor_visuals()
+		)
 
 func _buy_repair(player_id: int) -> void:
 	var cost = int(20 * _get_player_discount(player_id))
@@ -264,20 +554,25 @@ func _reroll_stall(player_id: int) -> void:
 		SoundEffects.play_sfx("roll", 0.08, 2.0)
 		_generate_stall_items(player_id)
 		
-		# Escalate reroll cost: 5 -> 10 -> 20 -> 35
+		# Escalate reroll cost: 5 -> 10 -> 20 -> 50 -> 100
 		if player_id == 1:
 			GameManager.p1_reroll_cost = _next_cost(GameManager.p1_reroll_cost)
 		else:
 			GameManager.p2_reroll_cost = _next_cost(GameManager.p2_reroll_cost)
 		_update_wallets(GameManager.p1_joules, GameManager.p2_joules)
+		get_tree().create_timer(0.01).timeout.connect(func():
+			_rebuild_stall_buttons(player_id)
+			_update_stall_cursor_visuals()
+		)
 
 func _next_cost(current: int) -> int:
 	match current:
 		5: return 10
 		10: return 20
-		20: return 35
-		35: return 55
-		_: return current + 25
+		20: return 50
+		50: return 100
+		100: return 200
+		_: return current * 2
 
 func _update_wallets(p1_j: int, p2_j: int) -> void:
 	p1_wallet_lbl.text = "P1 WALLET: %d J" % p1_j
@@ -357,6 +652,9 @@ func _draw_station(cradle_node: Control) -> void:
 				cradle_node.draw_arc(p_pos, 32.0, 0, TAU, 32, Color(0.2, 0.95, 1.0, tractor_beam_alpha * 0.9), 2.5, true)
 				var pulse_ring_r = 42.0 + sin(t * 6.0) * 4.0
 				cradle_node.draw_arc(p_pos, pulse_ring_r, 0, TAU, 32, Color(1.0, 0.85, 0.2, tractor_beam_alpha * 0.55), 1.5, true)
+	
+	if use_3d_model:
+		return
 	
 	# 2. Outer Ring: Habitat & Logistics Centrifuge (Clockwise Rotation)
 	var segs = 36

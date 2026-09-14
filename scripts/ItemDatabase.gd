@@ -6,7 +6,6 @@ extends RefCounted
 # Bespoke item scripts
 const BirefringencePrismScript = preload("res://scripts/items/BirefringencePrism.gd")
 const GravitationalLensingScript = preload("res://scripts/items/GravitationalLensing.gd")
-const ElasticMomentumScript = preload("res://scripts/items/ElasticMomentum.gd")
 const FeynmanPropagatorScript = preload("res://scripts/items/FeynmanPropagator.gd")
 const ZeemanSplittingScript = preload("res://scripts/items/ZeemanSplitting.gd")
 const CherenkovRadiatorScript = preload("res://scripts/items/CherenkovRadiator.gd")
@@ -15,12 +14,15 @@ const AntimatterSuspensionScript = preload("res://scripts/items/AntimatterSuspen
 const TachyonCapacitorScript = preload("res://scripts/items/TachyonCapacitor.gd")
 const CarnotHeatsinkScript = preload("res://scripts/items/CarnotHeatsink.gd")
 const QuantumTunnelingScript = preload("res://scripts/items/QuantumTunneling.gd")
+const CarnotPrecoolerScript = preload("res://scripts/items/CarnotPrecooler.gd")
 const MeissnerShieldScript = preload("res://scripts/items/MeissnerShield.gd")
 const MaxwellsDemonScript = preload("res://scripts/items/MaxwellsDemon.gd")
 const LagrangeSatellitesScript = preload("res://scripts/items/LagrangeSatellites.gd")
 const CarnotEfficiencyScript = preload("res://scripts/items/CarnotEfficiency.gd")
 const DiracInversionScript = preload("res://scripts/items/DiracInversion.gd")
 const BellEntanglementScript = preload("res://scripts/items/BellEntanglement.gd")
+const ContinuousWaveMagnetronScript = preload("res://scripts/items/ContinuousWaveMagnetron.gd")
+const NearFieldCasimirScript = preload("res://scripts/items/NearFieldCasimir.gd")
 const StatModItem = preload("res://scripts/items/StatModItem.gd")
 
 static func _make_bespoke(script: GDScript, cat: String) -> ItemModifier:
@@ -44,19 +46,21 @@ static func _make_stat(
 static func get_all_items() -> Array[ItemModifier]:
 	var list: Array[ItemModifier] = [
 		# --- Bespoke Ballistic Modifiers (Tier 1) ---
-		_make_bespoke(BirefringencePrismScript, "offense"),
-		_make_bespoke(GravitationalLensingScript, "utility"),
-		_make_bespoke(ElasticMomentumScript, "offense"),
 		_make_bespoke(FeynmanPropagatorScript, "offense"),
 		_make_bespoke(ZeemanSplittingScript, "offense"),
 		_make_bespoke(CherenkovRadiatorScript, "offense"),
 		_make_bespoke(HeisenbergLensScript, "offense"),
+		_make_bespoke(CarnotHeatsinkScript, "offense"),
+		_make_bespoke(QuantumTunnelingScript, "offense"),
 		
 		# --- Bespoke Weapon Paradigms (Tier 2) ---
+		_make_bespoke(BirefringencePrismScript, "offense"),
+		_make_bespoke(GravitationalLensingScript, "offense"),
 		_make_bespoke(AntimatterSuspensionScript, "offense"),
 		_make_bespoke(TachyonCapacitorScript, "offense"),
-		_make_bespoke(CarnotHeatsinkScript, "offense"),
-		_make_bespoke(QuantumTunnelingScript, "utility"),
+		_make_bespoke(CarnotPrecoolerScript, "utility"),
+		_make_bespoke(ContinuousWaveMagnetronScript, "offense"),
+		_make_bespoke(NearFieldCasimirScript, "offense"),
 		
 		# --- Bespoke Exotic Relics (Tier 3) ---
 		_make_bespoke(MeissnerShieldScript, "defense"),
@@ -90,11 +94,11 @@ static func get_all_items() -> Array[ItemModifier]:
 		_make_stat("endowment_capacitor", "Endowment Capacitor", "Subspace annuity: Grants a guaranteed +4 Joules upon clearing each combat wave.", ItemModifier.ItemTier.TIER_1_BALLISTIC, Color(0.2, 0.9, 0.8), "[DIVIDEND]", {"wave_dividend_joules": 4, "category": "utility", "max_stacks": 2}),
 		_make_stat("critical_resonator", "Critical Resonator", "Phased focal cavity adds +12% Critical Strike chance for 200% damage.", ItemModifier.ItemTier.TIER_1_BALLISTIC, Color(1.0, 0.3, 0.3), "[CRIT+]", {"add_crit_chance": 0.12, "category": "offense", "max_stacks": 3}),
 		_make_stat("target_lock_matrix", "Targeting Matrix", "Automated optical telemetry adds +20% Critical Strike chance.", ItemModifier.ItemTier.TIER_1_BALLISTIC, Color(1.0, 0.4, 0.2), "[CRIT++]", {"add_crit_chance": 0.20, "category": "offense", "max_stacks": 2}),
-		_make_stat("split_manifold", "Split Manifold", "Supplementary conduits fire +1 extra angled spread shot pair (-15% damage).", ItemModifier.ItemTier.TIER_1_BALLISTIC, Color(0.7, 0.5, 1.0), "[FLAK]", {"add_spread_shots": 1, "mult_damage": 0.85, "category": "offense", "max_stacks": 2}),
 		_make_stat("reinforced_cockpit", "Reinforced Canopy", "Armored canopy adds +1 Max Hull and +1 Max Barrel Roll charge.", ItemModifier.ItemTier.TIER_1_BALLISTIC, Color(0.2, 0.9, 0.7), "[SURV]", {"add_max_hull": 1, "add_max_rolls": 1, "category": "defense", "max_stacks": 2}),
 		_make_stat("emergency_cells", "Emergency Battery Cells", "Emergency capacitor reserves: instantly heals +2 Hull and recharges shields.", ItemModifier.ItemTier.TIER_1_BALLISTIC, Color(0.2, 1.0, 0.8), "[CELLS]", {"instant_heal_hull": 2, "instant_recharge_shields": 2, "category": "defense", "max_stacks": 3}),
 		
 		# --- Uncommon Weapon Paradigms & Enhancers (Tier 2) ---
+		_make_stat("split_manifold", "Split Manifold", "Supplementary conduits fire +1 extra angled spread shot pair (-15% damage).", ItemModifier.ItemTier.TIER_2_PARADIGM, Color(0.7, 0.5, 1.0), "[FLAK]", {"add_spread_shots": 1, "mult_damage": 0.85, "category": "offense", "max_stacks": 2}),
 		_make_stat("overclocked_dynamo", "Overclocked Dynamo", "Unrestricted generator governor: +25% Fire Rate and +15% Flight Speed.", ItemModifier.ItemTier.TIER_2_PARADIGM, Color(1.0, 0.6, 0.1), "[DYNAMO]", {"mult_fire_rate": 1.25, "mult_move_speed": 1.15, "category": "utility", "max_stacks": 2}),
 		_make_stat("dreadnought_plating", "Dreadnought Plating", "Massive layered armored plates: +3 Max Hull (-15% flight speed).", ItemModifier.ItemTier.TIER_2_PARADIGM, Color(0.6, 0.8, 0.6), "[DREAD]", {"add_max_hull": 3, "mult_move_speed": 0.85, "category": "defense", "max_stacks": 2}),
 		_make_stat("singularity_siphon", "Singularity Siphon", "Gravitational eddy: +250px Scrap Magnet Radius. Automatically siphons any scrap drifting out-of-bounds into the ship for full Joules.", ItemModifier.ItemTier.TIER_2_PARADIGM, Color(0.9, 0.4, 1.0), "[SIPHON]", {"add_magnet_radius": 250.0, "has_singularity_recovery": true, "category": "utility", "max_stacks": 1}),
@@ -153,3 +157,10 @@ static func get_random_choice(exclude_ids: Array[String] = [], count: int = 2, p
 	for i in range(mini(count, available.size())):
 		result.append(available[i])
 	return result
+
+static func get_item(target_id: String) -> ItemModifier:
+	for it in get_all_items():
+		if it.id.to_lower() == target_id.to_lower():
+			return it
+	return null
+

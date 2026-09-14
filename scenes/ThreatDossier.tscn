@@ -88,7 +88,6 @@ size_flags_vertical = 3
 [node name="EngageBtn" type="Button" parent="Panel/VBox"]
 custom_minimum_size = Vector2(0, 36)
 layout_mode = 2
-focus_mode = 0
 theme_override_colors/font_color = Color(0.1, 0.9, 1.0, 1.0)
 theme_override_font_sizes/font_size = 14
-text = "ENGAGE COMBAT PATROL [ENTER]"
+text = "ENGAGE COMBAT PATROL [SPACE / ENTER]"
