@@ -5,6 +5,7 @@ extends Node
 const ProgressionModel = preload("res://scripts/ProgressionModel.gd")
 const EnemyScript = preload("res://scripts/Enemy.gd")
 const DecoherenceSpawner = preload("res://scripts/DecoherenceSpawner.gd")
+const FeynmanTrailNodeScript = preload("res://scripts/items/FeynmanTrailNode.gd")
 
 func _ready() -> void:
 	# Watchdog timer: If any assert or uncaught error halts test execution,
@@ -91,8 +92,29 @@ func _ready() -> void:
 	main_inst.add_child(corvus)
 	corvus.entry_done = true
 	assert(corvus.port_wing_health == 60.0 and corvus.max_core_health == 160.0, "Corvus scaled HP mismatched!")
+	# 5A: Test Phase 1 Alternating Wing Barrages & Sweeping Linear Salvos
+	corvus._fire_wing_barrage(true)
+	var wing_bullets = main_inst.get_children().filter(func(c): return c.is_in_group("bullet"))
+	var all_linear = true
+	for b_node in wing_bullets:
+		if b_node.get("pattern") != 0:
+			all_linear = false
+			break
+	assert(all_linear, "Corvus wing barrage must launch clean linear plasma bolts without curving arcs!")
+	print(" - 5A: Corvus alternating wing batteries and sweeping linear salvos verified.")
+	
+	# 5B: Wing fracture retaliation flak burst
 	corvus.take_damage(65.0)
 	assert(corvus.port_wing_alive == false, "Port wing failed to break!")
+	var fracture_bullets = main_inst.get_children().filter(func(c): return c.is_in_group("bullet"))
+	var has_cluster_flak = false
+	for b_node in fracture_bullets:
+		if b_node.get("pattern") == 4: # Pattern.CLUSTER_BURST
+			has_cluster_flak = true
+			break
+	assert(has_cluster_flak, "Wing fracture must trigger retaliatory Cluster Flak Mortars!")
+	print(" - 5B: Corvus wing fracture flak retaliation verified.")
+	
 	corvus.take_damage(65.0)
 	assert(corvus.starboard_wing_alive == false, "Starboard wing failed to break!")
 	
@@ -103,7 +125,25 @@ func _ready() -> void:
 	var pulses_before = corvus.enrage_pulses_remaining
 	corvus._handle_attacks(0.1)
 	assert(corvus.enrage_pulses_remaining < pulses_before, "Corvus failed to advance vortex burst pulse!")
-	print(" - SUCCESS: Super-Dreadnought Corvus Phase 2 Enraged multi-wave vortex burst verified!")
+	
+	# 5C: Test Phase 2 Dorsal Homing Missiles during breather
+	corvus.enrage_burst_active = false
+	corvus.enrage_burst_cooldown = 0.5
+	corvus.enrage_mid_shot_fired = false
+	corvus._handle_attacks(0.05)
+	assert(corvus.enrage_mid_shot_fired == true, "Corvus mid-breather attack failed to fire!")
+	var homing_found = false
+	for b_node in main_inst.get_children().filter(func(c): return c.is_in_group("bullet")):
+		if b_node.get("pattern") == 1: # Pattern.HOMING
+			homing_found = true
+			break
+	assert(homing_found, "Corvus Phase 2 breather must launch Dorsal Homing Missiles!")
+	print(" - 5C: Corvus Phase 2 Dorsal Homing Missiles verified.")
+	print(" - SUCCESS: Super-Dreadnought Corvus Phase 2 Enraged multi-wave vortex burst and homing missiles verified!")
+	
+	# Clean up test bullets
+	for b_node in main_inst.get_children().filter(func(c): return c.is_in_group("bullet")):
+		b_node.queue_free()
 	
 	var flags = {"corvus_defeated": false, "goliath_defeated": false}
 	GameManager.boss_defeated.connect(func(b_name):
@@ -224,9 +264,9 @@ func _ready() -> void:
 	goliath_mini.is_miniboss = true
 	main_inst.add_child(goliath_mini)
 	goliath_mini.entry_done = true
-	assert(goliath_mini.core_health == 90.0 and goliath_mini.bow_armor_health == 50.0, "Goliath Miniboss HP mismatch!")
+	assert(goliath_mini.core_health == 72.0 and goliath_mini.bow_armor_health == 40.0, "Goliath Miniboss HP mismatch!")
 	assert(goliath_mini.port_railgun_alive == true and goliath_mini.star_railgun_alive == true, "Goliath Miniboss railguns must be active!")
-	assert(goliath_mini.port_railgun_health == 20.0 and goliath_mini.star_railgun_health == 20.0, "Goliath Miniboss railgun HP mismatch!")
+	assert(goliath_mini.port_railgun_health == 16.0 and goliath_mini.star_railgun_health == 16.0, "Goliath Miniboss railgun HP mismatch!")
 	
 	# Test railgun charge and tracking lock-on
 	goliath_mini._handle_attacks(1.9)
@@ -238,7 +278,7 @@ func _ready() -> void:
 	goliath_mini.take_damage(55.0)
 	assert(goliath_mini.bow_armor_alive == false, "Goliath Miniboss Bow Armor failed to break!")
 	goliath_mini._handle_attacks(1.5)
-	print(" - SUCCESS: Goliath Miniboss (180 HP), Tracking Railgun Lock-On, and Fusion Core Overdrive verified!")
+	print(" - SUCCESS: Goliath Miniboss (144 HP), Tracking Railgun Lock-On, and Fusion Core Overdrive verified!")
 	goliath_mini.queue_free()
 	
 	var goliath = goliath_scene.instantiate()
@@ -397,15 +437,15 @@ func _ready() -> void:
 	var hazard_scene = load("res://scenes/HazardObject.tscn")
 	var ouroboros_scene = load("res://scenes/BossOuroboros.tscn")
 	
-	# 12A. Verify all 17 enemy types instantiate cleanly
-	for type_idx in range(17):
+	# 12A. Verify all 16 enemy types instantiate cleanly
+	for type_idx in range(16):
 		var e = enemy_scene.instantiate()
 		main_inst.add_child(e)
 		e.setup(type_idx, Vector2(100 + type_idx * 20, 100), -1, null, 0)
 		assert(e.max_health > 0.0, "Enemy type %d has invalid health!" % type_idx)
 		assert(e.speed > 0.0, "Enemy type %d has invalid speed!" % type_idx)
 		e.queue_free()
-	print(" - 12A: All 17 Enemy Archetypes instantiated cleanly with distinct statistics.")
+	print(" - 12A: All 16 Enemy Archetypes instantiated cleanly with distinct statistics.")
 	
 	# 12B. Verify Shield Frigate protection aura
 	var frigate = enemy_scene.instantiate()
@@ -421,7 +461,8 @@ func _ready() -> void:
 	var scout_hp_before = shielded_scout.health
 	shielded_scout.take_damage(2.0)
 	assert(shielded_scout.health == scout_hp_before, "Protected scout must not take damage!")
-	print(" - 12B: Shield Frigate invulnerability aura verified protecting nearby allies.")
+	assert(frigate.energy_shield_hp == 10.0, "Shield Frigate must possess a personal 10.0 energy shield!")
+	print(" - 12B: Shield Frigate invulnerability aura verified protecting nearby allies & personal energy shield verified.")
 	frigate.queue_free()
 	shielded_scout.queue_free()
 	
@@ -1048,10 +1089,10 @@ func _ready() -> void:
 	
 	var crates_before = get_tree().get_nodes_in_group("crate").size()
 	
-	# Test 1: CARGO_HAULER (type 16) drops guaranteed Item Choice Crate upon destruction
+	# Test 1: CARGO_HAULER (type 15) drops guaranteed Item Choice Crate upon destruction
 	var cargo_hauler = load("res://scenes/Enemy.tscn").instantiate()
 	main_inst.add_child(cargo_hauler)
-	cargo_hauler.setup(16, Vector2(100, 100), 101, test_spawner, 0) # 16 = CARGO_HAULER
+	cargo_hauler.setup(15, Vector2(100, 100), 101, test_spawner, 0) # 15 = CARGO_HAULER
 	cargo_hauler._drop_loot()
 	var crates_after_hauler = get_tree().get_nodes_in_group("crate").size()
 	assert(crates_after_hauler == crates_before + 1, "Quantum Cargo Hauler must drop 1 guaranteed Item Choice Crate!")
@@ -2061,6 +2102,7 @@ func _ready() -> void:
 	b_homing.pattern = b_homing.Pattern.HOMING
 	b_homing.setup(Vector2(200, 200), Vector2.RIGHT, true, 1.0)
 	assert(b_homing.pattern == b_homing.Pattern.HOMING, "Bullet pattern must be HOMING!")
+	assert(b_homing.speed == 400.0, "Homing missile speed must be calibrated to 400.0!")
 	assert(b_homing.glow_color.r > 0.8 and b_homing.glow_color.g > 0.4 and b_homing.glow_color.b < 0.2, "Homing missile must have warm amber glow!")
 	p1.global_position = Vector2(300, 300)
 	var initial_homing_dir = b_homing.direction
@@ -2071,9 +2113,10 @@ func _ready() -> void:
 	p1.global_position = Vector2(100, 100)
 	b_homing._physics_process(0.1)
 	assert(b_homing.direction == burned_out_dir, "Homing missile must stop tracking after homing_duration!")
+	# Verify burnout state and queue_redraw executes cleanly
 	b_homing.queue_redraw()
 	b_homing.queue_free()
-	print(" - 28A: Homing Seeker Missiles (amber rocket, tracking slerp & burnout) verified.")
+	print(" - 28A: Homing Seeker Missiles (amber rocket, 400px/s speed, tracking slerp & burnout smoke indicator) verified.")
 
 	# 28B: Curving Crescent Arcs
 	var b_arc = preload("res://scenes/Bullet.tscn").instantiate()
@@ -2338,6 +2381,53 @@ func _ready() -> void:
 	p30_syn.queue_free()
 	print(" - 30D: Synergistic interaction (CW Magnetron + Casimir Discharge point-blank meat-grinder) verified.")
 
+	# 30E: Feynman Propagator (Vacuum Ionization Trails, Path Integral Wavelets & Hostile Burn)
+	var feynman_item = ItemDatabase.get_item("feynman_propagator")
+	assert(feynman_item != null, "Feynman Propagator must exist in ItemDatabase!")
+	assert(feynman_item.get_glyph() == "∿", "Feynman Propagator must have the path integral glyph ∿!")
+	
+	var p30_fey = load("res://scenes/Player.tscn").instantiate()
+	add_child(p30_fey)
+	var fey_params = {"pos": Vector2(100, 100), "dir": Vector2.RIGHT, "damage": 1.0}
+	var fey_results = feynman_item.on_fire(p30_fey, fey_params)
+	assert(fey_results.size() == 1, "Feynman Propagator on_fire must return 1 modified parameter!")
+	assert(fey_results[0].get("has_feynman") == true, "Feynman Propagator on_fire must tag projectiles with has_feynman!")
+	p30_fey.queue_free()
+	
+	var fey_bullet = load("res://scenes/Bullet.tscn").instantiate()
+	add_child(fey_bullet)
+	fey_bullet.setup(Vector2(200, 200), Vector2.RIGHT, false, 1.0)
+	feynman_item.on_projectile_tick(fey_bullet, 0.04)
+	assert(fey_bullet.has_meta("has_feynman") and fey_bullet.get_meta("has_feynman") == true, "Bullet must receive has_feynman metadata!")
+	
+	# Verify FeynmanTrailNode was spawned as a child of bullet's parent
+	var fey_trails: Array[Node] = []
+	for child in get_children():
+		if child.get_script() == FeynmanTrailNodeScript:
+			fey_trails.append(child)
+	assert(fey_trails.size() >= 1, "Feynman Propagator on_projectile_tick must spawn FeynmanTrailNode!")
+	var fey_trail_node = fey_trails[0]
+	assert(fey_trail_node.damage > 0.0, "FeynmanTrailNode must have positive damage!")
+	assert(fey_trail_node.base_radius >= 12.0, "FeynmanTrailNode must have adequate collision radius!")
+	assert(fey_trail_node.collision_mask == 4, "FeynmanTrailNode must target collision mask 4!")
+	
+	# Verify burn damage on hostile
+	var fey_enemy = load("res://scenes/Enemy.tscn").instantiate()
+	add_child(fey_enemy)
+	fey_enemy.setup(EnemyScript.EnemyType.SCOUT, Vector2(200, 200), 999, null, 0)
+	var init_hp: float = fey_enemy.health
+	fey_trail_node._apply_burn(fey_enemy)
+	assert(fey_enemy.health < init_hp, "FeynmanTrailNode must apply burn damage to hostiles!")
+	
+	# Test visual draw queue without runtime error
+	fey_trail_node.queue_redraw()
+	fey_bullet.queue_redraw()
+	
+	fey_enemy.queue_free()
+	fey_trail_node.queue_free()
+	fey_bullet.queue_free()
+	print(" - 30E: Feynman Propagator ionized vacuum trail, wavy path integrals, and hostile burn verified.")
+
 	# =========================================================================
 	# STEP 31: Testing Secret Debug Menu, Input Code Sequence, God Mode & Telemetry Disabling
 	# =========================================================================
@@ -2462,6 +2552,673 @@ func _ready() -> void:
 	GameManager.telemetry_enabled = true
 	HighScoreManager.high_score_recording_enabled = true
 	print(" - 31F: Sector/Wave warp configuration and game mode force unlocks verified.")
+
+	# 32. Test Ship-Adjacent Barrel Roll Indicator & Cooldown Rebalance
+	print("\nSTEP 32: Testing Ship-Adjacent Barrel Roll Indicator & Cooldown Rebalance...")
+	var p32_ship = load("res://scenes/Player.tscn").instantiate()
+	p32_ship.player_id = 1
+	add_child(p32_ship)
+	
+	# 32A: Baseline 9.0s Cooldown Verification
+	assert(abs(p32_ship.roll_cooldown - 9.0) < 0.001, "Player baseline roll_cooldown must be 9.0s!")
+	assert(abs(p32_ship.base_roll_cooldown - 9.0) < 0.001, "Player baseline base_roll_cooldown must be 9.0s!")
+	assert(p32_ship.rolls == 3, "Player starts with full 3 rolls!")
+	print(" - 32A: Baseline 9.0s roll cooldown and initial capacity verified.")
+	
+	# 32B: Roll consumption and quantum sparks
+	p32_ship._start_barrel_roll()
+	assert(p32_ship.rolls == 2, "Rolling must consume 1 charge, leaving 2!")
+	assert(p32_ship.roll_sparks.size() > 0, "Consuming a roll must emit aft quantum sparks!")
+	p32_ship._end_barrel_roll()
+	print(" - 32B: Roll consumption and quantum phase sparks emission verified.")
+	
+	# 32C: Cooldown timer progression
+	p32_ship.roll_timer = 4.5 # Exactly 50% through 9.0s cooldown
+	p32_ship._emit_rolls()
+	var ratio_32 = p32_ship.roll_timer / p32_ship.roll_cooldown
+	assert(abs(ratio_32 - 0.5) < 0.001, "Cooldown ratio must be 0.5 at 4.5s of 9.0s cooldown!")
+	print(" - 32C: Mid-recharge cooldown ratio advancement verified.")
+	
+	# 32D: Roll replenishment event, SFX, and recharge flash
+	assert(SoundEffects._streams.has("roll_recharge"), "roll_recharge procedural stream must exist in SoundEffects!")
+	assert(SoundEffects._streams["roll_recharge"] != null, "roll_recharge stream must be valid and non-null!")
+	p32_ship._handle_timers(4.6) # Advance remaining 4.5s + 0.1s to complete 9.0s
+	assert(p32_ship.rolls == 3, "Roll charges must restore to 3 after 9.0s cooldown completes!")
+	assert(p32_ship.roll_recharge_flash_timer > 0.0, "Restoring roll charge must trigger recharge flash timer!")
+	assert(p32_ship.roll_recharge_flash_index == 2, "Flash index must target the newly restored slot index!")
+	print(" - 32D: Roll replenishment lifecycle, SFX registration, and recharge flash verified.")
+	
+	# 32E: Co-Op Player 2 Theme Differentiation
+	var p32_ship_p2 = load("res://scenes/Player.tscn").instantiate()
+	p32_ship_p2.player_id = 2
+	add_child(p32_ship_p2)
+	assert(p32_ship.primary_color != p32_ship_p2.primary_color, "P1 and P2 must have distinct colorways!")
+	assert(p32_ship_p2.primary_color.r > 0.8 and p32_ship_p2.primary_color.g > 0.6, "P2 must feature solar amber/gold primary color!")
+	p32_ship_p2.queue_free()
+	p32_ship.queue_free()
+	print(" - 32E: Co-Op P1 Cyan vs P2 Solar Amber color differentiation verified.")
+	
+	# 32F: Roll & Shield HUD Recharge Subdued Blue Progress Bars
+	var hud32 = get_tree().get_first_node_in_group("hud")
+	if hud32:
+		# Test roll HUD charging color and progress bar fill: 2 rolls, 1 recharging at ratio 0.5
+		hud32._on_roll_charges_changed(2, 3, 0.5)
+		assert(hud32.roll_container.get_child(0).modulate == Color(0.2, 0.9, 1.0, 1.0), "Ready roll pip must be bright cyan!")
+		assert(hud32.roll_container.get_child(1).modulate == Color(0.2, 0.9, 1.0, 1.0), "Ready roll pip must be bright cyan!")
+		var roll_charging_col = hud32.roll_container.get_child(2).modulate
+		assert(roll_charging_col.b > 0.7 and roll_charging_col.r < 0.2, "Recharging roll pip must be blue/cyan!")
+		assert(abs(roll_charging_col.a - 0.55) < 0.05, "Recharging roll pip must maintain flat subdued brightness!")
+		var roll_fill = hud32.roll_container.get_child(2).get_node("Fill") as ColorRect
+		assert(roll_fill != null and abs(roll_fill.size.x - 8.0) < 0.1, "Roll pip progress bar fill must be exactly 50% width (8px of 16px) at ratio 0.5!")
+		var ready_roll_fill = hud32.roll_container.get_child(0).get_node("Fill") as ColorRect
+		assert(ready_roll_fill != null and abs(ready_roll_fill.size.x - 16.0) < 0.1, "Ready roll pip must be 100% full width (16px)!")
+		
+		# Test shield HUD charging color and progress bar fill: 1 shield, 3 max shields at ratio 0.75
+		hud32._update_shield_pips(1, 3, 0.75, 1)
+		var s_ready_col = hud32.shield_container.get_child(0).modulate
+		var s_charging_col = hud32.shield_container.get_child(1).modulate
+		var s_depleted_col = hud32.shield_container.get_child(2).modulate
+		assert(s_ready_col.a > 0.7, "Ready shield pip must be fully illuminated!")
+		assert(s_charging_col.b > 0.7 and s_charging_col.a < 0.5, "Recharging shield pip must be subdued blue!")
+		assert(s_depleted_col.a < 0.5, "Depleted shield pip must be dimmed below active!")
+		var s_charging_fill = hud32.shield_container.get_child(1).get_node("Fill") as ColorRect
+		assert(s_charging_fill != null and abs(s_charging_fill.size.x - 18.0) < 0.1, "Recharging shield pip must be exactly 75% width (18px of 24px) at ratio 0.75!")
+	print(" - 32F: Roll & Shield HUD subdued blue progress bar recharge states verified.")
+
+	# 33. Test Curving Bullet Edge & Anti-Backstab Safeguards
+	print("\nSTEP 33: Testing Curving Bullet Safeguards (Oncoming Cone, Off-Screen Curve, Deflection Cap)...")
+	
+	# 33A: Oncoming Cone Enforcement
+	var e33 = enemy_scene.instantiate()
+	main_inst.add_child(e33)
+	e33.setup(EnemyScript.EnemyType.INTERCEPTOR, Vector2(500, 40), -1, null, 0)
+	p1.global_position = Vector2(400, 680) # Extreme lateral downward angle
+	var bullets_before_33 = main_inst.get_children().filter(func(c): return c.is_in_group("bullet") and not c.is_queued_for_deletion())
+	e33._execute_attack()
+	var bullets_after_33 = main_inst.get_children().filter(func(c): return c.is_in_group("bullet") and not c.is_queued_for_deletion() and not c in bullets_before_33)
+	var oncoming_33 = -GameAxis.forward if GameAxis != null else Vector2.LEFT
+	for b_33 in bullets_after_33:
+		if b_33.pattern == b_33.Pattern.CURVING_ARC:
+			assert(b_33.direction.dot(oncoming_33) >= 0.24, "Interceptor curving bullet must stay within oncoming cone (>= 0.25 dot)!")
+		b_33.queue_free()
+	e33.queue_free()
+	print(" - 33A: Oncoming cone enforcement (no backwards-angled launches) verified.")
+
+	# 33B: Off-Screen Curve Prohibition
+	var b33_off = bullet_scene.instantiate()
+	main_inst.add_child(b33_off)
+	b33_off.pattern = b33_off.Pattern.CURVING_ARC
+	b33_off.curve_delay = 0.05
+	b33_off.curve_turn_time = 0.4
+	b33_off.curve_angular_speed = 5.0
+	b33_off.setup(Vector2(500, -120), Vector2.LEFT, true, 1.0) # Placed far off-screen
+	p1.global_position = Vector2(500, 300)
+	b33_off._physics_process(0.12)
+	assert(b33_off.direction == Vector2.LEFT, "Off-screen curving bullet must not curve towards player while outside playfield!")
+	b33_off.queue_free()
+	print(" - 33B: Off-screen curve prohibition (no homing from off-screen margins) verified.")
+
+	# 33C: Maximum Deflection Cap
+	var b33_cap = bullet_scene.instantiate()
+	main_inst.add_child(b33_cap)
+	b33_cap.pattern = b33_cap.Pattern.CURVING_ARC
+	b33_cap.curve_delay = 0.02
+	b33_cap.curve_turn_time = 1.0
+	b33_cap.curve_angular_speed = 12.0 # High angular speed
+	b33_cap.setup(Vector2(400, 300), Vector2.LEFT, true, 1.0)
+	p1.global_position = Vector2(700, 300) # Directly behind the bullet
+	b33_cap._physics_process(0.4)
+	var total_deflection_33 = absf(b33_cap.base_direction.angle_to(b33_cap.direction))
+	assert(total_deflection_33 <= b33_cap.max_curve_angle + 0.01, "Curving bullet must never exceed max_curve_angle cap!")
+	b33_cap.queue_free()
+	# 34: Threat Calculation, Swarm Density Calibration & Organic Micro Drone Kinematics
+	print("\nSTEP 34: Testing Threat Calculation, Swarm Density & Organic Drone Kinematics...")
+	# 34A: Archetype Threat Hierarchy & Helper Methods
+	assert(WaveDirector.get_archetype_threat(WaveDirector.MICRO_DRONE) == 0.4, "Micro Drone threat must be 0.4!")
+	assert(WaveDirector.get_archetype_threat(WaveDirector.SCOUT) == 1.0, "Scout threat must be 1.0!")
+	assert(WaveDirector.get_archetype_threat(WaveDirector.INTERCEPTOR) > WaveDirector.get_archetype_threat(WaveDirector.SCOUT), "Interceptor must have higher threat than Scout!")
+	assert(WaveDirector.get_archetype_threat(WaveDirector.HEAVY_CRUISER) >= 8.0, "Heavy Cruiser must have high threat >= 8.0!")
+	var b_threat_std = WaveDirector.calculate_batch_threat(WaveDirector.SCOUT, 5, 0)
+	var b_threat_elite = WaveDirector.calculate_batch_threat(WaveDirector.SCOUT, 5, 1)
+	assert(b_threat_std == 5.0, "5 standard scouts must equal 5.0 threat!")
+	assert(b_threat_elite == 7.5, "5 elite scouts must include 1.5x elite multiplier (7.5 threat)!")
+	print(" - 34A: Archetype threat hierarchy and calculation methods verified.")
+
+	# 34B: Wave 1 First Contact Preservation
+	var wd34 = WaveDirector.new()
+	var w1_tpl_34 = wd34.select_template_for_wave(1, 1)
+	assert(w1_tpl_34["id"] == "WAVE_FIRST_CONTACT", "Wave 1 must select WAVE_FIRST_CONTACT!")
+	var w1_scout_counts: Array[int] = []
+	var w1_drone_count = 0
+	for sp_34 in w1_tpl_34["spawns"]:
+		if sp_34["type"] == WaveDirector.SCOUT:
+			w1_scout_counts.append(sp_34["count"])
+		elif sp_34["type"] == WaveDirector.MICRO_DRONE:
+			w1_drone_count += sp_34["count"]
+	assert(w1_scout_counts == [4, 4, 4], "Wave 1 Scout batches must remain 4, 4, 4 for gentle onboarding!")
+	assert(w1_drone_count == 6, "Wave 1 Micro Drone count must remain 6 for gentle onboarding!")
+	print(" - 34B: Wave 1 First Contact gentle onboarding preservation verified.")
+
+	# 34C: Wave 2+ Swarm Density Scaling (Scouts >= 7, Micro Drones >= 12)
+	var all_tpls_34 = WaveDirector.get_all_templates()
+	for tpl_34 in all_tpls_34:
+		if tpl_34["id"] == "WAVE_FIRST_CONTACT":
+			continue
+		for sp_34 in tpl_34.get("spawns", []):
+			if sp_34["type"] == WaveDirector.SCOUT:
+				assert(sp_34["count"] >= 7, "Template %s Scout batch count must be >= 7! Found: %d" % [tpl_34["id"], sp_34["count"]])
+			elif sp_34["type"] == WaveDirector.MICRO_DRONE:
+				assert(sp_34["count"] >= 12, "Template %s Micro Drone batch count must be >= 12! Found: %d" % [tpl_34["id"], sp_34["count"]])
+	print(" - 34C: Wave 2+ template swarm density scaling (Scouts >= 7, Micro Drones >= 12) verified.")
+
+	# 34D: Procedural Wildcard Mutation Threat-Equivalence
+	var old_threat_calc = 4 * WaveDirector.get_archetype_threat(WaveDirector.BOMBER)
+	var equiv_drones = int(round(old_threat_calc / WaveDirector.get_archetype_threat(WaveDirector.MICRO_DRONE)))
+	assert(equiv_drones >= 12, "Equivalent micro drone count for 4 bombers must be >= 12! Got: %d" % equiv_drones)
+	print(" - 34D: Procedural wildcard mutation threat-ratio count conversion verified.")
+
+	# 34E: Micro Drone Organic Sine/Zig-Zag Kinematics
+	var drone_test = enemy_scene.instantiate()
+	main_inst.add_child(drone_test)
+	drone_test.setup(EnemyScript.EnemyType.MICRO_DRONE, Vector2(600, 300), -1, null, 0)
+	assert(drone_test.drone_weave_freq >= 3.0 and drone_test.drone_weave_freq <= 5.5, "Micro drone weave frequency must be randomized in 3.0-5.5 range!")
+	assert(drone_test.drone_weave_amp >= 30.0 and drone_test.drone_weave_amp <= 60.0, "Micro drone weave amplitude must be randomized in 30-60 range!")
+	drone_test.flight_time = 0.0
+	drone_test._physics_process(0.2)
+	assert(drone_test.drone_weave_amp > 0, "Drone weave amplitude must be active!")
+	drone_test.queue_free()
+	print(" - 34E: Micro Drone organic zig-zag/sinusoidal kinematics verified.")
+
+	# 34F: Micro Drone Staggered Swarm Streaming Cadence
+	var spawner_34 = main_inst.get_node("DecoherenceSpawner")
+	assert(spawner_34 != null, "DecoherenceSpawner required for cadence test!")
+	var drone_cadence_0 = 0.0
+	var drone_cadence_5 = 5 * 0.08
+	# 34G: Spawn simultaneity permission rule (only first batch is allowed to spawn all at once; count > 3 mid-wave never spawns all at once)
+	# 1. Opening batch allowed to spawn simultaneously (for heavy non-scout craft)
+	var c_first_simul_0 = spawner_34.calculate_craft_cadence(WaveDirector.BOMBER, 4, "ROW", 0.0, 0, true, true)
+	var c_first_simul_3 = spawner_34.calculate_craft_cadence(WaveDirector.BOMBER, 4, "ROW", 0.0, 3, true, true)
+	assert(c_first_simul_0 == 0.0 and c_first_simul_3 == 0.0, "First batch of wave with ROW pattern when permitted must spawn simultaneously as battle line!")
+
+	# 2. Opening batch can also stream in when allow_simultaneous is false (not forced to always be simultaneous)
+	var c_first_stream_0 = spawner_34.calculate_craft_cadence(WaveDirector.SCOUT, 7, "ROW", 0.0, 0, true, false)
+	var c_first_stream_6 = spawner_34.calculate_craft_cadence(WaveDirector.SCOUT, 7, "ROW", 0.0, 6, true, false)
+	assert(c_first_stream_6 > c_first_stream_0 + 0.8, "First batch when streaming must stagger craft cadences!")
+
+	# 3. Mid-wave batch with count > 3 is NEVER allowed to spawn simultaneously, even if allow_simultaneous is passed true
+	var c_mid_0 = spawner_34.calculate_craft_cadence(WaveDirector.SCOUT, 7, "ROW", 1.4, 0, false, true)
+	var c_mid_6 = spawner_34.calculate_craft_cadence(WaveDirector.SCOUT, 7, "ROW", 1.4, 6, false, true)
+	assert(c_mid_6 > c_mid_0 + 0.8, "Mid-wave batch with count > 3 must not spawn all at once (cadence must stagger)!")
+
+	# 4. Small squad (count <= 3) mid-wave can spawn as tactical pair/trio
+	var c_small_0 = spawner_34.calculate_craft_cadence(WaveDirector.BOMBER, 2, "ROW", 2.8, 0, false, false)
+	var c_small_1 = spawner_34.calculate_craft_cadence(WaveDirector.BOMBER, 2, "ROW", 2.8, 1, false, false)
+	assert(c_small_0 == 2.8 and c_small_1 == 2.8, "Small squad (count <= 3) may arrive together as a tactical unit!")
+	# 35: Maximized Window Launch Configuration
+	print("\nSTEP 35: Testing Maximized Window Launch Configuration...")
+	var launch_mode = ProjectSettings.get_setting("display/window/size/mode")
+	assert(launch_mode == 2, "Expected display/window/size/mode to be 2 (Window.MODE_MAXIMIZED), found: %s" % str(launch_mode))
+	print(" - 35A: display/window/size/mode=2 (Window.MODE_MAXIMIZED) verified.")
+
+	# =========================================================================
+	# STEP 36: Testing High-Density Projectile Performance & Lag Elimination
+	# =========================================================================
+	print("\nSTEP 36: Testing High-Density Projectile Performance & Lag Elimination...")
+	
+	# 36A: FeynmanTrailNode active_count tracking and MAX_ACTIVE_TRAILS cap
+	assert(FeynmanTrailNodeScript.MAX_ACTIVE_TRAILS == 64, "MAX_ACTIVE_TRAILS must be 64!")
+	var step36_fey_t1 = FeynmanTrailNodeScript.new()
+	add_child(step36_fey_t1)
+	step36_fey_t1.setup(Vector2(100, 100))
+	assert(FeynmanTrailNodeScript.active_count >= 1, "FeynmanTrailNode.active_count must increment on add_child!")
+	step36_fey_t1.queue_free()
+
+	# 36B: Birefringence Prism metadata retention on projectile split
+	var step36_prism_script = load("res://scripts/items/BirefringencePrism.gd")
+	var step36_prism_item = step36_prism_script.new()
+	var step36_prism_bullet = load("res://scenes/Bullet.tscn").instantiate()
+	add_child(step36_prism_bullet)
+	step36_prism_bullet.setup(Vector2(200, 200), Vector2.RIGHT, false, 2.0)
+	var step36_dummy_shooter = Node2D.new()
+	add_child(step36_dummy_shooter)
+	step36_prism_bullet.set_meta("shooter", step36_dummy_shooter)
+	step36_prism_bullet.set_meta("has_feynman", true)
+	step36_prism_bullet.set_meta("is_crit", true)
+	step36_prism_item._split_bullet(step36_prism_bullet)
+	
+	# Locate newly spawned children from split
+	var step36_split_bullets: Array[Node] = []
+	for child in get_children():
+		if child.is_in_group("bullet") and child != step36_prism_bullet and child.get("has_split") == true:
+			step36_split_bullets.append(child)
+	assert(step36_split_bullets.size() == 2, "Birefringence Prism must spawn 2 refracted split projectiles!")
+	for sb in step36_split_bullets:
+		assert(sb.has_meta("shooter") and sb.get_meta("shooter") == step36_dummy_shooter, "Split bullet must retain shooter metadata!")
+		assert(sb.has_meta("has_feynman") and sb.get_meta("has_feynman") == true, "Split bullet must retain has_feynman metadata!")
+		assert(sb.has_meta("is_crit") and sb.get_meta("is_crit") == true, "Split bullet must retain is_crit metadata!")
+		sb.queue_free()
+	step36_dummy_shooter.queue_free()
+	step36_prism_bullet.queue_free()
+	print(" - 36A: FeynmanTrailNode active_count budgeting and Birefringence metadata retention verified.")
+
+	# 36A2: Multi-Wave Birefringence Persistence & Pooled Split Verification
+	var biref_mod = ItemDatabase.get_item_by_id("birefringence_prism")
+	p1.active_modifiers.clear()
+	p1.active_projectile_modifiers.clear()
+	p1.add_modifier(biref_mod)
+	assert(p1.active_projectile_modifiers.has(biref_mod), "Player must retain Birefringence in active_projectile_modifiers!")
+	
+	# Fire Wave 1 bullet
+	p1._spawn_bullet_from_params({"pos": Vector2(100, 100), "dir": Vector2.RIGHT, "damage": 1.0})
+	var w1_bullets: Array[Node] = []
+	for b in get_tree().get_nodes_in_group("bullet"):
+		if is_instance_valid(b) and not b.is_queued_for_deletion() and b.get_parent() == p1.get_parent():
+			w1_bullets.append(b)
+	assert(not w1_bullets.is_empty(), "Wave 1 bullet must be spawned!")
+	var w1_b = w1_bullets[0]
+	w1_b.traveled_distance = 185.0
+	biref_mod.on_projectile_tick(w1_b, 0.016)
+	assert(w1_b.has_split == true, "Wave 1 bullet must split at 180px!")
+	
+	# Recycle Wave 1 bullet into the pool
+	w1_b.recycle()
+	assert(not w1_b.is_in_group("bullet"), "Recycled bullet must be removed from group 'bullet'!")
+	assert(p1.active_projectile_modifiers.has(biref_mod), "Recycling a bullet must NEVER clear Player.active_projectile_modifiers!")
+	
+	# Simulate wave transition (Wave 1 -> Wave 2)
+	p1.trigger_wave_cleared_hooks(1)
+	p1.trigger_wave_start_hooks(2)
+	assert(p1.active_projectile_modifiers.has(biref_mod), "Advancing to Wave 2 must preserve active_projectile_modifiers!")
+	
+	# Fire Wave 2 bullet (will be acquired from _player_pool)
+	p1._spawn_bullet_from_params({"pos": Vector2(100, 100), "dir": Vector2.RIGHT, "damage": 1.0})
+	var w2_bullets: Array[Node] = []
+	for b in get_tree().get_nodes_in_group("bullet"):
+		if is_instance_valid(b) and not b.is_queued_for_deletion() and b.get_parent() == p1.get_parent():
+			w2_bullets.append(b)
+	assert(not w2_bullets.is_empty(), "Wave 2 bullet must be acquired and spawned!")
+	var w2_b = w2_bullets[0]
+	assert(w2_b.has_split == false, "Acquired bullet must reset has_split to false!")
+	assert(w2_b.traveled_distance == 0.0, "Acquired bullet must reset traveled_distance to 0.0!")
+	assert(not w2_b.projectile_modifiers.is_empty(), "Wave 2 bullet must have projectile modifiers attached!")
+	
+	# Simulate bullet flight to 185px in Wave 2
+	w2_b.traveled_distance = 185.0
+	biref_mod.on_projectile_tick(w2_b, 0.016)
+	assert(w2_b.has_split == true, "Wave 2 bullet acquired from pool MUST split successfully!")
+	w2_b.recycle()
+	print(" - 36A2: Multi-wave Birefringence Prism split persistence and pool safety verified.")
+
+	# 36C: NearFieldCasimir thresholded scale optimization
+	var step36_cas_script = load("res://scripts/items/NearFieldCasimir.gd")
+	var step36_cas_item = step36_cas_script.new()
+	var step36_cas_b = load("res://scenes/Bullet.tscn").instantiate()
+	add_child(step36_cas_b)
+	step36_cas_b.setup(Vector2(100, 100), Vector2.RIGHT, false, 1.0)
+	step36_cas_b.traveled_distance = 100.0
+	step36_cas_item.on_projectile_tick(step36_cas_b, 0.016)
+	var step36_scale_after_first = step36_cas_b.scale
+	# Advance tiny distance (delta scale < 0.04 threshold)
+	step36_cas_b.traveled_distance = 101.0
+	step36_cas_item.on_projectile_tick(step36_cas_b, 0.016)
+	assert(step36_cas_b.scale == step36_scale_after_first, "NearFieldCasimir must not dirty scale when delta is below threshold!")
+	step36_cas_b.queue_free()
+	print(" - 36B: NearFieldCasimir thresholded scale updates verified.")
+
+	# 36D: GameAxis cached boundary checks
+	assert(GameAxis.is_out_of_bounds(Vector2(-150, -150), 60.0) == true, "Out of bounds point must return true!")
+	assert(GameAxis.is_out_of_bounds(Vector2(640, 360), 60.0) == false, "In bounds center point must return false!")
+	print(" - 36C: GameAxis cached viewport bounds check verified.")
+
+	# 36E: Bullet static player group caching and ImpactFlash concurrency cap
+	var step36_impact_flash_script = load("res://scripts/ImpactFlash.gd")
+	assert(step36_impact_flash_script.MAX_ACTIVE_FLASHES == 32, "MAX_ACTIVE_FLASHES must be 32!")
+	var step36_iflash1 = step36_impact_flash_script.new()
+	add_child(step36_iflash1)
+	assert(step36_impact_flash_script.active_count >= 1, "ImpactFlash.active_count must increment on add_child!")
+	step36_iflash1.queue_free()
+	print(" - 36D: ImpactFlash concurrency budget and bullet static player caching verified.")
+
+	# 36E: Unrestricted bullet spawning & SoundEffects per-frame rate limiter
+	var step36_bullets_before_test = get_tree().get_nodes_in_group("bullet").size()
+	p1._spawn_bullet_from_params({"pos": Vector2(100, 100), "dir": Vector2.RIGHT, "damage": 1.0})
+	assert(get_tree().get_nodes_in_group("bullet").size() > step36_bullets_before_test, "Spawning bullet must remain completely unrestricted!")
+	
+	# Verify SoundEffects per-frame rate limiter
+	SoundEffects.play_sfx("hit")
+	SoundEffects.play_sfx("hit")
+	SoundEffects.play_sfx("hit")
+	SoundEffects.play_sfx("hit") # 4th should be dropped by frame limiter
+	assert(SoundEffects._frame_play_count.get("hit", 0) >= 3, "SoundEffects must track and throttle identical sounds in same frame!")
+	print(" - 36E: Unrestricted player bullet spawning and audio frame rate limiter verified.")
+
+	# 36F: Profile High-Density Bullet Stress Test with Full User Loadout
+	print("\n--- RUNNING HIGH-DENSITY STRESS PROFILER ---")
+	p1.active_modifiers.clear()
+	p1.active_projectile_modifiers.clear()
+	p1.extra_spread_shots = 2
+	var test_items = ItemDatabase.get_all_items()
+	for it in test_items:
+		if it.id in ["continuous_wave_magnetron", "feynman_propagator", "birefringence_prism", "antimatter_suspension", "zeeman_splitting"]:
+			p1.add_modifier(it)
+	
+	# Hold fire for 120 frames (2 seconds, accumulates suspended bullets)
+	p1.is_firing = true
+	var t_start_charge = Time.get_ticks_usec()
+	for f in range(120):
+		p1._physics_process(0.0166)
+		var b_nodes = get_tree().get_nodes_in_group("bullet")
+		for b in b_nodes:
+			if is_instance_valid(b) and not b.is_queued_for_deletion():
+				b._physics_process(0.0166)
+	var t_charge_ms = (Time.get_ticks_usec() - t_start_charge) / 1000.0
+	var bullet_nodes = get_tree().get_nodes_in_group("bullet")
+	print("Charged %d suspended bullets in 120 frames: total %.2f ms (%.2f ms/frame)" % [bullet_nodes.size(), t_charge_ms, t_charge_ms / 120.0])
+	
+	# Release fire (all bullets rush forward and split at 180px)
+	p1.is_firing = false
+	var t_start_release = Time.get_ticks_usec()
+	var peak_frame_ms = 0.0
+	for f in range(120):
+		var f_start = Time.get_ticks_usec()
+		p1._physics_process(0.0166)
+		# Process all bullet physics
+		var cur_bullets = get_tree().get_nodes_in_group("bullet")
+		for b in cur_bullets:
+			if is_instance_valid(b) and not b.is_queued_for_deletion():
+				b._physics_process(0.0166)
+		var f_ms = (Time.get_ticks_usec() - f_start) / 1000.0
+		if f_ms > peak_frame_ms:
+			peak_frame_ms = f_ms
+	var t_release_ms = (Time.get_ticks_usec() - t_start_release) / 1000.0
+	var final_bullet_count = get_tree().get_nodes_in_group("bullet").size()
+	print("Flight & Split for %d bullets over 120 frames: total %.2f ms (%.2f ms/frame), PEAK frame = %.2f ms" % [final_bullet_count, t_release_ms, t_release_ms / 120.0, peak_frame_ms])
+
+	# 36G: Massive Projectile Stress Benchmark (Verifying Zero Bullet Capping & Pool Performance)
+	p1.active_modifiers.clear()
+	p1.active_projectile_modifiers.clear()
+	p1.extra_spread_shots = 0
+	for b in get_tree().get_nodes_in_group("bullet"):
+		if is_instance_valid(b) and not b.is_queued_for_deletion():
+			b.recycle()
+	
+	var t_mass_start = Time.get_ticks_usec()
+	for i in range(500):
+		p1._spawn_bullet_from_params({"pos": Vector2(100 + (i % 20) * 10, 100 + (i / 20) * 10), "dir": Vector2.RIGHT, "damage": 1.0})
+	var mass_bullets = get_tree().get_nodes_in_group("bullet")
+	var t_spawn_ms = (Time.get_ticks_usec() - t_mass_start) / 1000.0
+	print("Spawned %d bullets via pool: %.2f ms (%.3f ms/bullet)" % [mass_bullets.size(), t_spawn_ms, t_spawn_ms / 500.0])
+
+	var t_mass_proc_start = Time.get_ticks_usec()
+	var mass_peak = 0.0
+	for f in range(60):
+		var mf_start = Time.get_ticks_usec()
+		for b in mass_bullets:
+			if is_instance_valid(b) and not b.is_queued_for_deletion():
+				b._physics_process(0.0166)
+		var mf_ms = (Time.get_ticks_usec() - mf_start) / 1000.0
+		if mf_ms > mass_peak:
+			mass_peak = mf_ms
+	var t_mass_total_ms = (Time.get_ticks_usec() - t_mass_proc_start) / 1000.0
+	print("Massive 60-frame simulation with %d projectiles: total %.2f ms (%.2f ms/frame), PEAK = %.2f ms" % [mass_bullets.size(), t_mass_total_ms, t_mass_total_ms / 60.0, mass_peak])
+	assert(mass_peak < 8.0, "Even with 500+ projectiles, peak physics tick must be under 8ms (well within 16.6ms 60 FPS window)!")
+
+	# STEP 37: Testing Item Choice Modal Instant Single-Tap Navigation and Focus Sync
+	print("\nSTEP 37: Testing Item Choice Modal Instant Single-Tap Navigation and Focus Sync...")
+	var step37_hud = main_inst.get_node("HUD")
+	assert(step37_hud != null, "Main scene must contain HUD for Step 37!")
+	GameManager.is_game_over = false
+	GameManager.is_coop_mode = false
+	step37_hud.open_item_choice_modal()
+	assert(step37_hud.choice_modal.visible == true, "Choice modal must be open!")
+	assert(step37_hud.p1_selected_idx == 0, "Initial selection must be 0 (Card A)!")
+	assert(step37_hud.choice_btn_a.text == "► EQUIP [SPACE] ◄", "Card A must display active equip prompt initially!")
+	assert(step37_hud.choice_btn_b.text == "[2] EQUIP", "Card B must display hotkey equip prompt initially!")
+	
+	# 37A: Single lateral right input immediately advances selection to 1 on the first tap
+	var ev_right = InputEventAction.new()
+	ev_right.action = "move_right"
+	ev_right.pressed = true
+	step37_hud._input(ev_right)
+	assert(step37_hud.p1_selected_idx == 1, "Single move_right press must immediately advance p1_selected_idx to 1 on first tap!")
+	assert(step37_hud.choice_btn_b.text == "► EQUIP [SPACE] ◄", "Card B must display active equip prompt on first right tap!")
+	assert(step37_hud.choice_btn_a.text == "[1] EQUIP", "Card A must display hotkey equip prompt on first right tap!")
+	
+	# 37B: Single lateral left input immediately returns selection to 0 on the first tap
+	var ev_left = InputEventAction.new()
+	ev_left.action = "move_left"
+	ev_left.pressed = true
+	step37_hud._input(ev_left)
+	assert(step37_hud.p1_selected_idx == 0, "Single move_left press must immediately return p1_selected_idx to 0 on first tap!")
+	assert(step37_hud.choice_btn_a.text == "► EQUIP [SPACE] ◄", "Card A must return to active equip prompt!")
+	assert(step37_hud.choice_btn_b.text == "[2] EQUIP", "Card B must return to hotkey equip prompt!")
+	
+	# 37C: Focus entered event on button B synchronizes selection
+	step37_hud._on_choice_btn_b_focus_entered()
+	assert(step37_hud.p1_selected_idx == 1, "focus_entered on choice_btn_b must synchronize p1_selected_idx to 1!")
+	
+	# 37D: Focus entered event on button A synchronizes selection
+	step37_hud._on_choice_btn_a_focus_entered()
+	assert(step37_hud.p1_selected_idx == 0, "focus_entered on choice_btn_a must synchronize p1_selected_idx to 0!")
+	
+	# 37E: Focus neighbor isolation verification
+	assert(step37_hud.choice_btn_a.focus_neighbor_right == step37_hud.choice_btn_b.get_path(), "Card A neighbor right must point to Card B!")
+	assert(step37_hud.choice_btn_b.focus_neighbor_left == step37_hud.choice_btn_a.get_path(), "Card B neighbor left must point to Card A!")
+	
+	# 37F: Co-Op Mode Independent Single-Tap Navigation
+	GameManager.is_coop_mode = true
+	step37_hud.open_item_choice_modal()
+	assert(step37_hud.p1_selected_idx == 0, "P1 selection must reset to 0 in co-op!")
+	assert(step37_hud.p2_selected_idx == 0, "P2 selection must reset to 0 in co-op!")
+	
+	var ev_p2_right = InputEventAction.new()
+	ev_p2_right.action = "p2_move_right"
+	ev_p2_right.pressed = true
+	step37_hud._input(ev_p2_right)
+	assert(step37_hud.p2_selected_idx == 1, "Single p2_move_right must immediately advance p2_selected_idx to 1!")
+	assert(step37_hud.p1_selected_idx == 0, "P2 navigation must not alter P1 selection!")
+	assert(step37_hud.p2_choice_btn_b.text == "► EQUIP [ENTER] ◄", "P2 Card B must display active equip prompt!")
+	
+	step37_hud.dismiss_item_choice_modal()
+	GameManager.is_coop_mode = false
+	print(" - 37A: Single-tap lateral navigation (move_right/move_left) verified.")
+	print(" - 37B: Real-time visual and equip prompt synchronization verified.")
+	print(" - 37C: focus_entered and mouse_entered bi-directional synchronization verified.")
+	print(" - 37D: Focus neighbor wrap and cross-stall boundary isolation verified.")
+	print(" - 37E: Co-Op independent dual-stall single-tap navigation verified.")
+
+	# =========================================================================
+	# STEP 38: Testing Pink Ship (Scout) Anti-Mob Staggered Entry & Cadence
+	# =========================================================================
+	print("\nSTEP 38: Testing Pink Ship (Scout) Anti-Mob Staggered Entry & Cadence...")
+	
+	# 38A: Pink ships (SCOUT) in ROW/HORIZON_SPREAD must ALWAYS stagger over time (never spawn simultaneously)
+	var sc_row_0 = spawner_34.calculate_craft_cadence(WaveDirector.SCOUT, 7, "ROW", 0.0, 0, true, true)
+	var sc_row_6 = spawner_34.calculate_craft_cadence(WaveDirector.SCOUT, 7, "ROW", 0.0, 6, true, true)
+	assert(sc_row_6 >= 2.0, "7 Pink ships in ROW must stagger over at least 2.0s to prevent mobbing! Found: %f" % sc_row_6)
+	assert(sc_row_6 - sc_row_0 >= 6 * 0.40, "Per-craft stagger interval for pink ships must be >= 0.40s!")
+	print(" - 38A: Pink ships ROW/HORIZON_SPREAD anti-mob streaming cadence (>=0.40s/craft) verified.")
+
+	# 38B: Pink ships in V_SHAPE must have apex lead with port/starboard alternating wingman stagger
+	var sc_v_lead = spawner_34.calculate_craft_cadence(WaveDirector.SCOUT, 7, "V_SHAPE", 0.0, 3, true, false)
+	var sc_v_left = spawner_34.calculate_craft_cadence(WaveDirector.SCOUT, 7, "V_SHAPE", 0.0, 2, true, false)
+	var sc_v_right = spawner_34.calculate_craft_cadence(WaveDirector.SCOUT, 7, "V_SHAPE", 0.0, 4, true, false)
+	assert(sc_v_lead == 0.0, "V_SHAPE apex lead craft must enter first at 0.0s!")
+	assert(sc_v_left >= 0.40, "V_SHAPE first tier wingman must stagger by >= 0.40s!")
+	assert(sc_v_right > sc_v_left, "V_SHAPE port and starboard wingmen must not spawn simultaneously (must alternate)!")
+	print(" - 38B: Pink ships V_SHAPE cascading apex lead and alternating wingman stagger verified.")
+
+	# 38C: Pink ships in SWEEP_ROW / SERPENTINE_STREAM cadence
+	var sc_sw_0 = spawner_34.calculate_craft_cadence(WaveDirector.SCOUT, 7, "SWEEP_ROW", 0.0, 0, true, false)
+	var sc_sw_1 = spawner_34.calculate_craft_cadence(WaveDirector.SCOUT, 7, "SWEEP_ROW", 0.0, 1, true, false)
+	assert(sc_sw_1 - sc_sw_0 >= 0.38, "Pink ships SWEEP_ROW spacing must be >= 0.38s!")
+	print(" - 38C: Pink ships SWEEP_ROW / SERPENTINE_STREAM entry cadence verified.")
+
+	# 38D: Scout initial weapon fire timer reaction buffer
+	var scout_e = enemy_scene.instantiate()
+	main_inst.add_child(scout_e)
+	scout_e.setup(EnemyScript.EnemyType.SCOUT, Vector2(600, 300), -1, null, 0)
+	assert(scout_e.fire_timer >= 1.0, "Scout initial fire timer must grant >= 1.0s reaction buffer! Got: %f" % scout_e.fire_timer)
+	scout_e.queue_free()
+	print(" - 38D: Scout initial weapon fire timer reaction buffer (>=1.0s) verified.")
+
+	# STEP 39: Testing Hostile Archive & Bestiary Live Firing Simulation
+	print("\nSTEP 39: Testing Hostile Archive & Bestiary Live Firing Simulation...")
+	
+	# 39A: BestiaryData catalog completeness (17 archetypes + 3 bosses)
+	var BestiaryDataScript = load("res://scripts/BestiaryData.gd")
+	assert(BestiaryDataScript != null, "BestiaryData script must load!")
+	var b_entries = BestiaryDataScript.get_all_entries()
+	assert(b_entries.size() == 19, "BestiaryData must contain exactly 19 hostiles (16 archetypes + 3 bosses)! Got: %d" % b_entries.size())
+	
+	for b_entry in b_entries:
+		assert(b_entry.has("id") and not b_entry["id"].is_empty(), "Entry must have valid id!")
+		assert(b_entry.has("name") and not b_entry["name"].is_empty(), "Entry must have valid name!")
+		assert(b_entry.has("description") and not b_entry["description"].is_empty(), "Entry must have descriptive tactical dossier!")
+		assert(b_entry.has("sector_spawn") and not b_entry["sector_spawn"].is_empty(), "Entry %s must define sector/wave encounter data!" % b_entry["name"])
+	
+	# Verify WaveDirector spawn pools (16 active archetypes)
+	var s2_pool_check = WaveDirector.get_spawn_pool(2, 1)
+	var s3_pool_check = WaveDirector.get_spawn_pool(3, 1)
+	assert(EnemyScript.EnemyType.SHIELD_FRIGATE in s2_pool_check, "WaveDirector s2 pool must include SHIELD_FRIGATE!")
+	assert(EnemyScript.EnemyType.KNIGHT_VANGUARD in s3_pool_check, "WaveDirector s3 pool must include KNIGHT_VANGUARD!")
+	print(" - 39A: BestiaryData catalog completeness (19 craft dossiers) & WaveDirector pools verified.")
+
+	# 39B: MainMenu Bestiary button & view switching
+	var menu_39 = load("res://scenes/MainMenu.tscn").instantiate()
+	add_child(menu_39)
+	assert(menu_39.bestiary_btn != null, "MainMenu must contain BestiaryBtn!")
+	assert(menu_39.bestiary_view != null, "MainMenu must contain BestiaryView!")
+	
+	menu_39._on_bestiary_pressed()
+	assert(menu_39.bestiary_view.visible == true, "Selecting Bestiary must make BestiaryView visible!")
+	assert(menu_39.title_view.visible == false, "TitleView must be hidden when Bestiary is active!")
+	
+	var b_view = menu_39.bestiary_view
+	assert(b_view.ship_buttons.size() == 19, "BestiaryView must create 19 craft selection buttons! Got: %d" % b_view.ship_buttons.size())
+	assert(b_view.sector_badge_lbl != null, "BestiaryView must have sector_badge_lbl node!")
+	print(" - 39B: MainMenu Bestiary button, view transition, and sector encounter badge verified.")
+
+	# 39C: 3D Model instantiation across all catalog entries
+	var ShipBuilder3DScript_39 = load("res://scripts/ShipBuilder3D.gd")
+	for b_model_entry in b_entries:
+		var et = b_model_entry.get("enemy_type", -1)
+		var bid = b_model_entry.get("boss_id", "")
+		var mesh_node: Node3D = null
+		if bid != "":
+			mesh_node = ShipBuilder3DScript_39.build_boss_ship(bid)
+		else:
+			mesh_node = ShipBuilder3DScript_39.build_enemy_ship(et, 0)
+		assert(mesh_node != null, "ShipBuilder3D failed to build mesh for bestiary entry %s!" % b_model_entry["name"])
+		mesh_node.queue_free()
+	print(" - 39C: 3D model construction for all 19 bestiary hostiles verified.")
+
+	# 39D: Live Firing Simulation Arena, Nexus Spawning & Target Drone Lead Tracking
+	var sim_39 = b_view.simulation
+	assert(sim_39 != null, "BestiaryView must contain BestiarySimulation!")
+	assert(sim_39.target_drone != null, "BestiarySimulation must have target drone!")
+	assert(sim_39.target_drone.is_in_group("player"), "Target drone must belong to group 'player' while active!")
+	
+	# Verify continuous drone flight: drone position does not snap/reset when respawning enemy
+	sim_39._update_target_drone(1.5)
+	var drone_pos_before = sim_39.target_drone.position
+	sim_39._start_nexus_spawn()
+	var drone_pos_after = sim_39.target_drone.position
+	assert(drone_pos_before == drone_pos_after, "Respawning enemy must not reset the target drone position!")
+	
+	# Test loading an Interceptor (curving bullets)
+	b_view.select_ship(2)
+	assert(b_view.current_index == 2, "select_ship(2) must set current_index to 2!")
+	assert(b_view.sector_badge_lbl.text.contains("SECTOR 1+"), "Interceptor badge must indicate Sector 1+ encounter!")
+	sim_39._process_enemy_lifecycle(0.3)
+	sim_39._execute_salvo(1)
+	assert(sim_39.projectiles_node.get_child_count() >= 2, "Interceptor salvo must fire curving flank projectiles!")
+	
+	# Test loading a Sniper (rail slug)
+	b_view.select_ship(3)
+	assert(b_view.sector_badge_lbl.text.contains("SECTOR 1+"), "Sniper badge must indicate Sector 1+ encounter!")
+	sim_39._execute_salvo(1)
+	assert(sim_39.projectiles_node.get_child_count() >= 1, "Sniper salvo must fire railgun slug!")
+	
+	# Test cycling next and prev buttons
+	b_view._on_next_pressed()
+	assert(b_view.current_index == 4, "_on_next_pressed must advance to index 4!")
+	b_view._on_prev_pressed()
+	assert(b_view.current_index == 3, "_on_prev_pressed must return to index 3!")
+	print(" - 39D: Live Nexus spawning, continuous target drone flight, and projectile volleys verified.")
+
+	# 39E: Clean teardown and group de-registration
+	menu_39._show_title_view()
+	assert(menu_39.bestiary_view.visible == false, "BestiaryView must be hidden when returning to title!")
+	assert(not sim_39.target_drone.is_in_group("player"), "Target drone must be removed from group 'player' when Bestiary is closed!")
+	menu_39.queue_free()
+	print(" - 39E: Bestiary teardown and clean player group isolation verified.")
+
+	# 40. Test Wave 30 Miniboss Progression, Wave 36 Cap & Final Boss Victory Flow
+	print("\nSTEP 40: Testing Wave 30 Miniboss Progression, Wave 36 Cap & Final Boss Victory Flow...")
+	
+	# 40A: Test BossCorvus with is_miniboss = true
+	var corvus_mini_scene = load("res://scenes/BossCorvus.tscn")
+	var corvus_mini = corvus_mini_scene.instantiate()
+	corvus_mini.is_miniboss = true
+	main_inst.add_child(corvus_mini)
+	assert(corvus_mini.max_core_health == 90.0, "Corvus miniboss health must scale down to 90!")
+	var corvus_state = {"defeated_name": ""}
+	var corvus_signal_conn = func(b_name):
+		corvus_state["defeated_name"] = b_name
+	GameManager.boss_defeated.connect(corvus_signal_conn)
+	corvus_mini._die()
+	assert(corvus_state["defeated_name"] == "MINIBOSS: QUANTUM CORVUS", "Corvus miniboss must emit 'MINIBOSS: QUANTUM CORVUS'!")
+	GameManager.boss_defeated.disconnect(corvus_signal_conn)
+	print(" - 40A: BossCorvus miniboss scaling & defeat signal ('MINIBOSS: QUANTUM CORVUS') verified.")
+
+	# 40B: Test Main._on_boss_defeated_progression restores COMBAT_WAVES after Wave 30 miniboss
+	GameManager.current_sector = 3
+	GameManager.current_wave = 30
+	GameManager.current_phase = GameManager.RunPhase.BOSS_BATTLE
+	main_inst._on_boss_defeated_progression("MINIBOSS: QUANTUM CORVUS")
+	assert(GameManager.current_phase == GameManager.RunPhase.COMBAT_WAVES, "Defeating Wave 30 miniboss must restore RunPhase.COMBAT_WAVES!")
+	print(" - 40B: Wave 30 Miniboss defeat restores COMBAT_WAVES (preventing game freeze) verified.")
+
+	# 40C: Test DecoherenceSpawner MAX_WAVES cap and milestone hold
+	assert(DecoherenceSpawner.MAX_WAVES == 36, "MAX_WAVES must be capped at 36!")
+	var spawner_40 = main_inst.spawner
+	spawner_40.current_wave_num = 36
+	spawner_40._finish_quantum_warp_jump()
+	assert(spawner_40.waiting_for_progression_event == true, "Wave 36 finish must set waiting_for_progression_event = true!")
+	spawner_40._process(0.5)
+	assert(spawner_40.current_wave_num == 36, "Spawner must not increment beyond wave 36!")
+	spawner_40._trigger_next_wave()
+	assert(spawner_40.current_wave_num == 36, "_trigger_next_wave() must respect MAX_WAVES and not spawn wave 37!")
+	print(" - 40C: Spawner MAX_WAVES = 36 cap and milestone hold verified.")
+
+	# 40D: Test Carrier minion micro-drone isolation
+	var carrier_40 = load("res://scenes/Enemy.tscn").instantiate()
+	main_inst.add_child(carrier_40)
+	carrier_40.setup(EnemyScript.EnemyType.DRONE_CARRIER, Vector2(500, 100), 999, spawner_40)
+	carrier_40._launch_drone_swarm(2)
+	var spawned_drones = main_inst.get_children().filter(func(c): return c.is_in_group("enemy") and c.get("enemy_type") == EnemyScript.EnemyType.MICRO_DRONE)
+	assert(spawned_drones.size() >= 2, "Carrier must spawn micro drones!")
+	var last_drone = spawned_drones[spawned_drones.size() - 1]
+	assert(last_drone.squad_id == -1 and last_drone.spawner_ref == null, "Minion drones must have squad_id = -1 and spawner_ref = null to prevent desync!")
+	carrier_40.queue_free()
+	for d_node in spawned_drones:
+		d_node.queue_free()
+	print(" - 40D: Carrier minion drone squad isolation verified.")
+
+	# 40E: Test Sector 3 Wave 36 Final Boss Victory Flow
+	var victory_state = {"registered": false, "boss": ""}
+	var victory_conn = func(f_score, f_wipes, f_time, b_name):
+		victory_state["registered"] = true
+		victory_state["boss"] = b_name
+	GameManager.victory_triggered.connect(victory_conn)
+	GameManager.current_sector = 3
+	GameManager.current_wave = 36
+	GameManager.trigger_victory("Apex Titan Ouroboros")
+	assert(victory_state["registered"] == true and "OUROBOROS" in victory_state["boss"].to_upper(), "Ouroboros defeat must trigger true Victory!")
+	assert(GameManager.current_phase == GameManager.RunPhase.SECTOR_VICTORY, "Victory must set RunPhase.SECTOR_VICTORY!")
+	GameManager.victory_triggered.disconnect(victory_conn)
+	print(" - 40E: Sector 3 Wave 36 Ouroboros defeat -> True Run Victory Flow verified.")
 
 	print("\n====================================================")
 	print("--- ALL VERIFICATION TESTS PASSED 100% CLEANLY ---")

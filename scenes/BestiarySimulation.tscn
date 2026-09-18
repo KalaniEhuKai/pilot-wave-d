@@ -1,0 +1,61 @@
+[gd_scene load_steps=6 format=3 uid="uid://bestiary_sim01"]
+
+[ext_resource type="Script" path="res://scripts/BestiarySimulation.gd" id="1_sim"]
+[ext_resource type="Script" path="res://scripts/BestiaryCanvas.gd" id="2_canvas"]
+[ext_resource type="Script" path="res://scripts/BestiaryTargetDrone.gd" id="3_drone"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_drone"]
+radius = 18.0
+
+[node name="BestiarySimulation" type="SubViewportContainer"]
+custom_minimum_size = Vector2(640, 300)
+offset_right = 640.0
+offset_bottom = 300.0
+mouse_filter = 2
+stretch = true
+script = ExtResource("1_sim")
+
+[node name="SubViewport" type="SubViewport" parent="."]
+transparent_bg = true
+handle_input_locally = false
+size = Vector2i(640, 300)
+render_target_update_mode = 4
+
+[node name="Camera3D" type="Camera3D" parent="SubViewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 320, -150, 300)
+projection = 1
+current = true
+size = 300.0
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="SubViewport"]
+transform = Transform3D(0.906308, -0.178606, 0.383022, 0, 0.906308, 0.422618, -0.422618, -0.383022, 0.821394, 0, 0, 100)
+light_color = Color(1, 0.98, 0.94, 1)
+light_energy = 1.2
+shadow_enabled = false
+
+[node name="RimFillLight" type="DirectionalLight3D" parent="SubViewport"]
+transform = Transform3D(0.866025, 0.25, -0.433013, 0, 0.866025, 0.5, 0.5, -0.433013, 0.75, 0, 0, -100)
+light_color = Color(0.35, 0.75, 1, 1)
+light_energy = 0.4
+shadow_enabled = false
+
+[node name="Entities3D" type="Node3D" parent="SubViewport"]
+
+[node name="Canvas2D" type="Node2D" parent="SubViewport"]
+script = ExtResource("2_canvas")
+
+[node name="VFX" type="Node2D" parent="SubViewport/Canvas2D"]
+
+[node name="TelegraphLine" type="Line2D" parent="SubViewport/Canvas2D"]
+width = 2.0
+default_color = Color(1, 0.15, 0.25, 0.85)
+
+[node name="TargetDrone" type="Area2D" parent="SubViewport/Canvas2D"]
+position = Vector2(100, 150)
+collision_mask = 8
+script = ExtResource("3_drone")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="SubViewport/Canvas2D/TargetDrone"]
+shape = SubResource("CircleShape2D_drone")
+
+[node name="Projectiles" type="Node2D" parent="SubViewport/Canvas2D"]

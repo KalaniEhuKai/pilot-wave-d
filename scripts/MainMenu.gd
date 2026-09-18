@@ -9,12 +9,14 @@ const MenuStyleHelper = preload("res://scripts/MenuStyleHelper.gd")
 @onready var title_view: Control = $CenterContainer/TitleView
 @onready var mission_view: Control = $CenterContainer/MissionView
 @onready var scores_view: Control = $CenterContainer/ScoresView
+@onready var bestiary_view: Control = $CenterContainer/BestiaryView
 @onready var options_view: Control = $CenterContainer/OptionsView
 @onready var debug_view: Control = $CenterContainer/DebugView
 
 # Title View Controls
 @onready var start_btn: Button = $CenterContainer/TitleView/MenuButtons/StartBtn
 @onready var scores_btn: Button = $CenterContainer/TitleView/MenuButtons/ScoresBtn
+@onready var bestiary_btn: Button = $CenterContainer/TitleView/MenuButtons/BestiaryBtn
 @onready var options_btn: Button = $CenterContainer/TitleView/MenuButtons/OptionsBtn
 @onready var quit_btn: Button = $CenterContainer/TitleView/MenuButtons/QuitBtn
 @onready var debug_btn: Button = $CenterContainer/TitleView/MenuButtons/DebugBtn
@@ -90,9 +92,13 @@ func _ready() -> void:
 	# Connect title view buttons
 	start_btn.pressed.connect(_on_start_pressed)
 	scores_btn.pressed.connect(_on_scores_pressed)
+	bestiary_btn.pressed.connect(_on_bestiary_pressed)
 	options_btn.pressed.connect(_on_options_pressed)
 	quit_btn.pressed.connect(_on_quit_pressed)
 	debug_btn.pressed.connect(_on_debug_pressed)
+	
+	if bestiary_view.has_signal("back_pressed"):
+		bestiary_view.back_pressed.connect(_show_title_view)
 	
 	# Connect mission view buttons
 	btn_1p.pressed.connect(func(): _select_players(1))
@@ -177,6 +183,7 @@ func _apply_styles() -> void:
 	# Title Buttons
 	MenuStyleHelper.style_button(start_btn, cyan)
 	MenuStyleHelper.style_button(scores_btn, gold)
+	MenuStyleHelper.style_button(bestiary_btn, cyan)
 	MenuStyleHelper.style_button(options_btn, cyan)
 	MenuStyleHelper.style_button(debug_btn, amber)
 	MenuStyleHelper.style_button(quit_btn, magenta)
@@ -252,13 +259,25 @@ func _on_debug_pressed() -> void:
 func _on_quit_pressed() -> void:
 	get_tree().quit()
 
+func _on_bestiary_pressed() -> void:
+	_switch_view(bestiary_view)
+
 func _switch_view(target: Control) -> void:
+	if current_view == bestiary_view and target != bestiary_view:
+		if bestiary_view.has_method("on_deactivated"):
+			bestiary_view.on_deactivated()
+	
 	title_view.visible = (target == title_view)
 	mission_view.visible = (target == mission_view)
 	scores_view.visible = (target == scores_view)
+	bestiary_view.visible = (target == bestiary_view)
 	options_view.visible = (target == options_view)
 	debug_view.visible = (target == debug_view)
 	current_view = target
+
+	if target == bestiary_view:
+		if bestiary_view.has_method("on_activated"):
+			bestiary_view.on_activated()
 
 # --- Mission Deployment Logic ---
 

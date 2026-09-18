@@ -18,11 +18,28 @@ var lateral: Vector2 = Vector2.DOWN
 var scroll_dir: Vector2 = Vector2.LEFT
 var ship_base_rotation: float = 0.0
 
+var _cached_viewport_rect: Rect2 = Rect2(0, 0, 1280, 720)
+var _cached_bounds_60: Rect2 = Rect2(0, 0, 1280, 720).grow(60.0)
+var _cached_bounds_80: Rect2 = Rect2(0, 0, 1280, 720).grow(80.0)
+
 func _ready() -> void:
+	# Ensure desktop platforms launch maximized
+	if DisplayServer.get_name() != "headless" and not OS.has_feature("web") and not OS.has_feature("mobile"):
+		if DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_WINDOWED:
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_MAXIMIZED)
+	
 	# Auto-detect orientation based on window size
 	_check_viewport_aspect()
+	_refresh_cached_rects()
 	get_viewport().size_changed.connect(_on_viewport_size_changed)
 	_update_vectors()
+
+func _refresh_cached_rects() -> void:
+	var vp = get_viewport()
+	if vp:
+		_cached_viewport_rect = vp.get_visible_rect()
+		_cached_bounds_60 = _cached_viewport_rect.grow(60.0)
+		_cached_bounds_80 = _cached_viewport_rect.grow(80.0)
 
 func _check_viewport_aspect() -> void:
 	var vp_size = get_viewport().get_visible_rect().size
@@ -33,6 +50,7 @@ func _check_viewport_aspect() -> void:
 
 func _on_viewport_size_changed() -> void:
 	_check_viewport_aspect()
+	_refresh_cached_rects()
 
 func toggle_axis() -> void:
 	is_vertical = !is_vertical
@@ -55,10 +73,10 @@ func _update_vectors() -> void:
 		ship_base_rotation = 0.0
 
 func get_viewport_rect() -> Rect2:
-	return get_viewport().get_visible_rect()
+	return _cached_viewport_rect
 
 func clamp_position(pos: Vector2, margin: float = 32.0) -> Vector2:
-	var rect = get_viewport_rect()
+	var rect = _cached_viewport_rect
 	var min_x = rect.position.x + margin
 	var max_x = rect.position.x + rect.size.x - margin
 	var min_y = rect.position.y + margin
@@ -66,9 +84,11 @@ func clamp_position(pos: Vector2, margin: float = 32.0) -> Vector2:
 	return Vector2(clampf(pos.x, min_x, max_x), clampf(pos.y, min_y, max_y))
 
 func is_out_of_bounds(pos: Vector2, extra_margin: float = 80.0) -> bool:
-	var rect = get_viewport_rect()
-	var expanded = rect.grow(extra_margin)
-	return not expanded.has_point(pos)
+	if extra_margin == 60.0:
+		return not _cached_bounds_60.has_point(pos)
+	elif extra_margin == 80.0:
+		return not _cached_bounds_80.has_point(pos)
+	return not _cached_viewport_rect.grow(extra_margin).has_point(pos)
 
 func get_spawn_line(offset_along_lateral: float = 0.5) -> Vector2:
 	var rect = get_viewport_rect()

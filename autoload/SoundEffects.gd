@@ -12,6 +12,8 @@ extends Node
 
 var _players: Array[AudioStreamPlayer] = []
 var _streams: Dictionary = {}
+var _last_frame_played: Dictionary = {}
+var _frame_play_count: Dictionary = {}
 const MAX_VOICES: int = 16
 const SAMPLE_RATE: int = 44100
 
@@ -44,6 +46,7 @@ func _ready() -> void:
 	_streams["hull_hit"] = _generate_hull_hit()
 	_streams["shield_break"] = _generate_shield_break()
 	_streams["shield_recharge"] = _generate_shield_recharge()
+	_streams["roll_recharge"] = _generate_roll_recharge()
 	_streams["low_hull_alarm"] = _generate_low_hull_alarm()
 
 func _setup_audio_bus_pipeline() -> void:
@@ -82,6 +85,16 @@ func _setup_audio_bus_pipeline() -> void:
 func play_sfx(name: String, pitch_range: float = 0.08, volume_db: float = 0.0, base_pitch: float = 1.0) -> void:
 	if not _streams.has(name):
 		return
+	
+	# Rate-limit identical SFX in the same frame to protect audio server from digital clipping / voice clobber
+	var cur_frame = Engine.get_physics_frames()
+	if _last_frame_played.get(name, -1) != cur_frame:
+		_last_frame_played[name] = cur_frame
+		_frame_play_count[name] = 1
+	else:
+		_frame_play_count[name] += 1
+		if _frame_play_count[name] > 3:
+			return
 	
 	# Sane volume limit: clamp callers passing high positive dB, apply -4.0 dB voice trim
 	var final_vol = clampf(volume_db, -40.0, 0.0) - 4.0
@@ -597,4 +610,24 @@ func _generate_low_hull_alarm() -> AudioStreamWAV:
 		samples[i] = sin(p1) * 0.6 * env1 + sin(p2) * 0.6 * env2
 	
 	return _create_stream_from_floats(samples)
+
+func _generate_roll_recharge() -> AudioStreamWAV:
+	# Subtle, affirmative quantum energy recharge ping (680 Hz -> 980 Hz ascending snap)
+	var duration = 0.11
+	var num_samples = int(SAMPLE_RATE * duration)
+	var samples = PackedFloat32Array()
+	samples.resize(num_samples)
+	
+	var phase = 0.0
+	for i in range(num_samples):
+		var t = float(i) / SAMPLE_RATE
+		var p = t / duration
+		var freq = 680.0 + pow(p, 1.2) * 300.0
+		phase += freq * (TAU / SAMPLE_RATE)
+		var env = sin(p * PI)
+		# Crisp fundamental + glassy octave overtone
+		samples[i] = (sin(phase) * 0.65 + sin(phase * 2.0) * 0.25) * env
+	
+	return _create_stream_from_floats(samples)
+
 

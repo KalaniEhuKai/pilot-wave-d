@@ -19,7 +19,6 @@ enum EnemyType {
 	DRAINER_LEECH,
 	MISSILE_CORVETTE,
 	MINE_TETHER,
-	ORBITAL_REFLECTOR,
 	CARGO_HAULER
 }
 
@@ -126,6 +125,12 @@ var has_aimed_lead: bool = false
 var has_burst_spread: bool = false
 var bomber_volley_count: int = 0
 
+# Micro Drone Swarm Kinematics
+var drone_phase: float = 0.0
+var drone_weave_freq: float = 4.2
+var drone_weave_amp: float = 45.0
+var drone_angle_offset: float = 0.0
+
 # Visuals & Juice
 var hit_flash_timer: float = 0.0
 var main_color: Color = Color(1.0, 0.2, 0.4, 1.0)
@@ -161,7 +166,7 @@ func _setup_stats(profile_was_preset: bool = false) -> void:
 			main_color = Color(1.0, 0.25, 0.45, 1.0)
 			accent_color = Color(1.0, 0.7, 0.2, 1.0)
 			fire_interval = 2.4 / sec_fire_mult
-			fire_timer = randf_range(0.8, 1.6)
+			fire_timer = randf_range(1.1, 1.9)
 		EnemyType.BOMBER:
 			max_health = 8.0 * hp_mult
 			speed = 135.0 * sec_spd_mult
@@ -188,7 +193,8 @@ func _setup_stats(profile_was_preset: bool = false) -> void:
 			fire_interval = 2.8 / sec_fire_mult
 			fire_timer = 1.5
 		EnemyType.SHIELD_FRIGATE:
-			max_health = 18.0 * hp_mult
+			max_health = 14.0 * hp_mult
+			energy_shield_hp = 10.0 * hp_mult
 			speed = 115.0 * sec_spd_mult
 			score_value = 400
 			main_color = Color(0.1, 0.8, 1.0, 1.0)
@@ -237,12 +243,16 @@ func _setup_stats(profile_was_preset: bool = false) -> void:
 			fire_timer = 2.0
 		EnemyType.MICRO_DRONE:
 			max_health = 1.0 * hp_mult
-			speed = 270.0 * sec_spd_mult
+			speed = randf_range(250.0, 290.0) * sec_spd_mult
 			score_value = 40
 			main_color = Color(1.0, 0.9, 0.3, 1.0)
 			accent_color = Color(1.0, 0.4, 0.1, 1.0)
 			fire_interval = 999.0
 			fire_timer = 999.0
+			drone_phase = randf_range(0.0, TAU)
+			drone_weave_freq = randf_range(3.2, 5.0)
+			drone_weave_amp = randf_range(35.0, 55.0)
+			drone_angle_offset = randf_range(-0.14, 0.14)
 		EnemyType.TURRET_PLATFORM:
 			max_health = 16.0 * hp_mult
 			speed = 20.0
@@ -284,14 +294,6 @@ func _setup_stats(profile_was_preset: bool = false) -> void:
 			accent_color = Color(1.0, 0.8, 0.9, 1.0)
 			fire_interval = 2.5 / sec_fire_mult
 			fire_timer = 1.0
-		EnemyType.ORBITAL_REFLECTOR:
-			max_health = 16.0 * hp_mult
-			speed = 130.0
-			score_value = 220
-			main_color = Color(0.6, 0.8, 1.0, 1.0)
-			accent_color = Color(1.0, 1.0, 1.0, 1.0)
-			fire_interval = 999.0
-			fire_timer = 999.0
 		EnemyType.CARGO_HAULER:
 			max_health = 10.0 * hp_mult
 			speed = 100.0 * sec_spd_mult
@@ -394,8 +396,8 @@ func setup(p_type: EnemyType, p_pos: Vector2, p_squad_id: int, p_spawner: Node, 
 func _physics_process(delta: float) -> void:
 	flight_time += delta
 
-	if hit_flash_timer > 0.0:
-		hit_flash_timer -= delta
+	# Continuous redraw for active dynamic visual effects (shields, auras, aim lasers, flashes)
+	if is_shield_protected or energy_shield_hp > 0.0 or enemy_type == EnemyType.SHIELD_FRIGATE or (enemy_type == EnemyType.KNIGHT_VANGUARD and not knight_shield_shattered) or is_sniper_aiming or hit_flash_timer > 0.0:
 		queue_redraw()
 
 	if juke_cooldown > 0.0:
@@ -419,6 +421,7 @@ func _check_shield_frigate_buffs() -> void:
 		is_shield_protected = false
 		return
 
+	var old_shield = is_shield_protected
 	is_shield_protected = false
 	for e in get_tree().get_nodes_in_group("enemy"):
 		if is_instance_valid(e) and e != self and e.get("enemy_type") == EnemyType.SHIELD_FRIGATE:
@@ -426,6 +429,8 @@ func _check_shield_frigate_buffs() -> void:
 			if aura != null and global_position.distance_to(e.global_position) <= aura:
 				is_shield_protected = true
 				break
+	if old_shield != is_shield_protected:
+		queue_redraw()
 
 func _initialize_inward_direction() -> void:
 	var vp_rect = GameAxis.get_viewport_rect() if GameAxis != null else Rect2(0, 0, 1280, 720)
@@ -647,6 +652,10 @@ func _handle_flight_movement(delta: float) -> void:
 			var to_target = target.global_position - global_position
 			var lat_sign = 1.0 if to_target.dot(lat) > 0 else -1.0
 			vel += lat * lat_sign * speed * 0.35
+	elif enemy_type == EnemyType.MICRO_DRONE:
+		# Organic zig-zag / sinusoidal swarm weave with subtle angular fan drift
+		var wave_offset = sin(flight_time * drone_weave_freq + drone_phase) * drone_weave_amp
+		vel = (oncoming.rotated(drone_angle_offset) * speed) + (lat * wave_offset)
 
 	global_position += vel * delta
 	rotation = vel.angle() if absf(vel.dot(oncoming)) < vel.length() * 0.98 else base_angle
@@ -799,8 +808,25 @@ func _execute_attack() -> void:
 				shot_dir = calculate_lead_target_vector(global_position, target, int_spd)
 			# Flank flare & curved re-aim:
 			# Shoots out and away from player (±52° / ±0.91 rad) for 0.32s, then banks in a curve towards player
-			_spawn_curving_bullet(global_position - lat * 14.0, shot_dir.rotated(-0.91), 5.5, int_spd, 0.32, 0.55)
-			_spawn_curving_bullet(global_position + lat * 14.0, shot_dir.rotated(0.91), 5.5, int_spd, 0.32, 0.55)
+			var dir_left = shot_dir.rotated(-0.91)
+			var dir_right = shot_dir.rotated(0.91)
+
+			# Oncoming Cone Enforcement: Ensure flank shots maintain forward oncoming orientation (>= 0.25 dot)
+			var min_oncoming_dot = 0.25
+			if dir_left.dot(oncoming) < min_oncoming_dot:
+				var lat_comp = (dir_left - oncoming * dir_left.dot(oncoming)).normalized()
+				if lat_comp == Vector2.ZERO:
+					lat_comp = -lat
+				dir_left = (oncoming * min_oncoming_dot + lat_comp * sqrt(1.0 - min_oncoming_dot * min_oncoming_dot)).normalized()
+
+			if dir_right.dot(oncoming) < min_oncoming_dot:
+				var lat_comp2 = (dir_right - oncoming * dir_right.dot(oncoming)).normalized()
+				if lat_comp2 == Vector2.ZERO:
+					lat_comp2 = lat
+				dir_right = (oncoming * min_oncoming_dot + lat_comp2 * sqrt(1.0 - min_oncoming_dot * min_oncoming_dot)).normalized()
+
+			_spawn_curving_bullet(global_position - lat * 14.0, dir_left, 5.5, int_spd, 0.32, 0.55)
+			_spawn_curving_bullet(global_position + lat * 14.0, dir_right, 5.5, int_spd, 0.32, 0.55)
 			if wave_num >= 4 or sec_num > 1:
 				get_tree().create_timer(0.12).timeout.connect(func():
 					if is_instance_valid(self) and not is_queued_for_deletion():
@@ -912,7 +938,7 @@ func _launch_drone_swarm(count: int) -> void:
 	for i in range(count):
 		var drone = load("res://scenes/Enemy.tscn").instantiate()
 		get_parent().add_child(drone)
-		drone.setup(EnemyType.MICRO_DRONE, global_position + Vector2(randf_range(-25, 25), randf_range(10, 30)), squad_id, spawner_ref, EliteAffix.NONE)
+		drone.setup(EnemyType.MICRO_DRONE, global_position + Vector2(randf_range(-25, 25), randf_range(10, 30)), -1, null, EliteAffix.NONE)
 	SoundEffects.play_sfx("laser", 0.08, 6.0)
 
 func _spawn_enemy_bullet(pos: Vector2, dir: Vector2, dmg: float, b_speed: float) -> void:
@@ -973,7 +999,9 @@ func _get_closest_player() -> Node2D:
 func take_damage(amount: float) -> void:
 	# Shield Frigate invulnerability protection
 	if is_shield_protected:
-		SoundEffects.play_sfx("hit", 0.05, 5.0)
+		SoundEffects.play_sfx("shield_hit", 0.08, 4.0)
+		hit_flash_timer = 0.08
+		queue_redraw()
 		return
 
 	# Phantom cloaking intangibility
@@ -995,18 +1023,22 @@ func take_damage(amount: float) -> void:
 					if knight_shield_hp <= 0.0:
 						knight_shield_shattered = true
 						knight_shield_hp = 0.0
-						SoundEffects.play_sfx("explosion", 0.12, 4.0)
+						SoundEffects.play_sfx("shield_break", 0.15, 2.0)
 						GameManager.request_screen_shake(4.0, 0.18)
 					else:
-						SoundEffects.play_sfx("hit", 0.1, 7.0)
+						SoundEffects.play_sfx("shield_hit", 0.1, 5.0)
 					queue_redraw()
 					return
 
-	# Energy Shield depletion from SHIELDED affix
+	# Energy Shield depletion from SHIELDED affix or Shield Frigate personal shield
 	if energy_shield_hp > 0.0:
 		energy_shield_hp -= amount
-		SoundEffects.play_sfx("hit", 0.08, 3.0)
 		hit_flash_timer = 0.08
+		if energy_shield_hp <= 0.0:
+			energy_shield_hp = 0.0
+			SoundEffects.play_sfx("shield_break", 0.12, 3.0)
+		else:
+			SoundEffects.play_sfx("shield_hit", 0.08, 3.0)
 		queue_redraw()
 		return
 
@@ -1128,11 +1160,8 @@ func _escape_squad() -> void:
 	queue_free()
 
 func _on_area_entered(area: Area2D) -> void:
-	if area.is_in_group("bullet") and not area.get("is_enemy"):
-		var dmg = area.get("damage")
-		take_damage(dmg if dmg != null else 1.0)
-		if not area.has_meta("pierce_count") or area.get_meta("pierce_count") <= 0:
-			area.queue_free()
+	if area.has_method("_handle_hit"):
+		area._handle_hit(self)
 
 func _on_body_entered(body: Node2D) -> void:
 	if body.is_in_group("player"):
@@ -1145,17 +1174,115 @@ func _draw() -> void:
 	if phantom_is_cloaked:
 		col.a = 0.15
 
-	# Draw Shield Frigate protection aura
+	# 1. Protected Escort Allies Quantum Aegis Forcefield Bubble
 	if is_shield_protected:
-		draw_arc(Vector2.ZERO, 26.0, 0, TAU, 16, Color(0.2, 0.8, 1.0, 0.8), 2.0)
+		var bubble_r = 28.0
+		var bubble_pulse = 1.0 + sin(flight_time * 6.0) * 0.05
+		var bubble_fill = Color(0.12, 0.82, 1.0, 0.14)
+		draw_circle(Vector2.ZERO, bubble_r * bubble_pulse, bubble_fill)
+		
+		var bubble_col = Color.WHITE if hit_flash_timer > 0.0 else Color(0.2, 0.88, 1.0, 0.85)
+		draw_arc(Vector2.ZERO, bubble_r * bubble_pulse, 0.0, TAU, 32, bubble_col, 2.5)
+		
+		# 4x rotating quantum anchor nodes around bubble
+		var rot_node = flight_time * 2.0
+		for i in range(4):
+			var a = rot_node + float(i) * (TAU / 4.0)
+			var node_p = Vector2(cos(a), sin(a)) * bubble_r * bubble_pulse
+			draw_circle(node_p, 2.5, Color.WHITE)
+			
+		# Impact deflection shock-ring
+		if hit_flash_timer > 0.0:
+			var rip_r = bubble_r + (1.0 - hit_flash_timer / 0.08) * 14.0
+			draw_arc(Vector2.ZERO, rip_r, 0.0, TAU, 24, Color(1.0, 1.0, 1.0, (hit_flash_timer / 0.08) * 0.9), 2.0)
 
-	# Draw Energy Shield bubble if SHIELDED affix
+	# 2. Personal Hexagonal Energy Shield (SHIELDED affix or Shield Frigate)
 	if energy_shield_hp > 0.0:
-		_draw_hex_shield(28.0, Color(0.4, 0.7, 1.0, 0.9))
+		var hex_r = 32.0 if enemy_type == EnemyType.SHIELD_FRIGATE else 28.0
+		var hex_c = Color.WHITE if hit_flash_timer > 0.0 else Color(0.35, 0.85, 1.0, 0.95)
+		_draw_hex_shield(hex_r, hex_c)
 
-	# Draw Shield Frigate aura perimeter
+	# 3. Shield Frigate Living Quantum Aegis Dome
 	if enemy_type == EnemyType.SHIELD_FRIGATE:
-		draw_arc(Vector2.ZERO, shield_aura_radius, 0, TAU, 32, Color(0.1, 0.8, 1.0, 0.35), 1.5)
+		var pulse_r = shield_aura_radius + sin(flight_time * 3.2) * 3.5
+		# Translucent atmospheric forcefield interior
+		draw_circle(Vector2.ZERO, pulse_r, Color(0.08, 0.72, 1.0, 0.05))
+		# Outer perimeter
+		draw_arc(Vector2.ZERO, pulse_r, 0.0, TAU, 48, Color(0.18, 0.88, 1.0, 0.55), 2.0)
+		
+		# Rotating orbital projector brackets on perimeter
+		var orb_rot = flight_time * 0.75
+		for i in range(4):
+			var a_center = orb_rot + float(i) * (TAU / 4.0)
+			draw_arc(Vector2.ZERO, pulse_r, a_center - 0.22, a_center + 0.22, 8, Color(0.7, 0.95, 1.0, 0.9), 3.0)
+			var pip = Vector2(cos(a_center), sin(a_center)) * pulse_r
+			draw_circle(pip, 3.0, Color.WHITE)
+			
+		# Harmonic outward wave ripples
+		var ripple_r = fmod(flight_time * 55.0, shield_aura_radius)
+		var ripple_a = (1.0 - ripple_r / shield_aura_radius) * 0.40
+		draw_arc(Vector2.ZERO, ripple_r, 0.0, TAU, 36, Color(0.25, 0.92, 1.0, ripple_a), 1.5)
+		
+		# Quantum Tether Beams connecting to each protected escort ally
+		for e in get_tree().get_nodes_in_group("enemy"):
+			if is_instance_valid(e) and e != self and e.get("is_shield_protected") == true and global_position.distance_to(e.global_position) <= shield_aura_radius:
+				var local_ally_p = to_local(e.global_position)
+				# Core beam
+				draw_line(Vector2.ZERO, local_ally_p, Color(1.0, 1.0, 1.0, 0.8), 1.5)
+				# Outer energetic glow beam
+				draw_line(Vector2.ZERO, local_ally_p, Color(0.2, 0.85, 1.0, 0.45), 4.0)
+				# Tether contact flare
+				draw_circle(local_ally_p, 3.5, Color.WHITE)
+
+	# 4. Knight Vanguard Directional Mirror Shield
+	if enemy_type == EnemyType.KNIGHT_VANGUARD and not knight_shield_shattered:
+		if knight_is_firing_salvo:
+			# Split parted shield arcs exposing forward salvo cannons
+			draw_arc(Vector2(6, 0), 24.0, -PI * 0.52, -PI * 0.18, 8, Color(1.0, 0.82, 0.2, 0.95), 3.2)
+			draw_arc(Vector2(6, 0), 24.0, PI * 0.18, PI * 0.52, 8, Color(1.0, 0.82, 0.2, 0.95), 3.2)
+			# Twin cannon muzzle sparks
+			draw_circle(Vector2(18, -6), 3.5, Color(1.0, 0.95, 0.35, 0.95))
+			draw_circle(Vector2(18, 6), 3.5, Color(1.0, 0.95, 0.35, 0.95))
+		elif knight_shield_is_venting:
+			# Flickering amber/orange warning arc (overheating / vulnerable window)
+			var vent_alpha = 0.45 + 0.35 * sin(flight_time * 20.0)
+			draw_arc(Vector2(6, 0), 24.0, -PI * 0.45, PI * 0.45, 16, Color(1.0, 0.48, 0.15, vent_alpha), 2.8)
+			# Dissipating thermal vapor arcs
+			var heat_r = 27.0 + sin(flight_time * 12.0) * 3.0
+			draw_arc(Vector2(6, 0), heat_r, -PI * 0.35, PI * 0.35, 10, Color(1.0, 0.7, 0.2, vent_alpha * 0.5), 1.5)
+		else:
+			# Intact shield: color degrades as HP depletes (Cyan -> Amber -> Danger Red)
+			var s_ratio = clampf(knight_shield_hp / maxf(1.0, knight_shield_max_hp), 0.0, 1.0)
+			var s_color = Color(0.25, 0.88, 1.0, 0.95)
+			if s_ratio < 0.35:
+				s_color = Color(1.0, 0.25, 0.25, 0.95)
+			elif s_ratio < 0.65:
+				s_color = Color(1.0, 0.82, 0.20, 0.95)
+			
+			if hit_flash_timer > 0.0:
+				s_color = Color.WHITE
+				
+			# Translucent barrier forcefield fill
+			var arc_pts = PackedVector2Array([Vector2(6, 0)])
+			for i in range(17):
+				var a = -PI * 0.45 + (float(i) / 16.0) * (PI * 0.90)
+				arc_pts.append(Vector2(6, 0) + Vector2(cos(a), sin(a)) * 24.0)
+			var fill_c = s_color
+			fill_c.a = 0.15
+			draw_colored_polygon(arc_pts, fill_c)
+			
+			# Primary barrier arc
+			draw_arc(Vector2(6, 0), 24.0, -PI * 0.45, PI * 0.45, 18, s_color, 3.5)
+			
+			# Shimmering inner energetic field line
+			var shimmer = 0.5 + 0.5 * sin(flight_time * 10.0)
+			draw_arc(Vector2(9, 0), 20.0, -PI * 0.38, PI * 0.38, 12, Color(1.0, 1.0, 1.0, 0.4 + shimmer * 0.4), 1.6)
+			
+			# Deflection edge anchor pips
+			var top_pip = Vector2(6, 0) + Vector2(cos(-PI * 0.45), sin(-PI * 0.45)) * 24.0
+			var bot_pip = Vector2(6, 0) + Vector2(cos(PI * 0.45), sin(PI * 0.45)) * 24.0
+			draw_circle(top_pip, 2.5, Color.WHITE)
+			draw_circle(bot_pip, 2.5, Color.WHITE)
 
 	# Draw Sniper aiming laser line
 	if is_sniper_aiming:
@@ -1205,31 +1332,6 @@ func _draw() -> void:
 			var pts = PackedVector2Array([Vector2(18, 0), Vector2(-12, -12), Vector2(-8, 0), Vector2(-12, 12)])
 			draw_colored_polygon(pts, col)
 			draw_polyline(pts + PackedVector2Array([Vector2(18, 0)]), accent_color, 1.5)
-			
-			# Dynamic Mirror Shield rendering
-			if not knight_shield_shattered:
-				if knight_is_firing_salvo:
-					# Split parted shield arc exposing forward cannons
-					draw_arc(Vector2(8, 0), 16.0, -PI * 0.45, -PI * 0.15, 6, Color(1.0, 0.8, 0.2, 0.9), 3.0)
-					draw_arc(Vector2(8, 0), 16.0, PI * 0.15, PI * 0.45, 6, Color(1.0, 0.8, 0.2, 0.9), 3.0)
-					# Cannon muzzle spark
-					draw_circle(Vector2(18, 0), 3.5, Color(1.0, 0.9, 0.3, 0.95))
-				elif knight_shield_is_venting:
-					# Flickering amber/orange warning arc (overheating / vulnerable)
-					var vent_alpha = 0.35 + 0.25 * sin(flight_time * 18.0)
-					draw_arc(Vector2(8, 0), 16.0, -PI * 0.45, PI * 0.45, 12, Color(1.0, 0.45, 0.15, vent_alpha), 2.5)
-				else:
-					# Intact shield: color degrades as HP depletes (Cyan -> Amber -> Danger Red)
-					var s_ratio = clampf(knight_shield_hp / maxf(1.0, knight_shield_max_hp), 0.0, 1.0)
-					var s_color = Color(0.4, 0.9, 1.0, 1.0)
-					if s_ratio < 0.35:
-						s_color = Color(1.0, 0.25, 0.35, 0.95)
-					elif s_ratio < 0.65:
-						s_color = Color(1.0, 0.85, 0.25, 0.95)
-					
-					if hit_flash_timer > 0.0:
-						s_color = Color.WHITE
-					draw_arc(Vector2(8, 0), 16.0, -PI * 0.45, PI * 0.45, 12, s_color, 3.5)
 		EnemyType.TURRET_PLATFORM:
 			# Hexagonal bunker
 			var hex = PackedVector2Array()

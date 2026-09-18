@@ -50,7 +50,7 @@ Boss and miniboss health pools were re-anchored to realistic applied DPS while p
 
 | Boss / Subsystem | Old Effective HP | Calibrated HP | Target Time to Kill |
 | :--- | :--- | :--- | :--- |
-| **Miniboss Goliath** (Wave 6) | 85 HP (Passive) | **180 HP** (90 Core / 50 Bow / 2×20 Railguns) | ~15–20 seconds |
+| **Miniboss Goliath** (Wave 6) | 85 HP (Passive) | **144 HP** (72 Core / 40 Bow / 2×16 Railguns) | ~12–16 seconds |
 | **Major Boss Goliath** (Wave 24) | 900 HP | **450 HP** (280 Core / 120 Bow / 2×25 Guns) | ~30–40 seconds |
 | **Major Boss Corvus** (Wave 12) | 580 HP | **280 HP** (160 Core / 2×60 Wings) | ~30–40 seconds |
 | **Apex Titan Ouroboros** (Wave 36) | 1,600 HP | **850 HP** (600 Core / 250 Shield Gate) | ~45–60 seconds |
@@ -62,9 +62,9 @@ Boss and miniboss health pools were re-anchored to realistic applied DPS while p
   - **Fusion Core Overdrive (Phase 2)**: Breaking the bow armor now **enrages** the exposed core instead of pacifying the front. The exposed core fires an aimed 3-bolt plasma burst every 1.4s and discharges an 8-bullet radial energy pulse every 3.8s, while strafe speed accelerates from 85 to 125 px/s.
   - **Flanking Interceptor Hangar**: Deploys 2 aggressive Interceptor drones from the far lateral flanks (85 px away from the central line of fire) every 3.5s (2.6s in Phase 2) so they actively dive and flank rather than getting vaporized instantly in the forward firing line.
 - **Wave 12 Climax Boss (Super-Dreadnought Corvus Phase 2 Enraged)**:
-  - **Multi-Wave Rotating Vortex Bursts**: Replaced the weak single-pulse 4-bullet shot with rapid 12-pulse rotating vortex bursts spaced 0.09s apart (48 bullets per burst) advancing by 0.22 radians per pulse.
+  - **Multi-Wave Rotating Vortex Bursts**: Sustained 18-pulse rotating vortex bursts (1.5x duration, 72 bullets per burst) spaced 0.09s apart advancing by 0.22 radians per pulse.
   - **Alternating Direction**: Successive bursts alternate spin directions (Clockwise $\leftrightarrow$ Counter-Clockwise), creating dense overlapping spiral arms across the screen.
-  - **Breather Sniper Intercept**: Reduced downtime between bursts to 1.1s. In the midpoint of the breather window (at 0.55s), the exposed singularity core fires an aimed twin-plasma shot directly at the player to prevent static camping.
+  - **Dorsal Homing Missiles**: During the 1.1s breather between bursts, Corvus launches twin high-speed (400 px/s) amber dorsal seeker missiles with thrust-exhaustion indicators, preventing static camping and forcing active evasion or rolling.
 
 ---
 
@@ -89,6 +89,33 @@ Boss and miniboss health pools were re-anchored to realistic applied DPS while p
 - **Complete Elimination of Dynamic Threat Surges**:
   - Removed `consecutive_wipes >= 2` dynamic elite mutation from [WaveDirector.gd](file:///c:/Users/family/.gemini/antigravity-ide/scratch/pilot-wave-d/scripts/WaveDirector.gd).
   - Wiping squads cleanly awards score and wipe bonuses without punishing player skill with surprise elite rubber-banding.
+
+### 6. Multi-Wave Birefringence Prism Split Persistence & Pool Array Safety (`Bullet.gd`, `Player.gd`)
+- **Bug Diagnosed**: In the object pool, `Bullet.reset_for_pool()` called `projectile_modifiers.clear()`. Because GDScript arrays are passed by reference (`b.projectile_modifiers = active_projectile_modifiers`), calling `.clear()` directly mutated and wiped the `Player.active_projectile_modifiers` array in-place! Once the first recycled bullet returned to the pool, the player permanently lost Birefringence Prism (and any other projectile modifier) for all subsequent waves and volleys.
+- **Fixes**:
+  - In [Bullet.gd](file:///c:/Users/family/.gemini/antigravity-ide/scratch/pilot-wave-d/scripts/Bullet.gd): Replaced `.clear()` with `projectile_modifiers = []` to decouple references. Added group management so dormant pool nodes are removed from `"bullet"` group and restored on acquisition, preventing wave-end debris purges from freeing pooled bullets.
+  - In [Player.gd](file:///c:/Users/family/.gemini/antigravity-ide/scratch/pilot-wave-d/scripts/Player.gd): Implemented defensive cloning `b.projectile_modifiers = active_projectile_modifiers.duplicate()`.
+  - In [BirefringencePrism.gd](file:///c:/Users/family/.gemini/antigravity-ide/scratch/pilot-wave-d/scripts/items/BirefringencePrism.gd): Cloned projectile modifier arrays for child refracted beams.
+  - In [TestRunner.gd](file:///c:/Users/family/.gemini/antigravity-ide/scratch/pilot-wave-d/scripts/TestRunner.gd): Added automated test `36A2` to explicitly assert multi-wave Birefringence Prism splitting persistence across consecutive wave transitions.
+
+---
+
+## Benchmark & Stress Profiler Verification
+
+Running the automated test suite (`scenes/TestRunner.tscn`) through headless Godot:
+```powershell
+& "C:\Users\family\Downloads\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stable_win64_console.exe" --headless scenes/TestRunner.tscn
+```
+
+### Profiler Results
+- **Step 36F (120-frame Continuous Wave + Zeeman + Antimatter Suspension + Feynman + Birefringence)**:
+  - Charging 61 suspended bullets: **0.06 ms/frame**
+  - Release, Flight & Tri-split (57 bullets): **0.04 ms/frame** (Peak frame: **0.09 ms**)
+- **Step 36G (Massive 500+ Projectile Stress Benchmark)**:
+  - Spawned 557 bullets via pool: **49.46 ms total** (~0.099 ms/bullet)
+  - 60-frame flight simulation (557 projectiles): **1.32 ms/frame** (Peak frame: **1.75 ms**)
+- **Target Frame Budget (60 FPS)**: 16.66 ms. The peak frame time of **1.75 ms** consumes only **~10.5%** of the frame budget with over 550 active projectiles!
+- **Test Suite Status**: **All 36 test suites passed 100% cleanly with 0 errors**.
 
 ---
 

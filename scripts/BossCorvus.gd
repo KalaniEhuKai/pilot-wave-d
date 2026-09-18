@@ -5,6 +5,7 @@ extends Area2D
 signal subsystem_destroyed(name: String)
 signal boss_defeated()
 
+@export var is_miniboss: bool = false
 @export var max_core_health: float = 160.0
 var core_health: float = 160.0
 var use_3d_model: bool = true
@@ -24,7 +25,10 @@ var strafe_direction: float = 1.0
 
 # Attack timers
 var turret_fire_timer: float = 1.5
+var port_turret_timer: float = 1.0
+var starboard_turret_timer: float = 1.8
 var core_fire_timer: float = 2.0
+var wing_sweep_phase: float = 0.0
 var spiral_angle: float = 0.0
 
 # Phase 2 Enraged Vortex State
@@ -34,7 +38,7 @@ var enrage_pulse_timer: float = 0.0
 var enrage_pulses_remaining: int = 0
 var enrage_spin_dir: float = 1.0
 var enrage_mid_shot_fired: bool = false
-const ENRAGE_PULSES_PER_BURST: int = 12
+const ENRAGE_PULSES_PER_BURST: int = 18
 const ENRAGE_PULSE_INTERVAL: float = 0.09
 const ENRAGE_BURST_COOLDOWN: float = 1.1
 
@@ -55,6 +59,10 @@ func _ready() -> void:
 	collision_mask = 3
 	area_entered.connect(_on_area_entered)
 	body_entered.connect(_on_body_entered)
+	
+	if is_miniboss:
+		max_core_health = 90.0
+		max_wing_health = 35.0
 	
 	core_health = max_core_health
 	port_wing_health = max_wing_health
@@ -81,7 +89,8 @@ func _ready() -> void:
 func _emit_health() -> void:
 	var total_hp = core_health + (port_wing_health if port_wing_alive else 0.0) + (starboard_wing_health if starboard_wing_alive else 0.0)
 	var max_hp = max_core_health + max_wing_health * 2.0
-	GameManager.boss_health_updated.emit(total_hp, max_hp, "SUPER-DREADNOUGHT CORVUS")
+	var b_name = "MINIBOSS: QUANTUM CORVUS" if is_miniboss else "SUPER-DREADNOUGHT CORVUS"
+	GameManager.boss_health_updated.emit(total_hp, max_hp, b_name)
 
 func _physics_process(delta: float) -> void:
 	flight_time += delta
@@ -123,18 +132,28 @@ func _handle_attacks(delta: float) -> void:
 	var is_enraged = not port_wing_alive and not starboard_wing_alive
 	
 	if not is_enraged:
-		# Phase 1: Turret barrages & Aimed core salvos
-		turret_fire_timer -= delta
-		if turret_fire_timer <= 0.0:
-			turret_fire_timer = 1.6 if (port_wing_alive and starboard_wing_alive) else 0.9
-			_fire_turret_barrage()
+		# Phase 1: Alternating & Sweeping Turret barrages + Aimed core salvos
+		wing_sweep_phase += delta * 2.2
+		var base_interval = 1.6 if (port_wing_alive and starboard_wing_alive) else 0.95
+		
+		if port_wing_alive:
+			port_turret_timer -= delta
+			if port_turret_timer <= 0.0:
+				port_turret_timer = base_interval
+				_fire_wing_barrage(true)
+		
+		if starboard_wing_alive:
+			starboard_turret_timer -= delta
+			if starboard_turret_timer <= 0.0:
+				starboard_turret_timer = base_interval
+				_fire_wing_barrage(false)
 		
 		core_fire_timer -= delta
 		if core_fire_timer <= 0.0:
 			core_fire_timer = 2.2
 			_fire_core_aimed_salvo()
 	else:
-		# Phase 2 Enraged: Rapid rotating vortex bursts & breather plasma snipes
+		# Phase 2 Enraged: Rapid rotating vortex bursts & dorsal homing missiles
 		_handle_enraged_attacks(delta)
 
 func _handle_enraged_attacks(delta: float) -> void:
@@ -152,10 +171,10 @@ func _handle_enraged_attacks(delta: float) -> void:
 	else:
 		enrage_burst_cooldown -= delta
 		
-		# Mid-breather aimed shot from singularity core (prevents static camping)
+		# Mid-breather dorsal homing missiles from singularity core (forces player to maneuver/roll)
 		if not enrage_mid_shot_fired and enrage_burst_cooldown <= (ENRAGE_BURST_COOLDOWN * 0.5):
 			enrage_mid_shot_fired = true
-			_fire_enraged_breather_snipe()
+			_fire_enraged_breather_missiles()
 		
 		if enrage_burst_cooldown <= 0.0:
 			enrage_burst_active = true
@@ -163,21 +182,26 @@ func _handle_enraged_attacks(delta: float) -> void:
 			enrage_pulse_timer = 0.0 # Trigger first pulse immediately
 			SoundEffects.play_sfx("laser", 0.08, 1.0)
 
-func _fire_turret_barrage() -> void:
+func _fire_wing_barrage(is_port: bool) -> void:
 	var fwd = -GameAxis.forward
 	var lat = GameAxis.lateral
+	var wing_pos = global_position + lat * (-45.0 if is_port else 45.0)
+	var sweep_offset = sin(wing_sweep_phase) * 0.12 # Sweeping angular variation
 	
+	for i in range(-2, 3):
+		var spread_angle = (i * 0.14) + sweep_offset
+		var dir = fwd.rotated(spread_angle)
+		var b = _spawn_bullet(wing_pos, dir, 0, 1.0) # High-velocity linear plasma bolts
+		if b != null:
+			b.speed = 420.0
+	
+	SoundEffects.play_sfx("laser", 0.07, -1.5)
+
+func _fire_turret_barrage() -> void:
 	if port_wing_alive:
-		var port_pos = global_position - lat * 45.0
-		for i in range(-2, 3):
-			var dir = fwd.rotated(i * 0.15)
-			_spawn_bullet(port_pos, dir)
-	
+		_fire_wing_barrage(true)
 	if starboard_wing_alive:
-		var star_pos = global_position + lat * 45.0
-		for i in range(-2, 3):
-			var dir = fwd.rotated(i * 0.15)
-			_spawn_bullet(star_pos, dir)
+		_fire_wing_barrage(false)
 
 func _fire_core_aimed_salvo() -> void:
 	var fwd = -GameAxis.forward
@@ -200,18 +224,28 @@ func _fire_enraged_vortex_pulse() -> void:
 	if enrage_pulses_remaining % 3 == 0:
 		SoundEffects.play_sfx("laser", 0.03, 3.5)
 
-func _fire_enraged_breather_snipe() -> void:
+func _fire_enraged_breather_missiles() -> void:
 	var fwd = -GameAxis.forward
+	var lat = GameAxis.lateral
 	var players = get_tree().get_nodes_in_group("player")
 	var target_dir = fwd
 	if not players.is_empty() and is_instance_valid(players[0]):
 		target_dir = (players[0].global_position - global_position).normalized()
 	
-	# Twin aimed heavy bolts
-	var orth = target_dir.orthogonal()
-	_spawn_bullet(global_position + orth * 14.0, target_dir)
-	_spawn_bullet(global_position - orth * 14.0, target_dir)
-	SoundEffects.play_sfx("laser", 0.08, -1.0)
+	# Twin dorsal homing seeker missiles launched outward that curve in
+	for side in [-1.0, 1.0]:
+		var spawn_pos = global_position + lat * (side * 28.0) - fwd * 15.0
+		var eject_dir = target_dir.rotated(side * 0.42)
+		var m = _spawn_bullet(spawn_pos, eject_dir, 1, 1.0) # Pattern.HOMING
+		if m != null:
+			m.speed = 400.0 # Faster homing speed
+			m.homing_strength = 2.9
+			m.homing_duration = 1.9
+	
+	SoundEffects.play_sfx("laser", 0.09, -3.0)
+
+func _fire_enraged_breather_snipe() -> void:
+	_fire_enraged_breather_missiles()
 
 func _fire_core_salvo(is_enraged: bool) -> void:
 	if is_enraged:
@@ -219,10 +253,15 @@ func _fire_core_salvo(is_enraged: bool) -> void:
 	else:
 		_fire_core_aimed_salvo()
 
-func _spawn_bullet(pos: Vector2, dir: Vector2) -> void:
+func _spawn_bullet(pos: Vector2, dir: Vector2, p_pattern: int = 0, p_dmg: float = 1.0) -> Area2D:
 	var b = bullet_scene.instantiate()
-	get_parent().add_child(b)
-	b.setup(pos, dir, true, 1.0)
+	b.pattern = p_pattern
+	if get_parent():
+		get_parent().add_child(b)
+	else:
+		add_child(b)
+	b.setup(pos, dir, true, p_dmg)
+	return b
 
 func take_damage(amount: float) -> void:
 	# Distribute damage: wings take hits first, then core
@@ -249,7 +288,10 @@ func take_damage(amount: float) -> void:
 
 func _explode_subsystem(pos: Vector2) -> void:
 	var exp_node = explosion_scene.instantiate()
-	get_parent().add_child(exp_node)
+	if get_parent():
+		get_parent().add_child(exp_node)
+	else:
+		add_child(exp_node)
 	exp_node.global_position = pos
 	exp_node.max_radius = 64.0
 	SoundEffects.play_sfx("explosion", 0.05, 3.0)
@@ -257,12 +299,23 @@ func _explode_subsystem(pos: Vector2) -> void:
 	GameManager.request_directional_shake(dir if dir != Vector2.ZERO else Vector2.UP, 14.0, 0.3)
 	GameManager.trigger_hit_stop(0.045)
 	GameManager.add_score(2500)
+	
+	# Wing fracture retaliation: release a cluster flak barrage (Cluster Mortars)
+	var fwd = -GameAxis.forward
+	for angle_offset in [-0.35, 0.0, 0.35]:
+		var flak_dir = fwd.rotated(angle_offset)
+		var b = _spawn_bullet(pos, flak_dir, 4, 2.0) # Pattern.CLUSTER_BURST
+		if b != null:
+			b.cluster_fuse = 1.1
+			b.speed = 320.0
 
 
 func _die() -> void:
 	GameManager.add_score(15000)
 	GameManager.record_kill()
-	GameManager.boss_defeated.emit("SUPER-DREADNOUGHT CORVUS")
+	var b_name = "MINIBOSS: QUANTUM CORVUS" if is_miniboss else "SUPER-DREADNOUGHT CORVUS"
+	GameManager.boss_defeated.emit(b_name)
+	boss_defeated.emit()
 	
 	# Chain of 6 massive explosions
 	for i in range(6):
@@ -288,7 +341,9 @@ func _die() -> void:
 	queue_free()
 
 func _on_area_entered(area: Area2D) -> void:
-	if area.is_in_group("player") and area.has_method("take_damage"):
+	if area.has_method("_handle_hit"):
+		area._handle_hit(self)
+	elif area.is_in_group("player") and area.has_method("take_damage"):
 		area.take_damage(2)
 		take_damage(4.0)
 

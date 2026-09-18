@@ -1,0 +1,179 @@
+[gd_scene load_steps=5 format=3 uid="uid://bestiary_view01"]
+
+[ext_resource type="Script" path="res://scripts/BestiaryView.gd" id="1_view"]
+[ext_resource type="PackedScene" path="res://scenes/BestiarySimulation.tscn" id="2_sim"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.04, 0.06, 0.1, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.2, 0.85, 1, 0.85)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_desc"]
+bg_color = Color(0.02, 0.03, 0.06, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.15, 0.4, 0.6, 0.6)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="BestiaryView" type="Panel"]
+custom_minimum_size = Vector2(980, 560)
+offset_right = 980.0
+offset_bottom = 560.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+script = ExtResource("1_view")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 16.0
+offset_right = -20.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 10
+
+[node name="Header" type="VBoxContainer" parent="VBox"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Title" type="Label" parent="VBox/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "HOSTILE ARCHIVE // THREAT BESTIARY"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="VBox/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 11
+text = "LIVE NEXUS SIMULATION & BALLISTIC INTELLIGENCE"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="VBox"]
+layout_mode = 2
+
+[node name="MainHBox" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 14
+
+[node name="LeftPanel" type="VBoxContainer" parent="VBox/MainHBox"]
+custom_minimum_size = Vector2(210, 0)
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ListHeader" type="Label" parent="VBox/MainHBox/LeftPanel"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.8, 0.9, 1)
+theme_override_font_sizes/font_size = 12
+text = "HOSTILE CRAFT LIST"
+
+[node name="Scroll" type="ScrollContainer" parent="VBox/MainHBox/LeftPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="ShipListVBox" type="VBoxContainer" parent="VBox/MainHBox/LeftPanel/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="VSeparator" type="VSeparator" parent="VBox/MainHBox"]
+layout_mode = 2
+
+[node name="RightPanel" type="VBoxContainer" parent="VBox/MainHBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="SimContainer" type="CenterContainer" parent="VBox/MainHBox/RightPanel"]
+custom_minimum_size = Vector2(640, 260)
+layout_mode = 2
+
+[node name="BestiarySimulation" parent="VBox/MainHBox/RightPanel/SimContainer" instance=ExtResource("2_sim")]
+layout_mode = 2
+
+[node name="DescPanel" type="PanelContainer" parent="VBox/MainHBox/RightPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_desc")
+
+[node name="VBox" type="VBoxContainer" parent="VBox/MainHBox/RightPanel/DescPanel"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="TitleRow" type="HBoxContainer" parent="VBox/MainHBox/RightPanel/DescPanel/VBox"]
+layout_mode = 2
+
+[node name="ShipTitleLbl" type="Label" parent="VBox/MainHBox/RightPanel/DescPanel/VBox/TitleRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.2, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 13
+text = "THREAT DOSSIER // SCOUT"
+
+[node name="SectorBadgeLbl" type="Label" parent="VBox/MainHBox/RightPanel/DescPanel/VBox/TitleRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 12
+text = "ENCOUNTER: Sector 1+ (Wave 1+)"
+
+[node name="DescText" type="RichTextLabel" parent="VBox/MainHBox/RightPanel/DescPanel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/default_color = Color(0.85, 0.9, 0.95, 1)
+theme_override_font_sizes/normal_font_size = 11
+theme_override_font_sizes/bold_font_size = 11
+bbcode_enabled = true
+text = "FLIGHT & COMBAT INTEL"
+scroll_active = true
+
+[node name="HSeparator2" type="HSeparator" parent="VBox"]
+layout_mode = 2
+
+[node name="BottomRow" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="BtnPrev" type="Button" parent="VBox/BottomRow"]
+custom_minimum_size = Vector2(120, 34)
+layout_mode = 2
+text = "◄ PREV CRAFT"
+
+[node name="IndexLbl" type="Label" parent="VBox/BottomRow"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 12
+text = "CRAFT 1 / 20"
+horizontal_alignment = 1
+
+[node name="BtnNext" type="Button" parent="VBox/BottomRow"]
+custom_minimum_size = Vector2(120, 34)
+layout_mode = 2
+text = "NEXT CRAFT ►"
+
+[node name="Spacer" type="Control" parent="VBox/BottomRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BtnBack" type="Button" parent="VBox/BottomRow"]
+custom_minimum_size = Vector2(150, 34)
+layout_mode = 2
+text = "RETURN TO TITLE"

@@ -70,7 +70,10 @@ func _ready() -> void:
 	if is_instance_valid(shop):
 		shop.undocked.connect(func():
 			if is_instance_valid(spawner):
-				spawner.wave_timer = 2.5
+				if spawner.has_method("resume_waves"):
+					spawner.resume_waves(2.5)
+				else:
+					spawner.wave_timer = 2.5
 		)
 		if is_instance_valid(stage_3d) and stage_3d.has_method("register_station"):
 			stage_3d.register_station(shop)
@@ -209,9 +212,9 @@ func _evaluate_progression_triggers() -> void:
 	if GameManager.is_game_over or GameManager.current_phase == GameManager.RunPhase.SECTOR_VICTORY:
 		return
 	
-	var enemies = get_tree().get_nodes_in_group("enemy")
+	var active_enemies = get_tree().get_nodes_in_group("enemy").filter(func(e): return is_instance_valid(e) and not e.is_queued_for_deletion() and not e.is_in_group("boss"))
 	var has_bubbles = is_instance_valid(spawner) and not spawner.active_bubbles.is_empty()
-	var airspace_clear = enemies.is_empty() and not has_bubbles
+	var airspace_clear = active_enemies.is_empty() and not has_bubbles
 	if is_instance_valid(spawner) and spawner.has_method("_has_active_squads") and spawner._has_active_squads():
 		airspace_clear = false
 	if is_instance_valid(spawner) and spawner.has_method("is_wave_in_progress") and spawner.is_wave_in_progress():
@@ -263,7 +266,7 @@ func _evaluate_progression_triggers() -> void:
 		# Wave 30: Miniboss 3 (Quantum Corvus Miniboss)
 		if GameManager.current_wave >= 30 and not miniboss_w30_done and airspace_clear:
 			miniboss_w30_done = true
-			_spawn_boss(boss_corvus_scene, "MINIBOSS: QUANTUM CORVUS")
+			_spawn_boss(boss_corvus_scene, "MINIBOSS: QUANTUM CORVUS", true)
 			return
 		# Wave 36: Grand Finale Climax Boss (Apex Titan Ouroboros)
 		if GameManager.current_wave >= 36 and not boss_w36_done and airspace_clear:
@@ -306,7 +309,10 @@ func _on_boss_defeated_progression(b_name: String) -> void:
 		# Miniboss cleared: return to combat phase so wave progression continues to next wave
 		GameManager.current_phase = GameManager.RunPhase.COMBAT_WAVES
 		if is_instance_valid(spawner):
-			spawner.wave_timer = 1.0
+			if spawner.has_method("resume_waves"):
+				spawner.resume_waves(1.0)
+			else:
+				spawner.wave_timer = 1.0
 		return
 
 	if "CORVUS" in b_name.to_upper() and GameManager.current_sector == 1:
@@ -343,7 +349,10 @@ func _transition_to_sector(next_sec: int, next_boss_name: String) -> void:
 		dossier.show_dossier(next_sec, next_boss_name)
 	
 	if is_instance_valid(spawner):
-		spawner.wave_timer = 3.5
+		if spawner.has_method("resume_waves"):
+			spawner.resume_waves(3.5)
+		else:
+			spawner.wave_timer = 3.5
 
 func _on_axis_changed(_is_vertical: bool) -> void:
 	_center_camera()

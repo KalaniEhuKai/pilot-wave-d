@@ -80,12 +80,14 @@ func _check_anomaly_interaction(a: Dictionary) -> void:
 				return
 	
 	# Check player bullets
-	for b in get_tree().get_nodes_in_group("bullets"):
+	for b in get_tree().get_nodes_in_group("bullet"):
 		if is_instance_valid(b) and not b.get("is_enemy"):
-			if b.global_position.distance_to(a.pos) < a.radius:
-				b.queue_free()
-				_shatter_anomaly(a)
-				return
+			var b_pos = b.global_position
+			if absf(b_pos.x - a.pos.x) <= a.radius and absf(b_pos.y - a.pos.y) <= a.radius:
+				if b_pos.distance_to(a.pos) < a.radius:
+					b.queue_free()
+					_shatter_anomaly(a)
+					return
 
 func _shatter_anomaly(a: Dictionary) -> void:
 	a.shattered = true
@@ -115,15 +117,17 @@ func _update_monopole(delta: float) -> void:
 	dirac_monopole.pos += GameAxis.scroll_dir * 55.0 * delta
 	
 	# Check player bullet hits
-	for b in get_tree().get_nodes_in_group("bullets"):
+	for b in get_tree().get_nodes_in_group("bullet"):
 		if is_instance_valid(b) and not b.get("is_enemy"):
-			if b.global_position.distance_to(dirac_monopole.pos) < 32.0:
-				b.queue_free()
-				dirac_monopole.health -= 1.0
-				SoundEffects.play_sfx("hit", 0.1, 2.0)
-				if dirac_monopole.health <= 0.0:
-					_shatter_dirac_monopole()
-					return
+			var b_pos = b.global_position
+			if absf(b_pos.x - dirac_monopole.pos.x) <= 32.0 and absf(b_pos.y - dirac_monopole.pos.y) <= 32.0:
+				if b_pos.distance_to(dirac_monopole.pos) < 32.0:
+					b.queue_free()
+					dirac_monopole.health -= 1.0
+					SoundEffects.play_sfx("hit", 0.1, 2.0)
+					if dirac_monopole.health <= 0.0:
+						_shatter_dirac_monopole()
+						return
 	
 	if GameAxis.is_out_of_bounds(dirac_monopole.pos, 80.0):
 		dirac_monopole.active = false

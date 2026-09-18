@@ -14,6 +14,10 @@ signal wave_cleared(wave_num: int, reason_title: String, reason_desc: String, is
 signal quantum_warp_started(duration: float)
 signal quantum_warp_completed()
 
+const MAX_WAVES: int = 36
+const MILESTONE_WAVES: Array[int] = [5, 6, 12, 17, 18, 24, 29, 30, 36]
+var waiting_for_progression_event: bool = false
+
 var next_squad_id: int = 1
 var squads: Dictionary = {}
 
@@ -45,6 +49,11 @@ func _ready() -> void:
 func is_wave_in_progress() -> bool:
 	return wave_phase != WavePhase.IDLE
 
+func resume_waves(delay: float = 1.0) -> void:
+	waiting_for_progression_event = false
+	wave_timer = delay
+	wave_phase = WavePhase.IDLE
+
 func skip_grace_period() -> void:
 	if wave_phase == WavePhase.WAVE_CLEARED_GRACE:
 		wave_grace_timer = 0.0
@@ -66,9 +75,13 @@ func _process(delta: float) -> void:
 	
 	match wave_phase:
 		WavePhase.IDLE:
+			if current_wave_num >= MAX_WAVES:
+				return
+			if waiting_for_progression_event:
+				return
 			wave_timer -= delta
 			if wave_timer <= 0.0:
-				var active_enemies = get_tree().get_nodes_in_group("enemy")
+				var active_enemies = get_tree().get_nodes_in_group("enemy").filter(func(e): return is_instance_valid(e) and not e.is_queued_for_deletion() and not e.is_in_group("boss"))
 				var has_active_squad = _has_active_squads()
 				if not active_enemies.is_empty() or not active_bubbles.is_empty() or has_active_squad:
 					wave_timer = 0.8
@@ -76,7 +89,7 @@ func _process(delta: float) -> void:
 					_trigger_next_wave()
 		
 		WavePhase.SPAWNING_COMBAT:
-			var active_enemies = get_tree().get_nodes_in_group("enemy")
+			var active_enemies = get_tree().get_nodes_in_group("enemy").filter(func(e): return is_instance_valid(e) and not e.is_queued_for_deletion() and not e.is_in_group("boss"))
 			var has_active_squad = _has_active_squads()
 			if active_enemies.is_empty() and active_bubbles.is_empty() and not has_active_squad:
 				_on_wave_combat_cleared()
@@ -159,6 +172,11 @@ func _finish_quantum_warp_jump() -> void:
 		if is_instance_valid(b):
 			b.queue_free()
 	
+	if current_wave_num in MILESTONE_WAVES or current_wave_num >= MAX_WAVES:
+		waiting_for_progression_event = true
+	else:
+		waiting_for_progression_event = false
+	
 	quantum_warp_completed.emit()
 
 func _purge_uncollected_debris() -> void:
@@ -181,6 +199,8 @@ func _purge_uncollected_debris() -> void:
 	for h in get_tree().get_nodes_in_group("hazard"):
 		if is_instance_valid(h) and not h.is_queued_for_deletion():
 			h.queue_free()
+	
+	squads.clear()
 
 func _has_active_squads() -> bool:
 	for sid in squads:
@@ -190,6 +210,9 @@ func _has_active_squads() -> bool:
 	return false
 
 func _trigger_next_wave() -> void:
+	if current_wave_num >= MAX_WAVES:
+		return
+	
 	var squad_id = next_squad_id
 	next_squad_id += 1
 	
@@ -252,13 +275,19 @@ func _execute_encounter_template(template: Dictionary, squad_id: int) -> void:
 	current_wave_total = total_enemy_count
 	_register_squad(squad_id, total_enemy_count)
 	
+	var batch_idx = 0
+	# Opening batch has a 60% chance to arrive as a crisp simultaneous battle line, and 40% chance to stream in
+	var first_batch_simultaneous = (randf() < 0.60)
 	for batch in spawns:
 		var e_type = batch.get("type", 0)
 		var count = batch.get("count", 1)
 		var pattern = batch.get("pattern", "ROW")
 		var delay = batch.get("delay", 0.0)
 		var affix = batch.get("affix", 0)
-		_spawn_pattern_batch(e_type, count, pattern, delay, squad_id, affix)
+		var is_first_batch = (batch_idx == 0 or delay <= 0.05)
+		var allow_simultaneous = is_first_batch and first_batch_simultaneous and (e_type != 0)
+		_spawn_pattern_batch(e_type, count, pattern, delay, squad_id, affix, is_first_batch, allow_simultaneous)
+		batch_idx += 1
 
 func _clamp_to_spawn_zone(pos: Vector2) -> Vector2:
 	var rect = GameAxis.get_viewport_rect()
@@ -287,7 +316,54 @@ func get_craft_affix(craft_idx: int, count: int, pattern: String, batch_affix: i
 	var leader_index = int(count * 0.5) if pattern == "V_SHAPE" else 0
 	return batch_affix if craft_idx == leader_index else 0
 
-func _spawn_pattern_batch(e_type: int, count: int, pattern: String, base_delay: float, squad_id: int, affix: int) -> void:
+func calculate_craft_cadence(e_type: int, count: int, pattern: String, base_delay: float, craft_idx: int, is_first_batch: bool = true, allow_simultaneous: bool = true) -> float:
+	var mid = int(count * 0.5)
+	var is_pink_scout = (e_type == 0) # WaveDirector.SCOUT: Coral Crimson / Pink skirmisher
+	var scout_stagger_unit = 0.42 # Generous entry spacing between pink ships to prevent player mobbing
+
+	match pattern:
+		"V_SHAPE", "ARROW_WEDGE":
+			if is_pink_scout:
+				# Cascading apex lead with wingman alternation:
+				# Apex leader enters first, then port and starboard wingmen enter with alternating stagger
+				var tier = absf(float(craft_idx - mid))
+				var wing_alt = 0.18 if craft_idx > mid else 0.0
+				return base_delay + tier * scout_stagger_unit + wing_alt
+			return base_delay + absf(float(craft_idx - mid)) * 0.22
+		"SWEEP_ROW", "ECHELON", "SERPENTINE_STREAM":
+			if is_pink_scout:
+				return base_delay + craft_idx * 0.40
+			return base_delay + craft_idx * 0.24
+		"FLANK_SPLIT", "PINCER_FLANK", "PINCER_CONVERGE":
+			if is_pink_scout:
+				return base_delay + craft_idx * 0.38
+			return base_delay + craft_idx * 0.20
+		"FLANK_LEFT", "UPPER_CORRIDOR", "FLANK_RIGHT", "LOWER_CORRIDOR":
+			if is_pink_scout:
+				return base_delay + craft_idx * 0.38
+			return base_delay + craft_idx * 0.22
+		"CENTER", "CENTER_STREAM":
+			if is_pink_scout:
+				return base_delay + craft_idx * 0.40
+			return base_delay + craft_idx * 0.25
+		"ROW", "HORIZON_SPREAD", "DISCIPLINED_LINE":
+			if is_pink_scout:
+				# Pink ships always stream in with generous cadence across the battle horizon
+				return base_delay + craft_idx * scout_stagger_unit
+			var c = base_delay
+			if e_type == 9: # MICRO_DRONE
+				c += craft_idx * 0.08
+			elif count > 3:
+				# Only allowed to be simultaneous if it's the first batch AND allow_simultaneous is true
+				if not (is_first_batch and allow_simultaneous):
+					c += craft_idx * 0.14
+			return c
+		_:
+			if is_pink_scout:
+				return base_delay + craft_idx * 0.38
+			return base_delay + craft_idx * 0.18
+
+func _spawn_pattern_batch(e_type: int, count: int, pattern: String, base_delay: float, squad_id: int, affix: int, is_first_batch: bool = true, allow_simultaneous: bool = true) -> void:
 	var oncoming = -GameAxis.forward
 	var profile = -1
 	
@@ -301,7 +377,7 @@ func _spawn_pattern_batch(e_type: int, count: int, pattern: String, base_delay: 
 				var pos = _clamp_to_spawn_zone(GameAxis.get_spawn_line(lateral_step) + stagger)
 				var craft_affix = get_craft_affix(i, count, pattern, affix)
 				# CADENCE_APEX_LEAD: Apex leader materializes first, wingmen follow in trailing pairs
-				var cadence = base_delay + absf(float(i - mid)) * 0.22
+				var cadence = calculate_craft_cadence(e_type, count, pattern, base_delay, i, is_first_batch, allow_simultaneous)
 				_queue_quantum_bubble(e_type, pos, squad_id, cadence, craft_affix, profile)
 
 		"SWEEP_ROW", "ECHELON", "SERPENTINE_STREAM":
@@ -312,7 +388,7 @@ func _spawn_pattern_batch(e_type: int, count: int, pattern: String, base_delay: 
 				var pos = _clamp_to_spawn_zone(GameAxis.get_spawn_line(lateral_step) + stagger)
 				var craft_affix = get_craft_affix(i, count, pattern, affix)
 				# CADENCE_RIPPLE: Sequential stream emerging one by one in rhythm
-				var cadence = base_delay + i * 0.24
+				var cadence = calculate_craft_cadence(e_type, count, pattern, base_delay, i, is_first_batch, allow_simultaneous)
 				_queue_quantum_bubble(e_type, pos, squad_id, cadence, craft_affix, profile)
 
 		"FLANK_SPLIT", "PINCER_FLANK", "PINCER_CONVERGE":
@@ -324,7 +400,7 @@ func _spawn_pattern_batch(e_type: int, count: int, pattern: String, base_delay: 
 				var pos = _clamp_to_spawn_zone(GameAxis.get_spawn_line(lateral_step) + stagger)
 				var craft_affix = get_craft_affix(i, count, pattern, affix)
 				# CADENCE_ALTERNATING: Upper and lower horizon alternate in rhythm
-				var cadence = base_delay + i * 0.20
+				var cadence = calculate_craft_cadence(e_type, count, pattern, base_delay, i, is_first_batch, allow_simultaneous)
 				_queue_quantum_bubble(e_type, pos, squad_id, cadence, craft_affix, profile)
 
 		"FLANK_LEFT", "UPPER_CORRIDOR":
@@ -333,7 +409,7 @@ func _spawn_pattern_batch(e_type: int, count: int, pattern: String, base_delay: 
 				var stagger = oncoming * (i * 18.0)
 				var pos = _clamp_to_spawn_zone(GameAxis.get_spawn_line(0.18) + stagger)
 				var craft_affix = get_craft_affix(i, count, pattern, affix)
-				var cadence = base_delay + i * 0.22
+				var cadence = calculate_craft_cadence(e_type, count, pattern, base_delay, i, is_first_batch, allow_simultaneous)
 				_queue_quantum_bubble(e_type, pos, squad_id, cadence, craft_affix, profile)
 
 		"FLANK_RIGHT", "LOWER_CORRIDOR":
@@ -342,7 +418,7 @@ func _spawn_pattern_batch(e_type: int, count: int, pattern: String, base_delay: 
 				var stagger = oncoming * (i * 18.0)
 				var pos = _clamp_to_spawn_zone(GameAxis.get_spawn_line(0.82) + stagger)
 				var craft_affix = get_craft_affix(i, count, pattern, affix)
-				var cadence = base_delay + i * 0.22
+				var cadence = calculate_craft_cadence(e_type, count, pattern, base_delay, i, is_first_batch, allow_simultaneous)
 				_queue_quantum_bubble(e_type, pos, squad_id, cadence, craft_affix, profile)
 
 		"CENTER", "CENTER_STREAM":
@@ -351,7 +427,7 @@ func _spawn_pattern_batch(e_type: int, count: int, pattern: String, base_delay: 
 				var stagger = oncoming * (i * 20.0)
 				var pos = _clamp_to_spawn_zone(GameAxis.get_spawn_line(0.5) + stagger)
 				var craft_affix = get_craft_affix(i, count, pattern, affix)
-				var cadence = base_delay + i * 0.25
+				var cadence = calculate_craft_cadence(e_type, count, pattern, base_delay, i, is_first_batch, allow_simultaneous)
 				_queue_quantum_bubble(e_type, pos, squad_id, cadence, craft_affix, profile)
 
 		"ROW", "HORIZON_SPREAD", "DISCIPLINED_LINE":
@@ -360,8 +436,11 @@ func _spawn_pattern_batch(e_type: int, count: int, pattern: String, base_delay: 
 				var lateral_step = 0.15 + (float(i) / maxi(1, count - 1)) * 0.70
 				var pos = _clamp_to_spawn_zone(GameAxis.get_spawn_line(lateral_step))
 				var craft_affix = get_craft_affix(i, count, pattern, affix)
-				# CADENCE_SIMULTANEOUS: Full firing line emerges simultaneously on horizon
-				var cadence = base_delay + 0.0
+				# CADENCE: Micro Drones stream in sequentially; mid-wave squads (>3 craft) stream with rolling stagger;
+				# opening wave sets may arrive simultaneously when allow_simultaneous is true
+				var cadence = calculate_craft_cadence(e_type, count, pattern, base_delay, i, is_first_batch, allow_simultaneous)
+				if e_type == 9: # MICRO_DRONE organic jitter
+					cadence += randf_range(0.0, 0.04)
 				_queue_quantum_bubble(e_type, pos, squad_id, cadence, craft_affix, profile)
 
 		_: # RANDOM_HORIZON / Fallback

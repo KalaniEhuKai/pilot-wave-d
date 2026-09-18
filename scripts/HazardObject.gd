@@ -173,12 +173,18 @@ func _destroy_hazard() -> void:
 			queue_free()
 
 func _on_area_entered(area: Area2D) -> void:
-	if area.is_in_group("bullet"):
+	if hazard_type == HazardType.STORM_CELL:
+		return
+	if area.has_method("_handle_hit"):
+		area._handle_hit(self)
+	elif area.is_in_group("bullet"):
 		var dmg = area.get("damage")
 		take_damage(dmg if dmg != null else 1.0)
 		# Asteroids and Barrels absorb the bullet unless piercing
-		if hazard_type != HazardType.STORM_CELL:
-			if not area.has_meta("pierce_count") or area.get_meta("pierce_count") <= 0:
+		if not area.has_meta("pierce_count") or area.get_meta("pierce_count") <= 0:
+			if area.has_method("recycle"):
+				area.recycle()
+			else:
 				area.queue_free()
 
 func _on_body_entered(body: Node2D) -> void:

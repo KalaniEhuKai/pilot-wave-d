@@ -116,8 +116,7 @@ const ARCHETYPE_SCRAP_WEIGHTS: Dictionary = {
 	12: 2.0,  # DRAINER_LEECH
 	13: 3.2,  # MISSILE_CORVETTE
 	14: 1.5,  # MINE_TETHER
-	15: 2.0,  # ORBITAL_REFLECTOR
-	16: 1.5,  # CARGO_HAULER
+	15: 1.5,  # CARGO_HAULER
 }
 
 const HAZARD_SCRAP_WEIGHTS: Dictionary = {
@@ -216,7 +215,7 @@ static func get_enemy_scrap_yield(enemy_type: int, is_elite: bool) -> int:
 			return 2
 		5, 8: # Heavy Cruiser, Drone Carrier
 			return 3
-		16: # Cargo Hauler
+		15: # Cargo Hauler
 			return 1
 		_:
 			return 1
@@ -430,7 +429,7 @@ static func format_card_bbcode(item: ItemModifier, player: CharacterBody2D = nul
 		# 5. Barrel Roll Cooldown (Recharge Time)
 		var mult_rcd = item.get("mult_roll_cooldown")
 		if mult_rcd != null and mult_rcd != 1.0:
-			var cur_rcd = player.roll_cooldown if "roll_cooldown" in player else 3.2
+			var cur_rcd = player.roll_cooldown if "roll_cooldown" in player else 9.0
 			var next_rcd = cur_rcd * mult_rcd
 			var diff_rcd = 1.0 - mult_rcd
 			deltas.append("[color=#94a3b8]ROLL CD:[/color] %.1fs ──► %.1fs  %s" % [cur_rcd, next_rcd, format_stat_value_bbcode(diff_rcd, true)])

@@ -8,6 +8,8 @@ var orbit_speed: float = 2.8
 var fire_timer: float = 0.8
 var bullet_scene: PackedScene = preload("res://scenes/Bullet.tscn")
 
+const BulletScript = preload("res://scripts/Bullet.gd")
+
 func _process(delta: float) -> void:
 	angle += orbit_speed * delta
 	position = Vector2(cos(angle), sin(angle)) * orbit_radius
@@ -23,8 +25,7 @@ func _fire_support_laser() -> void:
 	if not parent_scene:
 		return
 	
-	var b = bullet_scene.instantiate()
-	parent_scene.add_child(b)
+	var b = BulletScript.acquire(parent_scene, false)
 	b.setup(global_position, GameAxis.forward, false, 0.5)
 	b.scale = Vector2(0.6, 0.6)
 

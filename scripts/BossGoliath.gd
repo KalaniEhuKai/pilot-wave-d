@@ -61,11 +61,11 @@ func _ready() -> void:
 	body_entered.connect(_on_body_entered)
 	
 	if is_miniboss:
-		max_core_health = 90.0
-		max_railgun_health = 20.0
+		max_core_health = 72.0
+		max_railgun_health = 16.0
 		port_railgun_alive = true
 		star_railgun_alive = true
-		max_armor_health = 50.0
+		max_armor_health = 40.0
 		charge_duration = 0.85
 		railgun_timer = 1.8
 		drone_launch_timer = 3.2
@@ -397,7 +397,9 @@ func _draw() -> void:
 	draw_arc(Vector2(10, 0), 18.0 * (1.1 if not bow_armor_alive else 1.0), 0, TAU, 24, ring_col, 2.0 if not bow_armor_alive else 1.5)
 
 func _on_area_entered(area: Area2D) -> void:
-	if area.is_in_group("player") and area.has_method("take_damage"):
+	if area.has_method("_handle_hit"):
+		area._handle_hit(self)
+	elif area.is_in_group("player") and area.has_method("take_damage"):
 		area.take_damage(2)
 
 func _on_body_entered(body: Node2D) -> void:

@@ -101,6 +101,7 @@ func _ready() -> void:
 	GameManager.wipe_bonus_awarded.connect(_on_wipe_bonus_awarded)
 	GameManager.player_health_changed.connect(_on_health_changed)
 	GameManager.player_roll_charges_changed.connect(_on_player_roll_charges_changed)
+	GameManager.player_shield_charges_changed.connect(_on_player_shield_charges_changed)
 	GameManager.player_modifiers_updated.connect(_on_player_modifiers_updated)
 	GameManager.boss_health_updated.connect(_on_boss_health_updated)
 	GameManager.boss_defeated.connect(_on_boss_defeated)
@@ -130,6 +131,16 @@ func _ready() -> void:
 	p2_choice_btn_a.pressed.connect(func(): _confirm_p2_choice(0))
 	p2_choice_btn_b.pressed.connect(func(): _confirm_p2_choice(1))
 	
+	choice_btn_a.focus_entered.connect(_on_choice_btn_a_focus_entered)
+	choice_btn_b.focus_entered.connect(_on_choice_btn_b_focus_entered)
+	choice_btn_a.mouse_entered.connect(_on_choice_btn_a_mouse_entered)
+	choice_btn_b.mouse_entered.connect(_on_choice_btn_b_mouse_entered)
+	
+	p2_choice_btn_a.focus_entered.connect(_on_p2_choice_btn_a_focus_entered)
+	p2_choice_btn_b.focus_entered.connect(_on_p2_choice_btn_b_focus_entered)
+	p2_choice_btn_a.mouse_entered.connect(_on_p2_choice_btn_a_mouse_entered)
+	p2_choice_btn_b.mouse_entered.connect(_on_p2_choice_btn_b_mouse_entered)
+	
 	choice_modal.visible = false
 	wipe_banner.modulate.a = 0.0
 	boss_container.visible = false
@@ -141,38 +152,42 @@ func _connect_players() -> void:
 			if p.player_id == 1:
 				if not p.roll_charges_changed.is_connected(_on_roll_charges_changed):
 					p.roll_charges_changed.connect(_on_roll_charges_changed)
+				if not p.shield_charges_changed.is_connected(_on_shield_charges_changed):
+					p.shield_charges_changed.connect(_on_shield_charges_changed)
 				if not p.modifiers_updated.is_connected(_on_modifiers_updated):
 					p.modifiers_updated.connect(_on_modifiers_updated)
 				_on_roll_charges_changed(p.rolls, p.max_rolls, 0.0)
+				_update_shield_pips(p.shields, p.max_shields, 0.0, 1)
 				_on_modifiers_updated(p.active_modifiers)
 
 func _on_player_roll_charges_changed(charges: int, max_charges: int, cooldown_ratio: float, p_id: int) -> void:
 	if p_id == 1:
 		_on_roll_charges_changed(charges, max_charges, cooldown_ratio)
 
+func _on_player_shield_charges_changed(s_count: int, s_max: int, s_ratio: float, p_id: int) -> void:
+	_update_shield_pips(s_count, s_max, s_ratio, p_id)
+
+func _on_shield_charges_changed(s_count: int, s_max: int, s_ratio: float) -> void:
+	_update_shield_pips(s_count, s_max, s_ratio, 1)
+
 func _on_player_modifiers_updated(modifiers: Array, p_id: int) -> void:
 	if p_id == 1:
 		_on_modifiers_updated(modifiers)
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_F3 or event.keycode == KEY_QUOTELEFT:
-			toggle_debug_overlay()
-			return
-	
+func _input(event: InputEvent) -> void:
 	if choice_modal and choice_modal.visible:
-		# P1 Controls (WASD / Space / 1 / 2)
+		# Let mouse button clicks reach buttons naturally without being consumed
+		if event is InputEventMouseButton:
+			return
+		
+		# P1 Controls (WASD / Space / 1 / 2 / Gamepad)
 		if not p1_confirmed:
 			if event.is_action_pressed("move_left") or (not GameManager.is_coop_mode and event.is_action_pressed("ui_left")):
-				p1_selected_idx = 0
-				SoundEffects.play_sfx("ui_hover", 0.05, -4.0)
-				_update_modal_visuals()
+				_select_p1_idx(0)
 				get_viewport().set_input_as_handled()
 				return
 			elif event.is_action_pressed("move_right") or (not GameManager.is_coop_mode and event.is_action_pressed("ui_right")):
-				p1_selected_idx = 1
-				SoundEffects.play_sfx("ui_hover", 0.05, -4.0)
-				_update_modal_visuals()
+				_select_p1_idx(1)
 				get_viewport().set_input_as_handled()
 				return
 			elif event.is_action_pressed("fire") or (not GameManager.is_coop_mode and event.is_action_pressed("ui_accept")):
@@ -192,15 +207,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		# P2 Controls (Arrow Keys / Enter / Numpad 1 / 2)
 		if GameManager.is_coop_mode and not p2_confirmed:
 			if event.is_action_pressed("p2_move_left"):
-				p2_selected_idx = 0
-				SoundEffects.play_sfx("ui_hover", 0.05, -4.0)
-				_update_modal_visuals()
+				_select_p2_idx(0)
 				get_viewport().set_input_as_handled()
 				return
 			elif event.is_action_pressed("p2_move_right"):
-				p2_selected_idx = 1
-				SoundEffects.play_sfx("ui_hover", 0.05, -4.0)
-				_update_modal_visuals()
+				_select_p2_idx(1)
 				get_viewport().set_input_as_handled()
 				return
 			elif event.is_action_pressed("p2_fire"):
@@ -216,6 +227,70 @@ func _unhandled_input(event: InputEvent) -> void:
 					_confirm_p2_choice(1)
 					get_viewport().set_input_as_handled()
 					return
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_F3 or event.keycode == KEY_QUOTELEFT:
+			toggle_debug_overlay()
+			return
+
+func _select_p1_idx(idx: int) -> void:
+	if p1_confirmed:
+		return
+	var changed = (p1_selected_idx != idx)
+	p1_selected_idx = idx
+	if changed:
+		SoundEffects.play_sfx("ui_hover", 0.05, -4.0)
+	_update_modal_visuals()
+	var target_btn = choice_btn_a if idx == 0 else choice_btn_b
+	if is_instance_valid(target_btn) and target_btn.is_inside_tree():
+		if target_btn.focus_mode != Control.FOCUS_NONE and not target_btn.has_focus():
+			target_btn.grab_focus()
+
+func _select_p2_idx(idx: int) -> void:
+	if p2_confirmed:
+		return
+	var changed = (p2_selected_idx != idx)
+	p2_selected_idx = idx
+	if changed:
+		SoundEffects.play_sfx("ui_hover", 0.05, -4.0)
+	_update_modal_visuals()
+	var target_btn = p2_choice_btn_a if idx == 0 else p2_choice_btn_b
+	if is_instance_valid(target_btn) and target_btn.is_inside_tree():
+		if target_btn.focus_mode != Control.FOCUS_NONE and not target_btn.has_focus():
+			target_btn.grab_focus()
+
+func _on_choice_btn_a_focus_entered() -> void:
+	if choice_modal and choice_modal.visible and not p1_confirmed and p1_selected_idx != 0:
+		_select_p1_idx(0)
+
+func _on_choice_btn_b_focus_entered() -> void:
+	if choice_modal and choice_modal.visible and not p1_confirmed and p1_selected_idx != 1:
+		_select_p1_idx(1)
+
+func _on_choice_btn_a_mouse_entered() -> void:
+	if choice_modal and choice_modal.visible and not p1_confirmed and p1_selected_idx != 0:
+		_select_p1_idx(0)
+
+func _on_choice_btn_b_mouse_entered() -> void:
+	if choice_modal and choice_modal.visible and not p1_confirmed and p1_selected_idx != 1:
+		_select_p1_idx(1)
+
+func _on_p2_choice_btn_a_focus_entered() -> void:
+	if choice_modal and choice_modal.visible and GameManager.is_coop_mode and not p2_confirmed and p2_selected_idx != 0:
+		_select_p2_idx(0)
+
+func _on_p2_choice_btn_b_focus_entered() -> void:
+	if choice_modal and choice_modal.visible and GameManager.is_coop_mode and not p2_confirmed and p2_selected_idx != 1:
+		_select_p2_idx(1)
+
+func _on_p2_choice_btn_a_mouse_entered() -> void:
+	if choice_modal and choice_modal.visible and GameManager.is_coop_mode and not p2_confirmed and p2_selected_idx != 0:
+		_select_p2_idx(0)
+
+func _on_p2_choice_btn_b_mouse_entered() -> void:
+	if choice_modal and choice_modal.visible and GameManager.is_coop_mode and not p2_confirmed and p2_selected_idx != 1:
+		_select_p2_idx(1)
 
 func toggle_debug_overlay() -> void:
 	is_debug_visible = not is_debug_visible
@@ -452,27 +527,52 @@ func _on_boss_defeated(_b_name: String) -> void:
 	boss_container.visible = false
 	_show_banner("SECTOR 1 CLEARED! +15,000 PTS", Color(1.0, 0.85, 0.2, 1.0))
 
+func _update_shield_pips(shields: int, max_shields: int, cooldown_ratio: float, p_id: int) -> void:
+	var s_container = p2_shield_container if p_id == 2 else shield_container
+	var shield_color = Color(1.0, 0.75, 0.2, 1.0) if p_id == 2 else Color(0.15, 0.85, 1.0, 1.0)
+	if not is_instance_valid(s_container):
+		return
+	while s_container.get_child_count() < max_shields:
+		var s_pip = ColorRect.new()
+		s_pip.custom_minimum_size = Vector2(24, 8)
+		s_pip.clip_contents = true
+		s_container.add_child(s_pip)
+	while s_container.get_child_count() > max_shields:
+		var last_s = s_container.get_child(s_container.get_child_count() - 1)
+		s_container.remove_child(last_s)
+		last_s.queue_free()
+	
+	for i in range(s_container.get_child_count()):
+		var s_pip = s_container.get_child(i)
+		s_pip.clip_contents = true
+		var fill = s_pip.get_node_or_null("Fill") as ColorRect
+		if not fill:
+			fill = ColorRect.new()
+			fill.name = "Fill"
+			fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			s_pip.add_child(fill)
+		
+		if i < shields:
+			s_pip.color = Color.WHITE
+			s_pip.modulate = shield_color
+			fill.size = Vector2(24, 8)
+			fill.color = Color.WHITE
+		elif i == shields and shields < max_shields:
+			s_pip.color = Color(0.28, 0.46, 0.62, 0.48)
+			s_pip.modulate = Color(shield_color.r * 0.6, shield_color.g * 0.7, shield_color.b * 0.85, 0.48)
+			var fill_w = clampf(cooldown_ratio * 24.0, 0.0, 24.0)
+			fill.size = Vector2(fill_w, 8)
+			fill.color = Color.WHITE
+		else:
+			s_pip.color = Color(0.28, 0.46, 0.62, 0.48)
+			s_pip.modulate = Color(0.28, 0.46, 0.62, 0.48)
+			fill.size = Vector2(0, 8)
+
 func _on_health_changed(hull: int, shields: int, max_hull: int, max_shields: int, p_id: int) -> void:
 	var h_container = p2_hull_container if p_id == 2 else hull_container
-	var s_container = p2_shield_container if p_id == 2 else shield_container
 	var hull_color = Color(1.0, 0.75, 0.2, 1.0) if p_id == 2 else Color(0.1, 1.0, 0.6, 1.0)
-	var shield_color = Color(1.0, 0.75, 0.2, 1.0) if p_id == 2 else Color(0.15, 0.85, 1.0, 1.0)
 	
-	# Update discrete shield pips
-	if is_instance_valid(s_container):
-		while s_container.get_child_count() < max_shields:
-			var s_pip = ColorRect.new()
-			s_pip.custom_minimum_size = Vector2(24, 8)
-			s_container.add_child(s_pip)
-		while s_container.get_child_count() > max_shields:
-			var last_s = s_container.get_child(s_container.get_child_count() - 1)
-			s_container.remove_child(last_s)
-			last_s.queue_free()
-		
-		for i in range(s_container.get_child_count()):
-			var s_pip = s_container.get_child(i)
-			s_pip.color = Color.WHITE
-			s_pip.modulate = shield_color if i < shields else Color(0.12, 0.22, 0.32, 0.35)
+	_update_shield_pips(shields, max_shields, 0.0, p_id)
 
 	# Update discrete hull pips
 	if is_instance_valid(h_container):
@@ -495,6 +595,7 @@ func _on_roll_charges_changed(charges: int, max_charges: int, cooldown_ratio: fl
 	while roll_container.get_child_count() < max_charges:
 		var pip = ColorRect.new()
 		pip.custom_minimum_size = Vector2(16, 9)
+		pip.clip_contents = true
 		roll_container.add_child(pip)
 	while roll_container.get_child_count() > max_charges:
 		var last = roll_container.get_child(roll_container.get_child_count() - 1)
@@ -503,13 +604,29 @@ func _on_roll_charges_changed(charges: int, max_charges: int, cooldown_ratio: fl
 
 	for i in range(roll_container.get_child_count()):
 		var pip = roll_container.get_child(i)
-		pip.color = Color.WHITE
+		pip.clip_contents = true
+		var fill = pip.get_node_or_null("Fill") as ColorRect
+		if not fill:
+			fill = ColorRect.new()
+			fill.name = "Fill"
+			fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			pip.add_child(fill)
+		
 		if i < charges:
+			pip.color = Color.WHITE
 			pip.modulate = Color(0.2, 0.9, 1.0, 1.0)
+			fill.size = Vector2(16, 9)
+			fill.color = Color.WHITE
 		elif i == charges and cooldown_ratio > 0.0:
-			pip.modulate = Color(0.2, 0.9, 1.0, lerpf(0.25, 0.85, cooldown_ratio))
+			pip.color = Color(0.26, 0.45, 0.60, 0.45)
+			pip.modulate = Color(0.12, 0.55, 0.80, 0.55)
+			var fill_w = clampf(cooldown_ratio * 16.0, 0.0, 16.0)
+			fill.size = Vector2(fill_w, 9)
+			fill.color = Color.WHITE
 		else:
-			pip.modulate = Color(0.15, 0.35, 0.45, 0.25)
+			pip.color = Color(0.26, 0.45, 0.60, 0.45)
+			pip.modulate = Color(0.26, 0.45, 0.60, 0.45)
+			fill.size = Vector2(0, 9)
 
 func _on_modifiers_updated(modifiers: Array) -> void:
 	for child in synergy_ribbon.get_children():
@@ -611,6 +728,27 @@ func open_item_choice_modal() -> void:
 	p1_confirmed = (p1 == null)
 	p1_chosen_item = null
 	p2_chosen_item = null
+	
+	# Explicit focus wrapping within cards & isolation between columns
+	choice_btn_a.focus_neighbor_left = choice_btn_b.get_path()
+	choice_btn_a.focus_neighbor_right = choice_btn_b.get_path()
+	choice_btn_a.focus_neighbor_top = choice_btn_a.get_path()
+	choice_btn_a.focus_neighbor_bottom = choice_btn_a.get_path()
+	
+	choice_btn_b.focus_neighbor_left = choice_btn_a.get_path()
+	choice_btn_b.focus_neighbor_right = choice_btn_a.get_path()
+	choice_btn_b.focus_neighbor_top = choice_btn_b.get_path()
+	choice_btn_b.focus_neighbor_bottom = choice_btn_b.get_path()
+	
+	p2_choice_btn_a.focus_neighbor_left = p2_choice_btn_b.get_path()
+	p2_choice_btn_a.focus_neighbor_right = p2_choice_btn_b.get_path()
+	p2_choice_btn_a.focus_neighbor_top = p2_choice_btn_a.get_path()
+	p2_choice_btn_a.focus_neighbor_bottom = p2_choice_btn_a.get_path()
+	
+	p2_choice_btn_b.focus_neighbor_left = p2_choice_btn_a.get_path()
+	p2_choice_btn_b.focus_neighbor_right = p2_choice_btn_a.get_path()
+	p2_choice_btn_b.focus_neighbor_top = p2_choice_btn_b.get_path()
+	p2_choice_btn_b.focus_neighbor_bottom = p2_choice_btn_b.get_path()
 	
 	_update_modal_visuals()
 	choice_btn_a.grab_focus()

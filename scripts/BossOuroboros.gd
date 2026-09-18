@@ -239,11 +239,8 @@ func _die() -> void:
 	queue_free()
 
 func _on_area_entered(area: Area2D) -> void:
-	if area.is_in_group("bullet") and not area.get("is_enemy"):
-		var dmg = area.get("damage")
-		take_damage(dmg if dmg != null else 1.0)
-		if not area.has_meta("pierce_count") or area.get_meta("pierce_count") <= 0:
-			area.queue_free()
+	if area.has_method("_handle_hit"):
+		area._handle_hit(self)
 
 func _on_body_entered(body: Node2D) -> void:
 	if body.is_in_group("player"):

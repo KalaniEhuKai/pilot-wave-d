@@ -433,12 +433,7 @@ static func build_enemy_ship(enemy_type: int, elite_affix: int = 0, custom_main_
 			dark_hull_col = Color(0.38, 0.12, 0.28)
 			conduit_col = Color(0.95, 0.65, 0.85)
 			neon_col = Color(1.0, 0.80, 0.90)
-		15: # ORBITAL_REFLECTOR: Gleaming Silver / Light Blue with White
-			armor_col = Color(0.82, 0.88, 0.98)
-			dark_hull_col = Color(0.24, 0.32, 0.44)
-			conduit_col = Color(0.90, 0.95, 1.0)
-			neon_col = Color(1.0, 1.0, 1.0)
-		16: # CARGO_HAULER: Bright Burnished Gold with Holographic Cyan
+		15: # CARGO_HAULER: Bright Burnished Gold with Holographic Cyan
 			armor_col = Color(1.0, 0.82, 0.20)
 			dark_hull_col = Color(0.52, 0.40, 0.12)
 			conduit_col = Color(0.88, 0.75, 0.35)
@@ -510,8 +505,9 @@ static func build_enemy_ship(enemy_type: int, elite_affix: int = 0, custom_main_
 
 		4: # SHIELD_FRIGATE: Broad command hull with rotating shield emitter (Cherenkov Cyan with Aqua)
 			add_imported_ship_mesh(root, 5, 15.0, -90.0, [mat_armor, mat_conduit, mat_hull])
-			# Central Rotating Shield Emitter Dome
-			var emitter = add_cylinder(root, 6.0, 7.0, 5.0, Vector3(0.0, 7.0, 0.0), Vector3.ZERO, mat_neon)
+			# Central Rotating Shield Emitter Dome (Luminous Radiant Cyan)
+			var mat_emitter = create_neon_material(Color(0.2, 0.92, 1.0), 3.4)
+			var emitter = add_cylinder(root, 6.0, 7.0, 5.0, Vector3(0.0, 7.0, 0.0), Vector3.ZERO, mat_emitter)
 			emitter.name = "ShieldEmitter"
 			var fl1 = add_thruster_plume(root, Vector3(-15.0, 0.0, 6.0), 16.0, 1.6, 0.25, flame_col)
 			fl1.name = "Flame_L"
@@ -541,18 +537,19 @@ static func build_enemy_ship(enemy_type: int, elite_affix: int = 0, custom_main_
 			# Twin heavy forward salvo cannons
 			add_cylinder(root, 2.0, 2.0, 18.0, Vector3(18.0, -2.0, 6.0), Vector3(0.0, 0.0, 90.0), mat_conduit)
 			add_cylinder(root, 2.0, 2.0, 18.0, Vector3(18.0, -2.0, -6.0), Vector3(0.0, 0.0, 90.0), mat_conduit)
-			# Articulated Shield Plates (Port & Starboard)
+			# Articulated Shield Plates (Port & Starboard) with Radiant Cyan Energy Material
+			var mat_shield_plate = create_neon_material(Color(0.2, 0.88, 1.0), 3.2)
 			var shield_l = Node3D.new()
 			shield_l.name = "ShieldPlate_Port"
 			shield_l.position = Vector3(16.0, 0.0, 8.0)
 			root.add_child(shield_l)
-			add_box(shield_l, Vector3(4.0, 16.0, 10.0), Vector3(4.0, 0.0, 2.0), Vector3(0.0, -20.0, 0.0), mat_neon)
+			add_box(shield_l, Vector3(4.0, 16.0, 10.0), Vector3(4.0, 0.0, 2.0), Vector3(0.0, -20.0, 0.0), mat_shield_plate)
 			
 			var shield_r = Node3D.new()
 			shield_r.name = "ShieldPlate_Starboard"
 			shield_r.position = Vector3(16.0, 0.0, -8.0)
 			root.add_child(shield_r)
-			add_box(shield_r, Vector3(4.0, 16.0, 10.0), Vector3(4.0, 0.0, -2.0), Vector3.ZERO, mat_neon)
+			add_box(shield_r, Vector3(4.0, 16.0, 10.0), Vector3(4.0, 0.0, -2.0), Vector3.ZERO, mat_shield_plate)
 			# Thermal Venting Vanes
 			var vent_vanes = add_box(root, Vector3(8.0, 4.0, 12.0), Vector3(-6.0, 7.0, 0.0), Vector3.ZERO, mat_neon)
 			vent_vanes.name = "ThermalVanes"
@@ -627,13 +624,7 @@ static func build_enemy_ship(enemy_type: int, elite_affix: int = 0, custom_main_
 			add_cylinder(root, 2.0, 2.0, 26.0, Vector3(90.0, 0.0, 0.0), Vector3.ZERO, mat_hull)
 			add_box(root, Vector3(6.0, 6.0, 6.0), Vector3.ZERO, Vector3.ZERO, mat_neon)
 
-		15: # ORBITAL_REFLECTOR: Silver mirror satellite array
-			add_cylinder(root, 15.0, 15.0, 3.0, Vector3.ZERO, Vector3(90.0, 0.0, 0.0), mat_armor)
-			add_cylinder(root, 5.0, 5.0, 6.0, Vector3.ZERO, Vector3(90.0, 0.0, 0.0), mat_hull)
-			add_cylinder(root, 1.2, 1.2, 22.0, Vector3(0.0, 0.0, 8.0), Vector3.ZERO, mat_conduit)
-			add_box(root, Vector3(4.0, 4.0, 4.0), Vector3(0.0, 0.0, 18.0), Vector3.ZERO, mat_neon)
-
-		16: # CARGO_HAULER: Industrial transport with glowing cargo pods (Bright Burnished Gold with Cyan)
+		15: # CARGO_HAULER: Industrial transport with glowing cargo pods (Bright Burnished Gold with Cyan)
 			add_imported_ship_mesh(root, 6, 18.0, -90.0, [mat_armor, mat_hull, mat_conduit, mat_conduit])
 			# Twin glowing magnetic cargo pods
 			var pod_l = add_box(root, Vector3(24.0, 10.0, 8.0), Vector3(-2.0, 0.0, 16.0), Vector3.ZERO, mat_neon)

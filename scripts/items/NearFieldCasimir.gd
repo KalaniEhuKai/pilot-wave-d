@@ -40,4 +40,6 @@ func on_projectile_tick(bullet: Area2D, _delta: float) -> void:
 	var scale_factor = lerpf(1.6, 0.5, t)
 	
 	bullet.damage = base_dmg * dmg_factor
-	bullet.scale = base_scale * scale_factor
+	var target_scale = base_scale * scale_factor
+	if absf(bullet.scale.x - target_scale.x) > 0.04:
+		bullet.scale = target_scale

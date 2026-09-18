@@ -4,6 +4,7 @@ extends CharacterBody2D
 
 signal health_changed(hull: int, shields: int, max_hull: int, max_shields: int)
 signal roll_charges_changed(charges: int, max_charges: int, cooldown_ratio: float)
+signal shield_charges_changed(shields: int, max_shields: int, cooldown_ratio: float)
 signal modifiers_updated(modifiers: Array[ItemModifier])
 signal weapon_fired(is_left: bool)
 
@@ -26,7 +27,7 @@ var current_velocity: Vector2 = Vector2.ZERO
 # 1942 Barrel Roll / Quantum Tunneling
 @export var max_rolls: int = 3
 var rolls: int = 3
-var roll_cooldown: float = 3.2
+var roll_cooldown: float = 9.0
 var roll_timer: float = 0.0
 var is_rolling: bool = false
 var roll_duration: float = 0.7
@@ -41,6 +42,13 @@ var auto_fire: bool = false
 
 # Active Roguelite Item Modifiers
 var active_modifiers: Array[ItemModifier] = []
+var active_projectile_modifiers: Array[ItemModifier] = []
+var active_fire_modifiers: Array[ItemModifier] = []
+const FIRE_HOOK_ITEM_IDS: Array[String] = [
+	"zeeman_splitting", "tachyon_capacitor", "quantum_tunneling",
+	"near_field_casimir", "heisenberg_lens", "feynman_propagator",
+	"continuous_wave_magnetron", "bell_entanglement", "antimatter_suspension"
+]
 var scrap_magnet_radius: float = 130.0
 
 # Visuals & Juice
@@ -55,6 +63,9 @@ var damage_smoke_accumulator: float = 0.0
 var damage_particles: Array[Dictionary] = []
 var shield_shards: Array[Dictionary] = []
 var hull_sparks: Array[Dictionary] = []
+var roll_sparks: Array[Dictionary] = []
+var roll_recharge_flash_timer: float = 0.0
+var roll_recharge_flash_index: int = -1
 
 # Inter-Wave Quantum Warp & Shard Vacuum Pulse
 var warp_charge_ratio: float = 0.0
@@ -78,6 +89,7 @@ var thruster_color: Color = Color(0.0, 0.7, 1.0, 0.9)
 var bullet_scene: PackedScene = preload("res://scenes/Bullet.tscn")
 var explosion_scene: PackedScene = preload("res://scenes/Explosion.tscn")
 const ImpactFlashScript = preload("res://scripts/ImpactFlash.gd")
+const BulletScript = preload("res://scripts/Bullet.gd")
 
 # Synergy state flags
 var fire_charge_time: float = 0.0
@@ -107,7 +119,7 @@ var base_max_shields: int = 2
 var base_max_rolls: int = 3
 var base_move_speed: float = 420.0
 var base_fire_rate: float = 3.8
-var base_roll_cooldown: float = 3.2
+var base_roll_cooldown: float = 9.0
 var base_shield_delay: float = 4.0
 var base_scrap_magnet_radius: float = 130.0
 
@@ -139,6 +151,7 @@ func _ready() -> void:
 	shields = max_shields
 	rolls = max_rolls
 	_emit_health()
+	_emit_shields()
 	_emit_rolls()
 	GameAxis.axis_changed.connect(_on_axis_changed)
 	
@@ -202,6 +215,10 @@ func add_modifier(mod: ItemModifier) -> void:
 	if not mod:
 		return
 	active_modifiers.append(mod)
+	if mod.id in ["casimir_discharge", "gravitational_lensing", "feynman_propagator", "birefringence_prism"]:
+		active_projectile_modifiers.append(mod)
+	if mod.id in FIRE_HOOK_ITEM_IDS:
+		active_fire_modifiers.append(mod)
 	mod.on_ship_init(self)
 	modifiers_updated.emit(active_modifiers)
 	GameManager.player_modifiers_updated.emit(active_modifiers, player_id)
@@ -210,16 +227,14 @@ func add_modifier(mod: ItemModifier) -> void:
 		GameManager.request_screen_shake(8.0, 0.3)
 		var p = get_parent()
 		if p:
-			var flash = ImpactFlashScript.new()
-			p.add_child(flash)
+			var flash = ImpactFlashScript.acquire(p)
 			flash.setup(global_position, 55.0, Color(1.0, 0.85, 0.2, 0.95))
 	elif mod.tier == ItemModifier.ItemTier.TIER_2_PARADIGM:
 		SoundEffects.play_sfx("bonus", 0.05, 4.0, 1.1)
 		GameManager.request_screen_shake(5.0, 0.2)
 		var p = get_parent()
 		if p:
-			var flash = ImpactFlashScript.new()
-			p.add_child(flash)
+			var flash = ImpactFlashScript.acquire(p)
 			flash.setup(global_position, 35.0, Color(1.0, 0.3, 0.7, 0.9))
 	else:
 		SoundEffects.play_sfx("bonus", 0.05, 3.5, 0.95)
@@ -308,7 +323,15 @@ func _emit_health() -> void:
 func recharge_shields_full() -> void:
 	shields = max_shields
 	_emit_health()
+	_emit_shields()
 	queue_redraw()
+
+func _emit_shields() -> void:
+	var ratio = 0.0
+	if shields < max_shields and shield_recharge_delay > 0.0:
+		ratio = clampf(1.0 - (shield_timer / shield_recharge_delay), 0.0, 1.0)
+	shield_charges_changed.emit(shields, max_shields, ratio)
+	GameManager.player_shield_charges_changed.emit(shields, max_shields, ratio, player_id)
 
 func _emit_rolls() -> void:
 	var ratio = 0.0
@@ -347,6 +370,8 @@ func _handle_timers(delta: float) -> void:
 		shield_break_flash_timer -= delta
 	if shield_reform_timer > 0.0:
 		shield_reform_timer -= delta
+	if roll_recharge_flash_timer > 0.0:
+		roll_recharge_flash_timer -= delta
 	if meissner_fx_timer > 0.0:
 		meissner_fx_timer -= delta
 	
@@ -357,11 +382,14 @@ func _handle_timers(delta: float) -> void:
 			shields += 1
 			shield_timer = shield_recharge_delay
 			_emit_health()
+			_emit_shields()
 			if was_zero:
 				shield_reform_timer = 0.25
 				SoundEffects.play_sfx("shield_recharge", 0.05, -3.0)
 			else:
 				SoundEffects.play_sfx("bonus", 0.05, -6.0)
+		else:
+			_emit_shields()
 	
 	if hull <= int(max_hull / 3.0) and hull > 0 and not GameManager.is_game_over:
 		critical_alarm_timer -= delta
@@ -387,6 +415,15 @@ func _handle_timers(delta: float) -> void:
 		if sp.life > 0.0:
 			alive_sparks.append(sp)
 	hull_sparks = alive_sparks
+
+	# Update roll consumption quantum phase sparks
+	var alive_roll_sparks: Array[Dictionary] = []
+	for rsp in roll_sparks:
+		rsp.pos += rsp.vel * delta
+		rsp.life -= delta
+		if rsp.life > 0.0:
+			alive_roll_sparks.append(rsp)
+	roll_sparks = alive_roll_sparks
 
 	# Emit and update damage smoke & fire particles
 	if hull < max_hull and not GameManager.is_game_over:
@@ -442,8 +479,12 @@ func _handle_timers(delta: float) -> void:
 	elif rolls < max_rolls:
 		roll_timer += delta
 		if roll_timer >= roll_cooldown:
+			var rep_idx = rolls
 			rolls += 1
 			roll_timer = 0.0
+			roll_recharge_flash_timer = 0.22
+			roll_recharge_flash_index = rep_idx
+			SoundEffects.play_sfx("roll_recharge", 0.04, -6.0)
 			_emit_rolls()
 		else:
 			_emit_rolls()
@@ -539,6 +580,8 @@ func _fire_synchrotron() -> void:
 			spawn_list.append({"pos": m2, "dir": d_right, "damage": 0.85})
 	
 	for mod in active_modifiers:
+		if not mod.id in FIRE_HOOK_ITEM_IDS:
+			continue
 		var new_list: Array[Dictionary] = []
 		for p in spawn_list:
 			var results = mod.on_fire(self, p)
@@ -565,9 +608,12 @@ func _fire_synchrotron() -> void:
 		SoundEffects.play_sfx("laser", 0.08, -6.0)
 
 func _spawn_bullet_from_params(params: Dictionary) -> void:
-	var b = bullet_scene.instantiate()
-	get_parent().add_child(b)
+	var b = BulletScript.acquire(get_parent(), false)
 	b.setup(params.get("pos", global_position), params.get("dir", GameAxis.forward), false, params.get("damage", 1.0))
+	
+	b.shooter = self
+	b.projectile_modifiers = active_projectile_modifiers.duplicate()
+	b.set_meta("shooter", self)
 	
 	if bullet_speed_mult != 1.0:
 		b.speed *= bullet_speed_mult
@@ -580,17 +626,20 @@ func _spawn_bullet_from_params(params: Dictionary) -> void:
 		b.glow_color = Color(1.0, 0.7, 0.2, 0.9)
 	
 	var is_bullet_crit = params.has("is_crit") and params["is_crit"]
+	b.is_crit = is_bullet_crit
 	if is_bullet_crit:
 		b.glow_color = Color(1.0, 0.95, 0.2, 1.0)
 		b.scale *= 1.25
 		b.set_meta("is_crit", true)
 	
 	if params.has("is_cw_dart") and params["is_cw_dart"]:
+		b.is_cw_dart = true
 		b.set_meta("is_cw_dart", true)
 		if not is_bullet_crit and player_id != 2:
 			b.glow_color = Color(0.2, 1.0, 0.75, 0.95)
 	
 	if params.has("is_casimir") and params["is_casimir"]:
+		b.is_casimir = true
 		b.set_meta("is_casimir", true)
 		b.damage *= 2.2
 		b.scale *= 1.6
@@ -599,16 +648,23 @@ func _spawn_bullet_from_params(params: Dictionary) -> void:
 		if not is_bullet_crit and player_id != 2:
 			b.glow_color = Color(1.0, 0.5, 0.15, 1.0)
 	
+	if params.has("has_feynman") and params["has_feynman"]:
+		b.has_feynman = true
+		b.set_meta("has_feynman", true)
+	
 	if params.has("is_suspended") and params["is_suspended"]:
 		b.is_suspended = true
+		b.monitorable = false
 		b.suspension_ship = self
 	
 	if params.has("is_tachyon_lance") and params["is_tachyon_lance"]:
 		b.scale = Vector2(2.5, 1.4)
 		b.glow_color = Color(1.0, 0.2, 0.4, 1.0)
+		b.pierce_count = 999
 		b.set_meta("pierce_count", 999)
 	
 	if params.has("pierce_count"):
+		b.pierce_count = params["pierce_count"]
 		b.set_meta("pierce_count", params["pierce_count"])
 	
 	var is_spectral_shot = (params.has("is_spectral") and params["is_spectral"]) or (params.has("pierce_count") and params["pierce_count"] > 0 and not params.get("is_tachyon_lance", false))
@@ -616,6 +672,7 @@ func _spawn_bullet_from_params(params: Dictionary) -> void:
 		b.is_spectral = true
 		if not is_bullet_crit and not params.get("is_tachyon_lance", false) and player_id != 2:
 			b.glow_color = Color(0.76, 0.34, 1.0, 0.95)
+	b.queue_redraw()
 
 func _handle_barrel_roll(delta: float) -> void:
 	var roll_action = "p2_barrel_roll" if player_id == 2 else "barrel_roll"
@@ -643,10 +700,26 @@ func _start_barrel_roll() -> void:
 	roll_elapsed = 0.0
 	rolls -= 1
 	_emit_rolls()
+	_spawn_roll_sparks()
 	for m in active_modifiers:
 		m.on_roll(self)
 	SoundEffects.play_sfx("roll", 0.05, 1.0)
 	GameManager.request_screen_shake(4.0, 0.2)
+
+func _spawn_roll_sparks() -> void:
+	var count = 8
+	for i in range(count):
+		var ang = PI + randf_range(-0.35, 0.35)
+		var spd = randf_range(40.0, 110.0)
+		var s_dir = Vector2(cos(ang), sin(ang))
+		roll_sparks.append({
+			"pos": s_dir * 32.0,
+			"vel": s_dir * spd,
+			"size": randf_range(1.5, 2.8),
+			"life": randf_range(0.18, 0.30),
+			"max_life": 0.30,
+			"color": primary_color.lerp(Color.WHITE, 0.55)
+		})
 
 func _end_barrel_roll() -> void:
 	is_rolling = false
@@ -696,6 +769,7 @@ func take_damage(amount: int = 1) -> void:
 			SoundEffects.play_sfx("low_hull_alarm", 0.02, -2.0)
 	
 	_emit_health()
+	_emit_shields()
 
 func _trigger_shield_break(dir: Vector2) -> void:
 	SoundEffects.play_sfx("shield_break", 0.08, -2.0)
@@ -880,6 +954,69 @@ func _draw() -> void:
 		var h_t = hull_hit_flash_timer / 0.22
 		var flash_col = Color(1.0, 0.25, 0.1, h_t * 0.6)
 		draw_circle(Vector2.ZERO, 26.0, flash_col)
+
+	# 8. Roll Consumption Quantum Phase Sparks
+	for rsp in roll_sparks:
+		var s_t = clampf(rsp.life / rsp.max_life, 0.0, 1.0)
+		var c = rsp.color
+		c.a *= s_t
+		draw_circle(rsp.pos, rsp.size * s_t, c)
+
+	# 9. Compact Aft Quantum Thruster Drive Indicator (Available Rolls & Cooldown)
+	var pip_radius = 36.5
+	var arc_len = 0.16 # ~9.2 degrees per pip
+	var gap = 0.10     # ~5.7 degrees gap
+	var step = arc_len + gap
+	var span_total = step * float(max_rolls - 1)
+	
+	# Slipstream glow during active roll
+	if is_rolling:
+		var roll_half_span = span_total * 0.5 + 0.10
+		draw_arc(Vector2.ZERO, pip_radius, PI - roll_half_span, PI + roll_half_span, 14, Color(0.3, 1.0, 0.65, 0.75), 2.4, true)
+	
+	for i in range(max_rolls):
+		var slot_ang = PI + (float(i) - float(max_rolls - 1) * 0.5) * step
+		var a_start = slot_ang - arc_len * 0.5
+		var a_end = slot_ang + arc_len * 0.5
+		
+		# Backing slot wireframe (capacity indicator)
+		var backing_col = Color(primary_color.r, primary_color.g, primary_color.b, 0.30)
+		if rolls == 0:
+			var w_t = 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.012)
+			backing_col = Color(1.0, 0.3, 0.2, 0.25 + w_t * 0.25)
+		draw_arc(Vector2.ZERO, pip_radius, a_start, a_end, 6, backing_col, 1.8, true)
+		
+		if i < rolls:
+			# Available / Ready charge: Snaps to full brightness vivid cyan/primary with pure white core
+			var ready_alpha = 0.90
+			if rolls == max_rolls:
+				var breath = 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.005 + i * 0.7)
+				ready_alpha = 0.85 + breath * 0.15
+			var cell_col = Color(primary_color.r, primary_color.g, primary_color.b, ready_alpha)
+			draw_arc(Vector2.ZERO, pip_radius, a_start, a_end, 6, cell_col, 2.2, true)
+			draw_arc(Vector2.ZERO, pip_radius, slot_ang - arc_len * 0.28, slot_ang + arc_len * 0.28, 4, Color(1.0, 1.0, 1.0, ready_alpha * 0.95), 1.0, true)
+			
+			var center_pos = Vector2(cos(slot_ang), sin(slot_ang)) * pip_radius
+			draw_circle(center_pos, 1.3, Color.WHITE)
+			
+			# Recharge completion flash
+			if roll_recharge_flash_timer > 0.0 and roll_recharge_flash_index == i:
+				var rf = roll_recharge_flash_timer / 0.22
+				draw_circle(center_pos, 3.2 * rf, Color(1.0, 1.0, 1.0, rf * 0.95))
+				draw_arc(Vector2.ZERO, pip_radius, slot_ang - arc_len * 0.7, slot_ang + arc_len * 0.7, 8, Color.WHITE, 2.8 * rf, true)
+		elif i == rolls and rolls < max_rolls:
+			# Actively recharging charge: Subdued quantum green with steady flat brightness (no alpha ramp)
+			var c_ratio = clampf(roll_timer / roll_cooldown, 0.0, 1.0)
+			var fill_end = lerpf(a_start, a_end, c_ratio)
+			if fill_end > a_start:
+				var charge_col = Color(0.2, 0.88, 0.45, 0.55)
+				var charge_core = Color(0.65, 1.0, 0.75, 0.55)
+				draw_arc(Vector2.ZERO, pip_radius, a_start, fill_end, 6, charge_col, 2.0, true)
+				draw_arc(Vector2.ZERO, pip_radius, a_start, fill_end, 4, charge_core, 1.0, true)
+			
+			var head_pos = Vector2(cos(fill_end), sin(fill_end)) * pip_radius
+			draw_circle(head_pos, 1.3, Color(0.25, 0.92, 0.5, 0.75))
+			draw_circle(head_pos, 0.6, Color.WHITE)
 
 	
 	if meissner_fx_timer > 0.0:

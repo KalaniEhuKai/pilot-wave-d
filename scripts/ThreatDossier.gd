@@ -39,8 +39,8 @@ func show_dossier(sector_num: int, boss_name: String) -> void:
 		hazards_label.text = "HAZARDS: Triple Railgun Sweeps // Carrier Fighter Bays // Heavy Bow Armor"
 		directive_label.text = "TACTICAL DIRECTIVE:\nBreak Bow Armor plates to expose the fusion reactor. Evade sweeping railgun targeting lasers."
 	else:
-		hazards_label.text = "HAZARDS: Subsystem Wing Batteries // Spiral Bullet Vortex // High-Speed Strafing"
-		directive_label.text = "TACTICAL DIRECTIVE:\nVaporize Port & Starboard wing batteries to strip armor. Target singularity core during Phase 2 enrage."
+		hazards_label.text = "HAZARDS: Alternating Wing Batteries // Wing Fracture Flak // Phase 2 Dorsal Missiles"
+		directive_label.text = "TACTICAL DIRECTIVE:\nVaporize Port & Starboard wings to break sweeping crossfire. Evade fracture flak and roll through Phase 2 homing missiles."
 	
 	SoundEffects.play_sfx("bonus", 0.05, 2.0)
 

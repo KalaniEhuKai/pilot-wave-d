@@ -6,6 +6,25 @@ extends Area2D
 
 const ImpactFlashScript = preload("res://scripts/ImpactFlash.gd")
 
+static var _cached_players: Array[Node] = []
+static var _cached_players_frame: int = -1
+
+static func get_active_players(tree: SceneTree) -> Array[Node]:
+	if not tree:
+		return []
+	var cur_frame = Engine.get_physics_frames()
+	if _cached_players_frame == cur_frame:
+		return _cached_players
+	_cached_players_frame = cur_frame
+	_cached_players = tree.get_nodes_in_group("player")
+	return _cached_players
+
+static func get_active_player(tree: SceneTree) -> Node2D:
+	var plist = get_active_players(tree)
+	if not plist.is_empty() and is_instance_valid(plist[0]) and not plist[0].is_queued_for_deletion():
+		return plist[0]
+	return null
+
 @export var is_enemy: bool = false:
 	set(value):
 		is_enemy = value
@@ -36,6 +55,7 @@ var curve_turn_time: float = 0.55
 var curve_angular_speed: float = 5.5
 var curve_duration: float = 0.87
 var curve_timer: float = 0.0
+var max_curve_angle: float = 1.22 # ~70 degrees maximum deflection cap
 
 var homing_strength: float = 2.4
 var homing_duration: float = 1.6
@@ -57,6 +77,103 @@ var glow_color: Color = Color(0.1, 0.94, 1.0, 1.0)
 var length: float = 22.0
 var radius: float = 4.5
 
+static var active_player_bullet_count: int = 0
+static var last_release_sound_frame: int = -1
+static var _player_pool: Array[Node] = []
+static var _enemy_pool: Array[Node] = []
+static var _bullet_scene: PackedScene = null
+
+static func _get_bullet_scene() -> PackedScene:
+	if _bullet_scene == null:
+		_bullet_scene = load("res://scenes/Bullet.tscn")
+	return _bullet_scene
+
+static func acquire(parent: Node, p_is_enemy: bool = false) -> Node:
+	var pool = _enemy_pool if p_is_enemy else _player_pool
+	while not pool.is_empty():
+		var b = pool.pop_back()
+		if is_instance_valid(b) and not b.is_queued_for_deletion():
+			if b.get_parent() != parent:
+				if b.get_parent() != null:
+					b.get_parent().remove_child(b)
+				parent.add_child(b)
+			b.is_enemy = p_is_enemy
+			b.reset_for_pool()
+			return b
+	var scene = _get_bullet_scene()
+	var new_b = scene.instantiate()
+	new_b.is_enemy = p_is_enemy
+	parent.add_child(new_b)
+	return new_b
+
+func reset_for_pool() -> void:
+	traveled_distance = 0.0
+	has_split = false
+	is_suspended = false
+	is_spectral = false
+	suspension_timer = 0.0
+	suspension_ship = null
+	pulse_time = 0.0
+	feynman_trail_timer = 0.0
+	feynman_last_pos = Vector2.INF
+	is_crit = false
+	is_cw_dart = false
+	is_casimir = false
+	pierce_count = 0
+	has_detonated = false
+	cluster_fuse_timer = 0.0
+	homing_timer = 0.0
+	curve_timer = 0.0
+	base_direction = Vector2.ZERO
+	direction = Vector2.RIGHT
+	scale = Vector2.ONE
+	rotation = 0.0
+	projectile_modifiers = []
+	shooter = null
+	visible = true
+	set_physics_process(true)
+	
+	if not is_in_group("bullet"):
+		add_to_group("bullet")
+	
+	# Strip lingering metadata so previous life state never bleeds over
+	if has_meta("is_crit"): remove_meta("is_crit")
+	if has_meta("is_cw_dart"): remove_meta("is_cw_dart")
+	if has_meta("is_casimir"): remove_meta("is_casimir")
+	if has_meta("has_feynman"): remove_meta("has_feynman")
+	if has_meta("pierce_count"): remove_meta("pierce_count")
+	if has_meta("shooter"): remove_meta("shooter")
+	if has_meta("casimir_base_damage"): remove_meta("casimir_base_damage")
+	if has_meta("casimir_base_scale"): remove_meta("casimir_base_scale")
+	
+	if not is_enemy:
+		active_player_bullet_count += 1
+		collision_layer = 2
+		collision_mask = 0
+		monitoring = false
+		monitorable = true
+	else:
+		collision_layer = 8
+		collision_mask = 1
+		monitoring = true
+		monitorable = true
+
+func recycle() -> void:
+	if is_queued_for_deletion():
+		return
+	visible = false
+	set_physics_process(false)
+	monitoring = false
+	monitorable = false
+	global_position = Vector2(-9999, -9999)
+	if is_in_group("bullet"):
+		remove_from_group("bullet")
+	if is_enemy:
+		_enemy_pool.append(self)
+	else:
+		active_player_bullet_count = max(0, active_player_bullet_count - 1)
+		_player_pool.append(self)
+
 # Synergy & ballistic variables
 var traveled_distance: float = 0.0
 var has_split: bool = false
@@ -66,21 +183,41 @@ var suspension_timer: float = 0.0
 var suspension_ship: CharacterBody2D = null
 var pulse_time: float = 0.0
 
+var shooter: Node2D = null
+var projectile_modifiers: Array = []
+var has_feynman: bool = false
+var feynman_last_pos: Vector2 = Vector2.INF
+var feynman_trail_timer: float = 0.0
+var is_crit: bool = false
+var is_cw_dart: bool = false
+var is_casimir: bool = false
+var pierce_count: int = 0
+
 func _ready() -> void:
 	add_to_group("bullet")
 	_update_colors()
 	area_entered.connect(_on_area_entered)
 	body_entered.connect(_on_body_entered)
+	if not is_enemy:
+		active_player_bullet_count += 1
+		monitoring = false
+		monitorable = not is_suspended
+
+func _exit_tree() -> void:
+	if not is_enemy:
+		active_player_bullet_count = max(0, active_player_bullet_count - 1)
 
 func _update_colors() -> void:
 	if is_enemy:
 		collision_layer = 8
 		collision_mask = 1
+		monitoring = true
+		monitorable = true
 		match pattern:
 			Pattern.HOMING:
 				core_color = Color(1.0, 0.98, 0.9, 1.0)
 				glow_color = Color(1.0, 0.55, 0.1, 1.0) # Amber rocket fire
-				speed = 360.0
+				speed = 400.0
 				length = 18.0
 				radius = 5.0
 			Pattern.SINE_WAVE:
@@ -114,7 +251,9 @@ func _update_colors() -> void:
 		length = 16.0
 		radius = 2.8
 		collision_layer = 2
-		collision_mask = 4
+		collision_mask = 0
+		monitoring = false
+		monitorable = not is_suspended
 
 func setup(p_pos: Vector2, p_dir: Vector2, p_is_enemy: bool = false, p_dmg: float = 1.0) -> void:
 	global_position = p_pos
@@ -124,6 +263,8 @@ func setup(p_pos: Vector2, p_dir: Vector2, p_is_enemy: bool = false, p_dmg: floa
 	is_enemy = p_is_enemy
 	damage = p_dmg
 	rotation = direction.angle()
+	traveled_distance = 0.0
+	has_split = false
 	_update_colors()
 	queue_redraw()
 
@@ -141,19 +282,37 @@ func _physics_process(delta: float) -> void:
 		
 		if should_release:
 			is_suspended = false
+			monitoring = false
+			monitorable = true
 			speed *= 1.45
-			SoundEffects.play_sfx("laser", 0.15, -2.0)
-		else:
+			if SoundEffects != null and Engine.get_physics_frames() != last_release_sound_frame:
+				last_release_sound_frame = Engine.get_physics_frames()
+				SoundEffects.play_sfx("laser", 0.15, -2.0)
 			queue_redraw()
+		else:
+			if (Engine.get_physics_frames() % 4) == (get_instance_id() % 4):
+				queue_redraw()
 			return
 	
-	# Projectile modifier hooks (e.g. Gravitational Lensing, Birefringence Prism)
+	# Projectile modifier hooks (e.g. Gravitational Lensing, Birefringence Prism, Feynman Propagator)
 	if not is_enemy:
-		var players = get_tree().get_nodes_in_group("player")
-		if not players.is_empty() and is_instance_valid(players[0]):
-			var player = players[0]
-			for mod in player.active_modifiers:
-				mod.on_projectile_tick(self, delta)
+		if projectile_modifiers.is_empty():
+			if is_instance_valid(shooter) and "active_projectile_modifiers" in shooter:
+				projectile_modifiers = shooter.active_projectile_modifiers
+			elif is_instance_valid(shooter) and "active_modifiers" in shooter:
+				projectile_modifiers = shooter.active_modifiers
+			else:
+				var player = get_active_player(get_tree())
+				if is_instance_valid(player):
+					if "active_projectile_modifiers" in player:
+						projectile_modifiers = player.active_projectile_modifiers
+					elif "active_modifiers" in player:
+						projectile_modifiers = player.active_modifiers
+		
+		for mod in projectile_modifiers:
+			if mod.id == "birefringence_prism" and has_split:
+				continue
+			mod.on_projectile_tick(self, delta)
 	
 	# Ballistic Kinematics by Pattern
 	if is_enemy:
@@ -170,6 +329,7 @@ func _physics_process(delta: float) -> void:
 				var step = speed * delta
 				global_position += direction * step
 				traveled_distance += step
+				queue_redraw()
 			
 			Pattern.SINE_WAVE:
 				traveled_distance += speed * delta
@@ -181,17 +341,30 @@ func _physics_process(delta: float) -> void:
 			
 			Pattern.CURVING_ARC:
 				curve_timer += delta
+				if base_direction == Vector2.ZERO:
+					base_direction = direction
 				# Phase 1: Fly outward and away from player along initial wide angle
 				# Phase 2: Active re-aiming curve towards the player
 				if curve_timer >= curve_delay and curve_timer < (curve_delay + curve_turn_time):
-					var target = _get_closest_player()
-					if target != null and is_instance_valid(target):
-						var desired_dir = (target.global_position - global_position).normalized()
-						direction = direction.slerp(desired_dir, curve_angular_speed * delta).normalized()
-						rotation = direction.angle()
-					else:
-						direction = direction.rotated(curve_angular_speed * delta)
-						rotation = direction.angle()
+					var vp_rect = GameAxis.get_viewport_rect() if GameAxis != null else Rect2(0, 0, 1280, 720)
+					var is_offscreen = not vp_rect.grow(16.0).has_point(global_position)
+					# Off-Screen Curve Prohibition: Do not curve while outside visible playfield
+					if not is_offscreen:
+						var target = _get_closest_player()
+						if target != null and is_instance_valid(target):
+							var desired_dir = (target.global_position - global_position).normalized()
+							direction = direction.slerp(desired_dir, curve_angular_speed * delta).normalized()
+							# Maximum Deflection Cap: Prevent bullet from turning more than max_curve_angle from base_direction
+							var angle_diff = base_direction.angle_to(direction)
+							if absf(angle_diff) > max_curve_angle:
+								direction = base_direction.rotated(signf(angle_diff) * max_curve_angle)
+							rotation = direction.angle()
+						else:
+							direction = direction.rotated(curve_angular_speed * delta)
+							var angle_diff = base_direction.angle_to(direction)
+							if absf(angle_diff) > max_curve_angle:
+								direction = base_direction.rotated(signf(angle_diff) * max_curve_angle)
+							rotation = direction.angle()
 				# Phase 3: Fly locked on the re-aimed trajectory straight into the player's airspace
 				var step = speed * delta
 				global_position += direction * step
@@ -230,7 +403,7 @@ func _physics_process(delta: float) -> void:
 		traveled_distance += step
 	
 	if GameAxis != null and GameAxis.is_out_of_bounds(global_position, 60.0):
-		queue_free()
+		recycle()
 
 func _draw() -> void:
 	if is_enemy:
@@ -291,6 +464,28 @@ func _draw_player_needle_dart() -> void:
 		var flank_phase = Color(0.85, 0.5, 1.0, 0.65)
 		draw_line(Vector2(shoulder_x + 1.0, -r * 2.2), Vector2(-half_len * 1.4, -r * 1.0), flank_phase, 1.4, true)
 		draw_line(Vector2(shoulder_x + 1.0, r * 2.2), Vector2(-half_len * 1.4, r * 1.0), flank_phase, 1.4, true)
+	
+	# 0B. Feynman Propagator Ionization Envelope & Path Integral Filament (∿)
+	if has_meta("has_feynman") and get_meta("has_feynman"):
+		var feynman_halo = Color(1.0, 0.35, 0.85, 0.30)
+		var feynman_poly = PackedVector2Array([
+			tip + Vector2(6.0, 0.0),
+			Vector2(shoulder_x + 1.0, -r * 2.7),
+			Vector2(-half_len * 1.1, -r * 1.6),
+			Vector2(-half_len * 3.0, 0.0),
+			Vector2(-half_len * 1.1, r * 1.6),
+			Vector2(shoulder_x + 1.0, r * 2.7)
+		])
+		draw_colored_polygon(feynman_poly, feynman_halo)
+		
+		# Propagator Wiggle Filament along the bullet flanks
+		var f_phase = pulse_time * 26.0
+		var f_pts = PackedVector2Array()
+		for fi in range(6):
+			var fx = lerpf(-half_len * 2.2, tip.x, float(fi) / 5.0)
+			var fy = sin(fx * 0.28 + f_phase) * (r * 0.75)
+			f_pts.append(Vector2(fx, fy))
+		draw_polyline(f_pts, Color(1.0, 0.85, 1.0, 0.75), 1.5, true)
 	
 	# 1. Outer Translucent Ionization Shroud (Shock Cone)
 	var outer_poly = PackedVector2Array([
@@ -383,25 +578,38 @@ func _draw_enemy_plasma_orb() -> void:
 func _draw_homing_missile() -> void:
 	var half_len = length * 0.5
 	var r = radius
+	var is_burned_out = homing_timer >= homing_duration
 	
-	# 1. Rocket Thruster Exhaust Flame
-	var flame_flicker = 1.0 + sin(pulse_time * 45.0) * 0.28
-	var flame_len = half_len * 1.6 * flame_flicker
-	var flame_pts = PackedVector2Array([
-		Vector2(-half_len * 0.7, -r * 0.6),
-		Vector2(-half_len * 0.7 - flame_len, 0.0),
-		Vector2(-half_len * 0.7, r * 0.6)
-	])
-	var flame_col = Color(1.0, 0.45, 0.05, 0.85)
-	draw_colored_polygon(flame_pts, flame_col)
-	
-	# Inner white-hot thruster core
-	var inner_flame = PackedVector2Array([
-		Vector2(-half_len * 0.7, -r * 0.3),
-		Vector2(-half_len * 0.7 - flame_len * 0.5, 0.0),
-		Vector2(-half_len * 0.7, r * 0.3)
-	])
-	draw_colored_polygon(inner_flame, Color(1.0, 0.95, 0.6, 0.9))
+	if not is_burned_out:
+		# 1. Active Rocket Thruster Exhaust Flame
+		var flame_flicker = 1.0 + sin(pulse_time * 45.0) * 0.28
+		var flame_len = half_len * 1.6 * flame_flicker
+		var flame_pts = PackedVector2Array([
+			Vector2(-half_len * 0.7, -r * 0.6),
+			Vector2(-half_len * 0.7 - flame_len, 0.0),
+			Vector2(-half_len * 0.7, r * 0.6)
+		])
+		var flame_col = Color(1.0, 0.45, 0.05, 0.85)
+		draw_colored_polygon(flame_pts, flame_col)
+		
+		# Inner white-hot thruster core
+		var inner_flame = PackedVector2Array([
+			Vector2(-half_len * 0.7, -r * 0.3),
+			Vector2(-half_len * 0.7 - flame_len * 0.5, 0.0),
+			Vector2(-half_len * 0.7, r * 0.3)
+		])
+		draw_colored_polygon(inner_flame, Color(1.0, 0.95, 0.6, 0.9))
+	else:
+		# 1. BURNOUT INDICATOR: Rocket flame extinguished! Sputtering smoke puff wake
+		var smoke_flicker = sin(pulse_time * 22.0) * 0.12
+		var puff_1 = Color(0.55, 0.58, 0.65, 0.45 + smoke_flicker)
+		var puff_2 = Color(0.40, 0.42, 0.48, 0.30)
+		var puff_3 = Color(0.30, 0.32, 0.36, 0.18)
+		draw_circle(Vector2(-half_len * 0.9, 0.0), r * 0.85, puff_1)
+		draw_circle(Vector2(-half_len * 1.5, 0.0), r * 1.25, puff_2)
+		draw_circle(Vector2(-half_len * 2.3, 0.0), r * 1.65, puff_3)
+		# Cold inert nozzle ring
+		draw_line(Vector2(-half_len * 0.7, -r * 0.55), Vector2(-half_len * 0.7, r * 0.55), Color(0.3, 0.3, 0.35, 0.9), 1.8)
 	
 	# 2. Stabilizing Tail Fins
 	var fin_top = PackedVector2Array([
@@ -409,7 +617,7 @@ func _draw_homing_missile() -> void:
 		Vector2(-half_len * 0.9, -r * 2.2),
 		Vector2(-half_len * 0.7, -r * 0.8)
 	])
-	var fin_col = glow_color.darkened(0.2)
+	var fin_col = glow_color.darkened(0.5 if is_burned_out else 0.2)
 	draw_colored_polygon(fin_top, fin_col)
 	
 	var fin_bot = PackedVector2Array([
@@ -427,21 +635,30 @@ func _draw_homing_missile() -> void:
 		Vector2(-half_len * 0.7, r * 0.9),
 		Vector2(half_len * 0.3, r * 1.0)
 	])
-	draw_colored_polygon(body_pts, glow_color)
+	var body_col = glow_color.darkened(0.35) if is_burned_out else glow_color
+	draw_colored_polygon(body_pts, body_col)
 	
-	# 4. Incandescent Seeker Nose Sensor & Spine
+	# 4. Seeker Nose Sensor & Spine
 	var nose_pts = PackedVector2Array([
 		Vector2(half_len + 3.0, 0.0),
 		Vector2(half_len * 0.4, -r * 0.45),
 		Vector2(half_len * 0.4, r * 0.45)
 	])
-	draw_colored_polygon(nose_pts, core_color)
-	draw_line(Vector2(half_len * 0.4, 0.0), Vector2(-half_len * 0.4, 0.0), core_color, 1.4, true)
-	
-	# 5. Soft Ionization Halo
-	var halo_col = glow_color
-	halo_col.a = 0.25
-	draw_circle(Vector2.ZERO, r * 2.2, halo_col)
+	if not is_burned_out:
+		draw_colored_polygon(nose_pts, core_color)
+		draw_line(Vector2(half_len * 0.4, 0.0), Vector2(-half_len * 0.4, 0.0), core_color, 1.4, true)
+		
+		# 5. Soft Ionization Halo
+		var halo_col = glow_color
+		halo_col.a = 0.25
+		draw_circle(Vector2.ZERO, r * 2.2, halo_col)
+	else:
+		# Burned-out / lost-lock indicator: seeker eye blinks red/gray warning
+		var sensor_offline_col = Color(0.9, 0.2, 0.2, 0.85) if fmod(pulse_time * 8.0, 1.0) > 0.4 else Color(0.35, 0.35, 0.4, 0.85)
+		draw_colored_polygon(nose_pts, sensor_offline_col)
+		draw_line(Vector2(half_len * 0.4, 0.0), Vector2(-half_len * 0.4, 0.0), Color(0.35, 0.35, 0.4, 0.7), 1.2, true)
+		# Faint inertial trajectory tick ahead
+		draw_line(Vector2(half_len + 3.0, 0.0), Vector2(half_len + 12.0, 0.0), Color(0.85, 0.25, 0.25, 0.35), 1.0)
 
 func _draw_quantum_wavepacket() -> void:
 	var r = radius
@@ -559,18 +776,15 @@ func _detonate_cluster() -> void:
 	has_detonated = true
 	var parent_node = get_parent()
 	if parent_node:
-		var bullet_scene = load("res://scenes/Bullet.tscn")
 		for i in range(cluster_count):
 			var angle = (float(i) / float(cluster_count)) * TAU + rotation
 			var sub_dir = Vector2(cos(angle), sin(angle))
-			var sub_b = bullet_scene.instantiate()
-			parent_node.add_child(sub_b)
+			var sub_b = acquire(parent_node, true)
 			sub_b.setup(global_position + sub_dir * 14.0, sub_dir, true, 1.0)
 			sub_b.speed = 320.0
 			sub_b.glow_color = Color(0.25, 1.0, 0.5, 1.0) # Radiant Emerald Shrapnel
 		
-		var flash = ImpactFlashScript.new()
-		parent_node.add_child(flash)
+		var flash = ImpactFlashScript.acquire(parent_node)
 		flash.setup(global_position, 30.0, Color(0.3, 1.0, 0.5, 1.0))
 		
 		SoundEffects.play_sfx("hit", 0.08, 1.8)
@@ -581,7 +795,7 @@ func _get_closest_player() -> Node2D:
 	var tree = get_tree()
 	if not tree:
 		return null
-	var players = tree.get_nodes_in_group("player")
+	var players = get_active_players(tree)
 	var closest: Node2D = null
 	var min_dist_sq = INF
 	for p in players:
@@ -602,34 +816,36 @@ func _handle_hit(target: Node2D) -> void:
 	if is_enemy:
 		if target.is_in_group("player") and target.has_method("take_damage"):
 			target.take_damage(damage)
-			queue_free()
+			recycle()
 	else:
-		if target.is_in_group("enemy") and target.has_method("take_damage"):
+		if not target.is_in_group("player") and target.has_method("take_damage"):
 			target.take_damage(damage)
-			var is_crit = get_meta("is_crit", false)
+			var is_crit_hit = is_crit or (has_meta("is_crit") and get_meta("is_crit"))
 			
 			# Dynamic acoustic snap: crits snap higher, heavy hits have deeper body thud
 			var hit_pitch = 1.0
-			if is_crit:
+			if is_crit_hit:
 				hit_pitch = 1.22
 			elif damage >= 2.0:
 				hit_pitch = clampf(1.0 - (damage - 1.0) * 0.08, 0.65, 0.95)
 			SoundEffects.play_sfx("hit", 0.08, -3.5, hit_pitch)
 			
-			# Spawn lightweight vector impact flash shock-ring
-			_spawn_impact_shockwave(is_crit)
+			# Spawn lightweight vector impact flash shock-ring (throttled)
+			_spawn_impact_shockwave(is_crit_hit)
 			
-			var pierce = get_meta("pierce_count", 0)
-			if pierce > 0:
-				set_meta("pierce_count", pierce - 1)
+			var p_count = pierce_count if pierce_count > 0 else (get_meta("pierce_count") if has_meta("pierce_count") else 0)
+			if p_count > 0:
+				pierce_count = p_count - 1
+				set_meta("pierce_count", pierce_count)
 			else:
-				queue_free()
+				recycle()
 
 func _spawn_impact_shockwave(is_crit: bool) -> void:
-	var flash = ImpactFlashScript.new()
+	if ImpactFlashScript.active_count >= ImpactFlashScript.MAX_ACTIVE_FLASHES and not is_crit:
+		return
 	var parent_node = get_parent()
 	if parent_node:
-		parent_node.add_child(flash)
+		var flash = ImpactFlashScript.acquire(parent_node)
 		var flash_col = Color(1.0, 0.92, 0.25, 1.0) if is_crit else glow_color
 		var ring_radius = clampf(7.0 + sqrt(maxf(1.0, damage)) * 5.5, 7.0, 24.0)
 		if is_crit:
